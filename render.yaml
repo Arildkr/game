@@ -1,0 +1,16 @@
+# Render.com Blueprint for Klassespill
+# Deploy serveren ved å koble GitHub-repo til Render.com
+
+services:
+  - type: web
+    name: klassespill-server
+    runtime: node
+    region: frankfurt
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CLIENT_ORIGIN
+        value: https://game.ak-kreativ.no,https://klassespill.onrender.com
