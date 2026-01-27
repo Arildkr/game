@@ -553,13 +553,146 @@ function handleGjettBildetPlayerAction(room, playerId, action, data) {
 // ==================
 
 function handleTallkampHostAction(room, action, data) {
-  // TODO: Implement
-  return null;
+  const gd = room.gameData;
+
+  switch (action) {
+    case 'start-round': {
+      const { numbers, target, timeLimit, round } = data;
+      gd.targetNumber = target;
+      gd.availableNumbers = numbers;
+      gd.solutions = {};
+      gd.timeLimit = timeLimit * 1000;
+      gd.currentRound = round;
+
+      return {
+        broadcast: true,
+        event: 'game:round-started',
+        data: { numbers, target, timeLimit, round }
+      };
+    }
+
+    case 'reveal-round': {
+      const results = [];
+      const target = gd.targetNumber;
+
+      // Calculate results for each player
+      for (const player of room.players) {
+        const submission = gd.solutions[player.id];
+        let result = null;
+        let difference = null;
+        let points = 0;
+
+        if (submission) {
+          result = submission.result;
+          difference = result - target;
+
+          // Points: closer to target = more points
+          // Perfect = 1000, within 10 = 500+, etc.
+          const absDiff = Math.abs(difference);
+          if (absDiff === 0) {
+            points = 1000;
+          } else if (absDiff <= 5) {
+            points = 750;
+          } else if (absDiff <= 10) {
+            points = 500;
+          } else if (absDiff <= 25) {
+            points = 250;
+          } else if (absDiff <= 50) {
+            points = 100;
+          } else {
+            points = 50;
+          }
+
+          player.score += points;
+        }
+
+        results.push({
+          playerId: player.id,
+          playerName: player.name,
+          result,
+          difference,
+          points,
+          totalScore: player.score
+        });
+      }
+
+      // Sort by closest to target
+      results.sort((a, b) => {
+        if (a.difference === null) return 1;
+        if (b.difference === null) return -1;
+        return Math.abs(a.difference) - Math.abs(b.difference);
+      });
+
+      const leaderboard = room.players
+        .map(p => ({ id: p.id, name: p.name, score: p.score }))
+        .sort((a, b) => b.score - a.score);
+
+      return {
+        broadcast: true,
+        event: 'game:round-revealed',
+        data: { results, leaderboard, target }
+      };
+    }
+
+    case 'next-round': {
+      gd.solutions = {};
+      gd.currentRound++;
+
+      const leaderboard = room.players
+        .map(p => ({ id: p.id, name: p.name, score: p.score }))
+        .sort((a, b) => b.score - a.score);
+
+      return {
+        broadcast: true,
+        event: 'game:ready-for-round',
+        data: { round: gd.currentRound, leaderboard }
+      };
+    }
+
+    case 'end-tallkamp': {
+      const leaderboard = room.players
+        .map(p => ({ id: p.id, name: p.name, score: p.score }))
+        .sort((a, b) => b.score - a.score);
+
+      return {
+        broadcast: true,
+        event: 'game:tallkamp-ended',
+        data: { leaderboard, winner: leaderboard[0] || null }
+      };
+    }
+
+    default:
+      return null;
+  }
 }
 
 function handleTallkampPlayerAction(room, playerId, action, data) {
-  // TODO: Implement
-  return null;
+  const gd = room.gameData;
+  const player = room.players.find(p => p.id === playerId);
+
+  if (!player) return null;
+
+  switch (action) {
+    case 'submit': {
+      if (gd.solutions[playerId]) return null; // Already submitted
+
+      const { expression, result } = data;
+      gd.solutions[playerId] = { expression, result };
+
+      return {
+        broadcast: true,
+        event: 'game:player-submitted',
+        data: {
+          playerId,
+          playerName: player.name,
+          submissionCount: Object.keys(gd.solutions).length
+        }
+      };
+    }
+
+    default:
+      return null;
+  }
 }
 
 // ==================

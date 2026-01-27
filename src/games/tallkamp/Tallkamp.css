@@ -1,0 +1,683 @@
+/* game/src/games/tallkamp/Tallkamp.css */
+
+/* ==================
+   HOST STYLES
+   ================== */
+
+.tallkamp-host {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+  background: linear-gradient(135deg, #065f46 0%, #022c22 100%);
+  color: white;
+}
+
+.tallkamp-host .game-header {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tallkamp-host .game-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.tallkamp-host .game-badge {
+  background: #10b981;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+.tallkamp-host .room-code,
+.tallkamp-host .round-progress {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.tallkamp-host .header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.tallkamp-host .difficulty-select {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.tallkamp-host .btn-end {
+  background: #ef4444;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* Main content */
+.tallkamp-host .game-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+/* Waiting phase */
+.tallkamp-host .waiting-phase {
+  text-align: center;
+}
+
+.tallkamp-host .round-number {
+  font-size: 1.5rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 2rem;
+}
+
+.tallkamp-host .btn-start-round {
+  background: #10b981;
+  color: white;
+  padding: 1.5rem 3rem;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.tallkamp-host .btn-start-round:hover {
+  transform: scale(1.05);
+}
+
+.tallkamp-host .hint {
+  margin-top: 2rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Playing phase */
+.tallkamp-host .playing-phase {
+  text-align: center;
+  width: 100%;
+  max-width: 700px;
+}
+
+.tallkamp-host .timer-display {
+  margin-bottom: 2rem;
+}
+
+.tallkamp-host .timer-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+.tallkamp-host .timer-circle.urgent {
+  background: #ef4444;
+  animation: pulse 0.5s infinite;
+}
+
+.tallkamp-host .target-display {
+  margin-bottom: 2rem;
+}
+
+.tallkamp-host .target-label {
+  display: block;
+  font-size: 1.25rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 0.5rem;
+}
+
+.tallkamp-host .target-number {
+  font-size: 5rem;
+  font-weight: bold;
+  color: #fbbf24;
+  text-shadow: 0 4px 20px rgba(251, 191, 36, 0.3);
+}
+
+.tallkamp-host .target-display.small .target-number {
+  font-size: 3rem;
+}
+
+.tallkamp-host .numbers-display {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.tallkamp-host .number-tile {
+  width: 70px;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  color: #065f46;
+  font-size: 1.5rem;
+  font-weight: bold;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.tallkamp-host .submission-status {
+  font-size: 1.2rem;
+  margin-bottom: 1.5rem;
+}
+
+.tallkamp-host .btn-reveal,
+.tallkamp-host .btn-next {
+  background: #f59e0b;
+  color: white;
+  padding: 1rem 2.5rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.3rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Reveal phase */
+.tallkamp-host .reveal-phase {
+  text-align: center;
+  width: 100%;
+  max-width: 700px;
+}
+
+.tallkamp-host .results-list {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin: 1.5rem 0;
+}
+
+.tallkamp-host .results-list h3 {
+  margin-bottom: 1rem;
+}
+
+.tallkamp-host .result-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+}
+
+.tallkamp-host .result-item.winner {
+  background: rgba(251, 191, 36, 0.2);
+}
+
+.tallkamp-host .result-item .rank {
+  font-weight: bold;
+  width: 30px;
+}
+
+.tallkamp-host .result-item .name {
+  flex: 1;
+}
+
+.tallkamp-host .result-item .answer {
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.tallkamp-host .result-item .diff {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.9rem;
+}
+
+.tallkamp-host .result-item .points {
+  color: #10b981;
+  font-weight: bold;
+}
+
+/* Leaderboard sidebar */
+.tallkamp-host .leaderboard-sidebar {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.tallkamp-host .leaderboard-sidebar h3 {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.tallkamp-host .leaderboard-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.tallkamp-host .leaderboard-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+}
+
+.tallkamp-host .leaderboard-item.top-1 { background: rgba(255, 215, 0, 0.2); }
+.tallkamp-host .leaderboard-item.top-2 { background: rgba(192, 192, 192, 0.2); }
+.tallkamp-host .leaderboard-item.top-3 { background: rgba(205, 127, 50, 0.2); }
+
+.tallkamp-host .leaderboard-item .rank {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.tallkamp-host .leaderboard-item .name {
+  flex: 1;
+}
+
+.tallkamp-host .leaderboard-item .score {
+  font-weight: bold;
+  color: #34d399;
+}
+
+/* Finished screen */
+.tallkamp-host.finished-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tallkamp-host .finished-content {
+  text-align: center;
+}
+
+.tallkamp-host .podium {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+.tallkamp-host .podium-place {
+  text-align: center;
+  padding: 1.5rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.tallkamp-host .podium-place.place-1 {
+  background: rgba(255, 215, 0, 0.3);
+  transform: scale(1.1);
+}
+
+.tallkamp-host .podium-place .medal {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+}
+
+.tallkamp-host .rest-of-leaderboard {
+  list-style: none;
+  padding: 0;
+  margin: 0 auto 2rem;
+  max-width: 400px;
+}
+
+.tallkamp-host .rest-of-leaderboard li {
+  display: flex;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+/* ==================
+   PLAYER STYLES
+   ================== */
+
+.tallkamp-player {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #065f46 0%, #022c22 100%);
+  color: white;
+  display: flex;
+  flex-direction: column;
+}
+
+.tallkamp-player .player-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.tallkamp-player .player-name {
+  font-weight: 600;
+}
+
+.tallkamp-player .player-score {
+  background: #10b981;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-weight: bold;
+}
+
+.tallkamp-player .player-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+/* Waiting phase */
+.tallkamp-player .waiting-phase {
+  text-align: center;
+}
+
+.tallkamp-player .waiting-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+/* Playing phase */
+.tallkamp-player .playing-phase {
+  width: 100%;
+  max-width: 400px;
+}
+
+.tallkamp-player .timer-display {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.tallkamp-player .timer-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.tallkamp-player .timer-circle.urgent {
+  background: #ef4444;
+  animation: pulse 0.5s infinite;
+}
+
+.tallkamp-player .target-display {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.tallkamp-player .target-label {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.tallkamp-player .target-number {
+  font-size: 3rem;
+  font-weight: bold;
+  color: #fbbf24;
+}
+
+.tallkamp-player .numbers-available {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.tallkamp-player .number-btn {
+  width: 50px;
+  height: 50px;
+  border: none;
+  border-radius: 8px;
+  background: white;
+  color: #065f46;
+  font-size: 1.25rem;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.tallkamp-player .number-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tallkamp-player .expression-display {
+  margin-bottom: 1rem;
+}
+
+.tallkamp-player .expression-display input {
+  width: 100%;
+  padding: 1rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.25rem;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.9);
+  color: #065f46;
+}
+
+.tallkamp-player .result-preview {
+  text-align: center;
+  margin-top: 0.5rem;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.tallkamp-player .result-preview.exact {
+  color: #fbbf24;
+}
+
+.tallkamp-player .error-message {
+  text-align: center;
+  color: #fca5a5;
+  margin-top: 0.5rem;
+}
+
+.tallkamp-player .operator-buttons {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.tallkamp-player .operator-buttons button {
+  padding: 0.75rem;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 1.25rem;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.tallkamp-player .operator-buttons button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tallkamp-player .action-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr 2fr;
+  gap: 0.5rem;
+}
+
+.tallkamp-player .btn-clear,
+.tallkamp-player .btn-backspace {
+  padding: 1rem;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.tallkamp-player .btn-submit {
+  padding: 1rem;
+  border: none;
+  border-radius: 8px;
+  background: #10b981;
+  color: white;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.tallkamp-player .btn-submit:disabled {
+  background: rgba(255, 255, 255, 0.2);
+  cursor: not-allowed;
+}
+
+/* Reveal phase */
+.tallkamp-player .reveal-phase {
+  text-align: center;
+}
+
+.tallkamp-player .my-result {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 1rem;
+}
+
+.tallkamp-player .difference {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.tallkamp-player .points-earned {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #34d399;
+  margin-top: 0.5rem;
+}
+
+.tallkamp-player .current-standing {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+/* Finished screen */
+.tallkamp-player.finished-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tallkamp-player .finished-content {
+  text-align: center;
+  padding: 2rem;
+}
+
+.tallkamp-player .my-final-result {
+  margin: 2rem 0;
+}
+
+.tallkamp-player .final-rank .trophy {
+  font-size: 4rem;
+}
+
+.tallkamp-player .final-rank .rank-number {
+  font-size: 3rem;
+  font-weight: bold;
+}
+
+.tallkamp-player .final-score {
+  font-size: 1.5rem;
+  color: #34d399;
+}
+
+.tallkamp-player .mini-leaderboard {
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+.tallkamp-player .mini-lb-item {
+  display: flex;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.tallkamp-player .mini-lb-item.me {
+  background: rgba(16, 185, 129, 0.3);
+}
+
+.tallkamp-player .mini-lb-item .name {
+  flex: 1;
+  text-align: left;
+}
+
+/* ==================
+   ANIMATIONS
+   ================== */
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+/* ==================
+   RESPONSIVE
+   ================== */
+
+@media (max-width: 768px) {
+  .tallkamp-host {
+    grid-template-columns: 1fr;
+  }
+
+  .tallkamp-host .leaderboard-sidebar {
+    display: none;
+  }
+
+  .tallkamp-host .target-number {
+    font-size: 3.5rem;
+  }
+
+  .tallkamp-host .number-tile {
+    width: 55px;
+    height: 55px;
+    font-size: 1.25rem;
+  }
+}
