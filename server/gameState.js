@@ -369,13 +369,169 @@ function handleJaEllerNeiPlayerAction(room, playerId, action, data) {
 // ==================
 
 function handleQuizHostAction(room, action, data) {
-  // TODO: Implement
-  return null;
+  const gd = room.gameData;
+
+  switch (action) {
+    case 'show-question': {
+      // Host shows a new question
+      const { question, questionIndex, timeLimit = 20 } = data;
+      gd.currentQuestion = question;
+      gd.currentQuestionIndex = questionIndex;
+      gd.showAnswer = false;
+      gd.answers = {};
+      gd.questionStartTime = Date.now();
+      gd.timeLimit = timeLimit * 1000; // Convert to ms
+
+      return {
+        broadcast: true,
+        event: 'game:question-shown',
+        data: {
+          question: question.question,
+          options: question.options,
+          questionIndex,
+          timeLimit
+        }
+      };
+    }
+
+    case 'reveal-answer': {
+      // Host reveals the answer
+      gd.showAnswer = true;
+      const correctIndex = gd.currentQuestion.correct;
+      const results = [];
+
+      // Calculate points for each player
+      for (const [playerId, answerData] of Object.entries(gd.answers)) {
+        const player = room.players.find(p => p.id === playerId);
+        if (player) {
+          const isCorrect = answerData.answer === correctIndex;
+          let points = 0;
+
+          if (isCorrect) {
+            // Base points + time bonus (faster = more points)
+            const timeTaken = answerData.time;
+            const timeBonus = Math.max(0, Math.floor((1 - timeTaken / gd.timeLimit) * 500));
+            points = 500 + timeBonus; // 500-1000 points possible
+            player.score += points;
+          }
+
+          results.push({
+            playerId,
+            playerName: player.name,
+            answer: answerData.answer,
+            isCorrect,
+            points,
+            totalScore: player.score
+          });
+        }
+      }
+
+      // Add players who didn't answer
+      for (const player of room.players) {
+        if (!gd.answers[player.id]) {
+          results.push({
+            playerId: player.id,
+            playerName: player.name,
+            answer: null,
+            isCorrect: false,
+            points: 0,
+            totalScore: player.score
+          });
+        }
+      }
+
+      // Sort by score
+      const leaderboard = room.players
+        .map(p => ({ id: p.id, name: p.name, score: p.score }))
+        .sort((a, b) => b.score - a.score);
+
+      gd.currentQuestionIndex++;
+
+      return {
+        broadcast: true,
+        event: 'game:answer-revealed',
+        data: {
+          correctAnswer: correctIndex,
+          results,
+          leaderboard,
+          questionIndex: gd.currentQuestionIndex - 1
+        }
+      };
+    }
+
+    case 'next-question': {
+      // Reset for next question
+      gd.currentQuestion = null;
+      gd.showAnswer = false;
+      gd.answers = {};
+
+      return {
+        broadcast: true,
+        event: 'game:ready-for-question',
+        data: {
+          questionIndex: gd.currentQuestionIndex,
+          leaderboard: room.players
+            .map(p => ({ id: p.id, name: p.name, score: p.score }))
+            .sort((a, b) => b.score - a.score)
+        }
+      };
+    }
+
+    case 'end-quiz': {
+      // End the quiz and show final results
+      const finalLeaderboard = room.players
+        .map(p => ({ id: p.id, name: p.name, score: p.score }))
+        .sort((a, b) => b.score - a.score);
+
+      return {
+        broadcast: true,
+        event: 'game:quiz-ended',
+        data: {
+          leaderboard: finalLeaderboard,
+          winner: finalLeaderboard[0] || null
+        }
+      };
+    }
+
+    default:
+      return null;
+  }
 }
 
 function handleQuizPlayerAction(room, playerId, action, data) {
-  // TODO: Implement
-  return null;
+  const gd = room.gameData;
+  const player = room.players.find(p => p.id === playerId);
+
+  if (!player) return null;
+
+  switch (action) {
+    case 'answer': {
+      // Player submits their answer
+      if (gd.showAnswer) return null; // Too late
+      if (gd.answers[playerId]) return null; // Already answered
+
+      const { answer } = data; // 0, 1, 2, or 3
+      const timeTaken = Date.now() - gd.questionStartTime;
+
+      gd.answers[playerId] = {
+        answer,
+        time: timeTaken
+      };
+
+      return {
+        broadcast: true,
+        event: 'game:player-answered',
+        data: {
+          playerId,
+          answerCount: Object.keys(gd.answers).length,
+          totalPlayers: room.players.filter(p => p.isConnected).length
+        }
+      };
+    }
+
+    default:
+      return null;
+  }
 }
 
 // ==================
