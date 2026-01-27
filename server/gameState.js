@@ -700,13 +700,132 @@ function handleTallkampPlayerAction(room, playerId, action, data) {
 // ==================
 
 function handleTidslinjeHostAction(room, action, data) {
-  // TODO: Implement
-  return null;
+  const gd = room.gameData;
+
+  switch (action) {
+    case 'start-round': {
+      const { setName, events, correctOrder, timeLimit, round } = data;
+      gd.events = events;
+      gd.correctOrder = correctOrder;
+      gd.submissions = {};
+      gd.timeLimit = timeLimit * 1000;
+      gd.currentRound = round;
+
+      return {
+        broadcast: true,
+        event: 'game:round-started',
+        data: { setName, events, timeLimit, round }
+      };
+    }
+
+    case 'reveal-round': {
+      const results = [];
+      const correctOrder = gd.correctOrder;
+
+      for (const player of room.players) {
+        const submission = gd.submissions[player.id];
+        let correctCount = 0;
+        let points = 0;
+
+        if (submission) {
+          // Count correct positions
+          for (let i = 0; i < submission.order.length; i++) {
+            if (submission.order[i] === correctOrder[i]) {
+              correctCount++;
+            }
+          }
+
+          // Points based on correct count
+          points = correctCount * 200;
+          if (correctCount === correctOrder.length) {
+            points += 500; // Perfect bonus
+          }
+
+          player.score += points;
+        }
+
+        results.push({
+          playerId: player.id,
+          playerName: player.name,
+          correctCount,
+          points,
+          totalScore: player.score
+        });
+      }
+
+      // Sort by correct count
+      results.sort((a, b) => b.correctCount - a.correctCount);
+
+      const leaderboard = room.players
+        .map(p => ({ id: p.id, name: p.name, score: p.score }))
+        .sort((a, b) => b.score - a.score);
+
+      return {
+        broadcast: true,
+        event: 'game:round-revealed',
+        data: { results, leaderboard, correctOrder }
+      };
+    }
+
+    case 'next-round': {
+      gd.submissions = {};
+      gd.currentRound++;
+
+      const leaderboard = room.players
+        .map(p => ({ id: p.id, name: p.name, score: p.score }))
+        .sort((a, b) => b.score - a.score);
+
+      return {
+        broadcast: true,
+        event: 'game:ready-for-round',
+        data: { round: gd.currentRound, leaderboard }
+      };
+    }
+
+    case 'end-tidslinje': {
+      const leaderboard = room.players
+        .map(p => ({ id: p.id, name: p.name, score: p.score }))
+        .sort((a, b) => b.score - a.score);
+
+      return {
+        broadcast: true,
+        event: 'game:tidslinje-ended',
+        data: { leaderboard, winner: leaderboard[0] || null }
+      };
+    }
+
+    default:
+      return null;
+  }
 }
 
 function handleTidslinjePlayerAction(room, playerId, action, data) {
-  // TODO: Implement
-  return null;
+  const gd = room.gameData;
+  const player = room.players.find(p => p.id === playerId);
+
+  if (!player) return null;
+
+  switch (action) {
+    case 'submit': {
+      if (gd.submissions[playerId]) return null; // Already submitted
+
+      const { order } = data;
+      gd.submissions[playerId] = { order };
+
+      return {
+        broadcast: true,
+        event: 'game:player-submitted',
+        data: {
+          playerId,
+          playerName: player.name,
+          submissionCount: Object.keys(gd.submissions).length
+        }
+      };
+    }
+
+    default:
+      return null;
+  }
 }
 
 // ==================

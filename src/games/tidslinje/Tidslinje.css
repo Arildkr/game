@@ -1,0 +1,649 @@
+/* game/src/games/tidslinje/Tidslinje.css */
+
+/* ==================
+   HOST STYLES
+   ================== */
+
+.tidslinje-host {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+  background: linear-gradient(135deg, #7c2d12 0%, #431407 100%);
+  color: white;
+}
+
+.tidslinje-host .game-header {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tidslinje-host .game-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.tidslinje-host .game-badge {
+  background: #ea580c;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+.tidslinje-host .room-code,
+.tidslinje-host .round-progress {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.tidslinje-host .btn-end {
+  background: #ef4444;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* Main content */
+.tidslinje-host .game-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+/* Waiting phase */
+.tidslinje-host .waiting-phase {
+  text-align: center;
+}
+
+.tidslinje-host .round-number {
+  font-size: 1.5rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 2rem;
+}
+
+.tidslinje-host .btn-start-round {
+  background: #ea580c;
+  color: white;
+  padding: 1.5rem 3rem;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.tidslinje-host .btn-start-round:hover {
+  transform: scale(1.05);
+}
+
+.tidslinje-host .hint {
+  margin-top: 2rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Playing phase */
+.tidslinje-host .playing-phase {
+  text-align: center;
+  width: 100%;
+  max-width: 600px;
+}
+
+.tidslinje-host .timer-display {
+  margin-bottom: 1.5rem;
+}
+
+.tidslinje-host .timer-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 1.75rem;
+  font-weight: bold;
+}
+
+.tidslinje-host .timer-circle.urgent {
+  background: #ef4444;
+  animation: pulse 0.5s infinite;
+}
+
+.tidslinje-host .set-name {
+  font-size: 1.75rem;
+  font-weight: bold;
+  margin-bottom: 1.5rem;
+  color: #fdba74;
+}
+
+.tidslinje-host .events-preview {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.tidslinje-host .events-preview h3 {
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.tidslinje-host .events-list {
+  list-style: disc;
+  padding-left: 1.5rem;
+}
+
+.tidslinje-host .events-list li {
+  margin-bottom: 0.5rem;
+}
+
+.tidslinje-host .submission-status {
+  font-size: 1.2rem;
+  margin-bottom: 1.5rem;
+}
+
+.tidslinje-host .btn-reveal,
+.tidslinje-host .btn-next {
+  background: #f59e0b;
+  color: white;
+  padding: 1rem 2.5rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.3rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Reveal phase */
+.tidslinje-host .reveal-phase {
+  text-align: center;
+  width: 100%;
+  max-width: 700px;
+}
+
+.tidslinje-host .correct-order {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+}
+
+.tidslinje-host .correct-order h3 {
+  margin-bottom: 1rem;
+}
+
+.tidslinje-host .timeline {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  position: relative;
+}
+
+.tidslinje-host .timeline::before {
+  content: '';
+  position: absolute;
+  left: 50px;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: #fdba74;
+}
+
+.tidslinje-host .timeline-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  position: relative;
+}
+
+.tidslinje-host .timeline-item .year {
+  width: 70px;
+  font-weight: bold;
+  color: #fdba74;
+  font-size: 1.1rem;
+}
+
+.tidslinje-host .timeline-item .text {
+  flex: 1;
+  text-align: left;
+  padding-left: 1rem;
+}
+
+.tidslinje-host .results-list {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+}
+
+.tidslinje-host .result-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+}
+
+.tidslinje-host .result-item.winner {
+  background: rgba(251, 191, 36, 0.2);
+}
+
+.tidslinje-host .result-item .rank {
+  font-weight: bold;
+  width: 30px;
+}
+
+.tidslinje-host .result-item .name {
+  flex: 1;
+}
+
+.tidslinje-host .result-item .correct {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.tidslinje-host .result-item .points {
+  color: #fdba74;
+  font-weight: bold;
+}
+
+/* Leaderboard sidebar */
+.tidslinje-host .leaderboard-sidebar {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.tidslinje-host .leaderboard-sidebar h3 {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.tidslinje-host .leaderboard-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.tidslinje-host .leaderboard-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+}
+
+.tidslinje-host .leaderboard-item.top-1 { background: rgba(255, 215, 0, 0.2); }
+.tidslinje-host .leaderboard-item.top-2 { background: rgba(192, 192, 192, 0.2); }
+.tidslinje-host .leaderboard-item.top-3 { background: rgba(205, 127, 50, 0.2); }
+
+.tidslinje-host .leaderboard-item .rank {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.tidslinje-host .leaderboard-item .name {
+  flex: 1;
+}
+
+.tidslinje-host .leaderboard-item .score {
+  font-weight: bold;
+  color: #fdba74;
+}
+
+/* Finished screen */
+.tidslinje-host.finished-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tidslinje-host .finished-content {
+  text-align: center;
+}
+
+.tidslinje-host .podium {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+.tidslinje-host .podium-place {
+  text-align: center;
+  padding: 1.5rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.tidslinje-host .podium-place.place-1 {
+  background: rgba(255, 215, 0, 0.3);
+  transform: scale(1.1);
+}
+
+.tidslinje-host .podium-place .medal {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+}
+
+.tidslinje-host .rest-of-leaderboard {
+  list-style: none;
+  padding: 0;
+  margin: 0 auto 2rem;
+  max-width: 400px;
+}
+
+.tidslinje-host .rest-of-leaderboard li {
+  display: flex;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+/* ==================
+   PLAYER STYLES
+   ================== */
+
+.tidslinje-player {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #7c2d12 0%, #431407 100%);
+  color: white;
+  display: flex;
+  flex-direction: column;
+}
+
+.tidslinje-player .player-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.tidslinje-player .player-name {
+  font-weight: 600;
+}
+
+.tidslinje-player .player-score {
+  background: #ea580c;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-weight: bold;
+}
+
+.tidslinje-player .player-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+/* Waiting phase */
+.tidslinje-player .waiting-phase {
+  text-align: center;
+}
+
+.tidslinje-player .waiting-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+/* Playing phase */
+.tidslinje-player .playing-phase {
+  width: 100%;
+  max-width: 400px;
+}
+
+.tidslinje-player .timer-display {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.tidslinje-player .timer-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.tidslinje-player .timer-circle.urgent {
+  background: #ef4444;
+  animation: pulse 0.5s infinite;
+}
+
+.tidslinje-player .set-name {
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #fdba74;
+  margin-bottom: 0.5rem;
+}
+
+.tidslinje-player .instructions {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 1rem;
+}
+
+.tidslinje-player .events-sortable {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.tidslinje-player .event-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: grab;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.tidslinje-player .event-item.dragging {
+  background: rgba(234, 88, 12, 0.3);
+  transform: scale(1.02);
+}
+
+.tidslinje-player .event-item:active {
+  cursor: grabbing;
+}
+
+.tidslinje-player .event-number {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ea580c;
+  border-radius: 50%;
+  font-weight: bold;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.tidslinje-player .event-text {
+  flex: 1;
+  font-size: 0.9rem;
+}
+
+.tidslinje-player .move-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tidslinje-player .move-buttons button {
+  width: 28px;
+  height: 22px;
+  border: none;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.tidslinje-player .move-buttons button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.tidslinje-player .btn-submit {
+  width: 100%;
+  padding: 1rem;
+  border: none;
+  border-radius: 10px;
+  background: #ea580c;
+  color: white;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.tidslinje-player .btn-submit:disabled {
+  background: rgba(255, 255, 255, 0.2);
+  cursor: not-allowed;
+}
+
+/* Reveal phase */
+.tidslinje-player .reveal-phase {
+  text-align: center;
+}
+
+.tidslinje-player .my-result {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 1rem;
+}
+
+.tidslinje-player .points-earned {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #fdba74;
+  margin-top: 0.5rem;
+}
+
+.tidslinje-player .current-standing {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+/* Finished screen */
+.tidslinje-player.finished-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tidslinje-player .finished-content {
+  text-align: center;
+  padding: 2rem;
+}
+
+.tidslinje-player .my-final-result {
+  margin: 2rem 0;
+}
+
+.tidslinje-player .final-rank .trophy {
+  font-size: 4rem;
+}
+
+.tidslinje-player .final-rank .rank-number {
+  font-size: 3rem;
+  font-weight: bold;
+}
+
+.tidslinje-player .final-score {
+  font-size: 1.5rem;
+  color: #fdba74;
+}
+
+.tidslinje-player .mini-leaderboard {
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+.tidslinje-player .mini-lb-item {
+  display: flex;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.tidslinje-player .mini-lb-item.me {
+  background: rgba(234, 88, 12, 0.3);
+}
+
+.tidslinje-player .mini-lb-item .name {
+  flex: 1;
+  text-align: left;
+}
+
+/* ==================
+   ANIMATIONS
+   ================== */
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+/* ==================
+   RESPONSIVE
+   ================== */
+
+@media (max-width: 768px) {
+  .tidslinje-host {
+    grid-template-columns: 1fr;
+  }
+
+  .tidslinje-host .leaderboard-sidebar {
+    display: none;
+  }
+}
