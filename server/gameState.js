@@ -539,13 +539,93 @@ function handleQuizPlayerAction(room, playerId, action, data) {
 // ==================
 
 function handleGjettBildetHostAction(room, action, data) {
-  // TODO: Implement
-  return null;
+  const gd = room.gameData;
+
+  switch (action) {
+    case 'reveal-step':
+      // Sørg for at vi lagrer steget i server-staten også
+      gd.revealedTiles.push(data.step); 
+      return {
+        broadcast: true,
+        event: 'game:reveal-step',
+        data: { step: data.step, revealedTiles: gd.revealedTiles }
+      };
+
+    case 'select-player':
+      const player = room.players.find(p => p.id === data.playerId);
+      gd.currentPlayer = { id: data.playerId, name: player?.name };
+      return {
+        broadcast: true,
+        event: 'game:player-selected',
+        data: { playerId: data.playerId, playerName: player?.name }
+      };
+
+    case 'validate-guess': {
+      const { playerId, isCorrect } = data;
+      const player = room.players.find(p => p.id === playerId);
+      
+      if (isCorrect && player) {
+        player.score += 100;
+      }
+
+      gd.currentPlayer = null;
+      gd.buzzerQueue = []; 
+
+      return {
+        broadcast: true,
+        event: 'game:guess-result',
+        data: { 
+          playerId, 
+          isCorrect, 
+          points: isCorrect ? 100 : 0,
+          players: room.players // Send oppdatert scoreliste
+        }
+      };
+    }
+
+    case 'next-image':
+      gd.currentImageIndex = data.imageIndex;
+      gd.revealedTiles = []; // Nullstill ruter for nytt bilde
+      gd.buzzerQueue = [];
+      gd.currentPlayer = null;
+      return {
+        broadcast: true,
+        event: 'game:next-image',
+        data: { imageIndex: data.imageIndex }
+      };
+
+    default:
+      return null;
+  }
 }
 
 function handleGjettBildetPlayerAction(room, playerId, action, data) {
-  // TODO: Implement
-  return null;
+  const gd = room.gameData;
+
+  switch (action) {
+    case 'buzz':
+      // Bare legg til i køen hvis spilleren ikke allerede er der
+      if (!gd.buzzerQueue.includes(playerId) && !gd.currentPlayer) {
+        gd.buzzerQueue.push(playerId);
+        return {
+          broadcast: true,
+          event: 'game:player-buzzed',
+          data: { playerId, buzzerQueue: gd.buzzerQueue }
+        };
+      }
+      return null;
+
+    case 'submit-guess':
+      gd.pendingGuess = { playerId, guess: data.guess };
+      return {
+        toHost: true,
+        hostEvent: 'game:guess-submitted',
+        hostData: { playerId, guess: data.guess }
+      };
+
+    default:
+      return null;
+  }
 }
 
 // ==================

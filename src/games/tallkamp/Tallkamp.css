@@ -52,10 +52,21 @@
   padding: 0.5rem 1rem;
   border-radius: 8px;
   border: none;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.2);
   color: white;
   font-size: 1rem;
   cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='white' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  padding-right: 2rem;
+}
+
+.tallkamp-host .difficulty-select option {
+  background: #065f46;
+  color: white;
 }
 
 .tallkamp-host .btn-end {
@@ -181,8 +192,49 @@
 }
 
 .tallkamp-host .submission-status {
-  font-size: 1.2rem;
   margin-bottom: 1.5rem;
+}
+
+.tallkamp-host .submission-count {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.tallkamp-host .live-submissions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.tallkamp-host .live-submission {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.tallkamp-host .live-submission.exact {
+  background: rgba(251, 191, 36, 0.3);
+}
+
+.tallkamp-host .live-submission .sub-name {
+  font-weight: 500;
+}
+
+.tallkamp-host .live-submission .sub-result {
+  font-weight: bold;
+  color: #34d399;
+}
+
+.tallkamp-host .live-submission .sub-diff {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.85rem;
 }
 
 .tallkamp-host .btn-reveal,

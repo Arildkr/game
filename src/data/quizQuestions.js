@@ -1,465 +1,560 @@
-// Quiz-spørsmål med flervalg
+// Quiz-spørsmål med tekstsvar
 // Tilpasset ungdomsskole
+// Bruker Levenshtein-distanse for toleranse
+
+// Levenshtein distance for typo tolerance
+function levenshteinDistance(str1, str2) {
+  const m = str1.length;
+  const n = str2.length;
+  const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (str1[i - 1] === str2[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1];
+      } else {
+        dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+      }
+    }
+  }
+  return dp[m][n];
+}
+
+// Check if answer is correct (with typo tolerance)
+export function checkAnswer(userAnswer, correctAnswers) {
+  const normalized = userAnswer.toLowerCase().trim();
+  if (!normalized) return false;
+
+  return correctAnswers.some(answer => {
+    const correct = answer.toLowerCase();
+
+    // Exact match
+    if (correct === normalized) return true;
+
+    // Contains each other
+    if (correct.includes(normalized) || normalized.includes(correct)) {
+      const lengthRatio = Math.min(normalized.length, correct.length) / Math.max(normalized.length, correct.length);
+      if (lengthRatio >= 0.6) return true;
+    }
+
+    // Allow typos based on word length
+    const maxDistance = correct.length <= 4 ? 1 : correct.length <= 8 ? 2 : 3;
+    const distance = levenshteinDistance(normalized, correct);
+
+    return distance <= maxDistance;
+  });
+}
 
 const questions = [
   // ==================== GEOGRAFI ====================
   {
     question: "Hva er hovedstaden i Australia?",
-    options: ["Sydney", "Melbourne", "Canberra", "Brisbane"],
-    correct: 2,
+    answers: ["Canberra"],
     category: "geografi"
   },
   {
-    question: "Hvilket land har flest innbyggere?",
-    options: ["USA", "India", "Kina", "Indonesia"],
-    correct: 2,
+    question: "Hvilket land har flest innbyggere i verden?",
+    answers: ["India", "Kina"],
     category: "geografi"
   },
   {
-    question: "Hvilken elv er verdens lengste?",
-    options: ["Amazonas", "Nilen", "Yangtze", "Mississippi"],
-    correct: 1,
+    question: "Hva heter den lengste elva i verden?",
+    answers: ["Nilen", "Amazonas"],
     category: "geografi"
   },
   {
     question: "Hvilket hav ligger mellom Europa og Amerika?",
-    options: ["Stillehavet", "Det indiske hav", "Atlanterhavet", "Nordishavet"],
-    correct: 2,
+    answers: ["Atlanterhavet", "Atlanteren"],
     category: "geografi"
   },
   {
     question: "Hva er Norges nest største by?",
-    options: ["Trondheim", "Bergen", "Stavanger", "Drammen"],
-    correct: 1,
+    answers: ["Bergen"],
     category: "geografi"
   },
   {
     question: "Hvilket land er kjent som 'den stigende sols land'?",
-    options: ["Kina", "Korea", "Japan", "Vietnam"],
-    correct: 2,
+    answers: ["Japan"],
     category: "geografi"
   },
   {
     question: "Hvor mange kontinenter er det?",
-    options: ["5", "6", "7", "8"],
-    correct: 2,
+    answers: ["7", "syv", "sju"],
     category: "geografi"
   },
   {
-    question: "Hvilket land har verdens høyeste fjell?",
-    options: ["Kina", "Nepal", "India", "Pakistan"],
-    correct: 1,
+    question: "I hvilket land ligger verdens høyeste fjell?",
+    answers: ["Nepal", "Kina"],
     category: "geografi"
   },
   {
     question: "Hva heter det største landet i verden (areal)?",
-    options: ["Kina", "USA", "Canada", "Russland"],
-    correct: 3,
+    answers: ["Russland"],
     category: "geografi"
   },
   {
     question: "Hvilken by er kjent som 'Den evige stad'?",
-    options: ["Athen", "Roma", "Jerusalem", "Kairo"],
-    correct: 1,
+    answers: ["Roma", "Rome"],
+    category: "geografi"
+  },
+  {
+    question: "Hva heter Norges lengste fjord?",
+    answers: ["Sognefjorden"],
+    category: "geografi"
+  },
+  {
+    question: "Hva er navnet på verdens høyeste fjell?",
+    answers: ["Mount Everest", "Everest", "Sagarmatha", "Chomolungma"],
+    category: "geografi"
+  },
+  {
+    question: "Hva heter den største øya i verden?",
+    answers: ["Grønland", "Greenland"],
+    category: "geografi"
+  },
+  {
+    question: "Hva er hovedstaden i Japan?",
+    answers: ["Tokyo"],
+    category: "geografi"
+  },
+  {
+    question: "Hva heter den lengste elva i Norge?",
+    answers: ["Glomma"],
+    category: "geografi"
+  },
+  {
+    question: "Hva er hovedstaden i Frankrike?",
+    answers: ["Paris"],
+    category: "geografi"
+  },
+  {
+    question: "Hva heter verdens nest største hav?",
+    answers: ["Atlanterhavet", "Atlanteren"],
+    category: "geografi"
+  },
+  {
+    question: "Hva heter den største innsjøen i Norge?",
+    answers: ["Mjøsa"],
+    category: "geografi"
+  },
+  {
+    question: "Hva er hovedstaden i Canada?",
+    answers: ["Ottawa"],
+    category: "geografi"
+  },
+  {
+    question: "Hva heter den største verdensdelen?",
+    answers: ["Asia"],
     category: "geografi"
   },
 
   // ==================== HISTORIE ====================
   {
     question: "Når startet andre verdenskrig?",
-    options: ["1914", "1939", "1941", "1945"],
-    correct: 1,
+    answers: ["1939"],
     category: "historie"
   },
   {
     question: "Hvem oppdaget Amerika i 1492?",
-    options: ["Vasco da Gama", "Ferdinand Magellan", "Christopher Columbus", "Leiv Eiriksson"],
-    correct: 2,
+    answers: ["Christopher Columbus", "Columbus", "Kristoffer Columbus"],
     category: "historie"
   },
   {
     question: "Når ble Norge selvstendig fra Sverige?",
-    options: ["1814", "1905", "1920", "1945"],
-    correct: 1,
+    answers: ["1905"],
     category: "historie"
   },
   {
     question: "Hvem var den første mannen på månen?",
-    options: ["Buzz Aldrin", "Neil Armstrong", "Yuri Gagarin", "John Glenn"],
-    correct: 1,
+    answers: ["Neil Armstrong", "Armstrong"],
     category: "historie"
   },
   {
     question: "Hvilken mur falt i 1989?",
-    options: ["Den kinesiske mur", "Berlinmuren", "Hadrians mur", "Muren i Jerusalem"],
-    correct: 1,
+    answers: ["Berlinmuren", "Berlin-muren"],
     category: "historie"
   },
   {
     question: "Hvem malte Mona Lisa?",
-    options: ["Michelangelo", "Raphael", "Leonardo da Vinci", "Botticelli"],
-    correct: 2,
+    answers: ["Leonardo da Vinci", "Da Vinci", "Leonardo"],
     category: "historie"
   },
   {
     question: "Hvilket skip sank i 1912 på sin jomfrutur?",
-    options: ["Lusitania", "Britannic", "Olympic", "Titanic"],
-    correct: 3,
+    answers: ["Titanic"],
     category: "historie"
   },
   {
     question: "Hvem var Norges konge under andre verdenskrig?",
-    options: ["Olav V", "Haakon VII", "Harald V", "Oscar II"],
-    correct: 1,
+    answers: ["Haakon VII", "Haakon 7", "Haakon den syvende", "Kong Haakon"],
     category: "historie"
   },
   {
     question: "Når ble grunnloven undertegnet på Eidsvoll?",
-    options: ["1814", "1905", "1810", "1820"],
-    correct: 0,
+    answers: ["1814"],
     category: "historie"
   },
   {
     question: "Hvilket imperium bygde Colosseum i Roma?",
-    options: ["Det greske", "Det persiske", "Det romerske", "Det bysantinske"],
-    correct: 2,
+    answers: ["Det romerske", "Romerriket", "Roma", "Romerske riket"],
+    category: "historie"
+  },
+  {
+    question: "Hvilken norsk konge ble drept i slaget på Stiklestad i 1030?",
+    answers: ["Olav den Hellige", "Olav Haraldsson", "Olav II", "Sankt Olav"],
     category: "historie"
   },
 
   // ==================== NATURFAG ====================
   {
     question: "Hva er det kjemiske symbolet for gull?",
-    options: ["Go", "Gd", "Au", "Ag"],
-    correct: 2,
+    answers: ["Au"],
     category: "naturfag"
   },
   {
     question: "Hvor mange planeter er det i vårt solsystem?",
-    options: ["7", "8", "9", "10"],
-    correct: 1,
+    answers: ["8", "åtte"],
     category: "naturfag"
   },
   {
     question: "Hva kalles prosessen der planter lager mat fra sollys?",
-    options: ["Respirasjon", "Fotosyntese", "Fermentering", "Osmose"],
-    correct: 1,
+    answers: ["Fotosyntese", "Fotosyntesen"],
     category: "naturfag"
   },
   {
     question: "Hvilket grunnstoff puster vi inn mest av?",
-    options: ["Oksygen", "Karbondioksid", "Nitrogen", "Hydrogen"],
-    correct: 2,
-    category: "naturfag"
-  },
-  {
-    question: "Hva er lysets hastighet (ca.)?",
-    options: ["300 km/s", "3 000 km/s", "300 000 km/s", "3 000 000 km/s"],
-    correct: 2,
+    answers: ["Nitrogen", "Kvelstoff"],
     category: "naturfag"
   },
   {
     question: "Hvilket organ pumper blod gjennom kroppen?",
-    options: ["Lungene", "Leveren", "Hjertet", "Nyrene"],
-    correct: 2,
+    answers: ["Hjertet", "Hjerte"],
     category: "naturfag"
   },
   {
     question: "Hva kalles den minste enheten i et grunnstoff?",
-    options: ["Molekyl", "Atom", "Elektron", "Celle"],
-    correct: 1,
+    answers: ["Atom", "Atomet"],
     category: "naturfag"
   },
   {
     question: "Hvilken planet er nærmest solen?",
-    options: ["Venus", "Mars", "Merkur", "Jorden"],
-    correct: 2,
+    answers: ["Merkur", "Mercury"],
     category: "naturfag"
   },
   {
     question: "Hva er H2O?",
-    options: ["Oksygen", "Hydrogen", "Vann", "Salt"],
-    correct: 2,
+    answers: ["Vann", "Water"],
     category: "naturfag"
   },
   {
     question: "Hvilket dyr er kjent som 'kongen av jungelen'?",
-    options: ["Tiger", "Elefant", "Løve", "Gorilla"],
-    correct: 2,
+    answers: ["Løve", "Løven", "Lion"],
+    category: "naturfag"
+  },
+  {
+    question: "Hvilket element har det kjemiske symbolet O?",
+    answers: ["Oksygen", "Oxygen"],
+    category: "naturfag"
+  },
+  {
+    question: "Hva er det største dyret i verden?",
+    answers: ["Blåhval", "Blåhvalen", "Blue whale"],
+    category: "naturfag"
+  },
+  {
+    question: "Hvilken planet er kjent som den røde planeten?",
+    answers: ["Mars"],
+    category: "naturfag"
+  },
+  {
+    question: "Hva kalles en vinkel på 90 grader?",
+    answers: ["Rett vinkel", "Rettvinklet"],
+    category: "naturfag"
+  },
+  {
+    question: "Hva er det hardeste naturlige stoffet?",
+    answers: ["Diamant", "Diamond"],
+    category: "naturfag"
+  },
+  {
+    question: "Hvor mange ben har en edderkopp?",
+    answers: ["8", "åtte"],
+    category: "naturfag"
+  },
+  {
+    question: "Hva er Norges nasjonalfugl?",
+    answers: ["Fossekallen", "Fossekall"],
+    category: "naturfag"
+  },
+  {
+    question: "Hva er den minste knokkelen i menneskekroppen?",
+    answers: ["Stigbøylen", "Stigbøyle"],
+    category: "naturfag"
+  },
+  {
+    question: "Hva kalles læren om jordskjelv?",
+    answers: ["Seismologi"],
+    category: "naturfag"
+  },
+  {
+    question: "Hvilket metall har det kjemiske symbolet Au?",
+    answers: ["Gull", "Gold"],
+    category: "naturfag"
+  },
+  {
+    question: "Hvilken enhet måles elektrisk strøm i?",
+    answers: ["Ampere", "A"],
+    category: "naturfag"
+  },
+  {
+    question: "Hva kalles studien av stjerner og planeter?",
+    answers: ["Astronomi"],
+    category: "naturfag"
+  },
+  {
+    question: "Hvilket grunnstoff har det kjemiske symbolet Fe?",
+    answers: ["Jern", "Iron"],
     category: "naturfag"
   },
 
   // ==================== KULTUR & UNDERHOLDNING ====================
   {
     question: "Hvem skrev Harry Potter-bøkene?",
-    options: ["Stephen King", "J.R.R. Tolkien", "J.K. Rowling", "Roald Dahl"],
-    correct: 2,
+    answers: ["J.K. Rowling", "JK Rowling", "Rowling", "Joanne Rowling"],
     category: "kultur"
   },
   {
     question: "Hvilket land kommer pizza opprinnelig fra?",
-    options: ["USA", "Frankrike", "Spania", "Italia"],
-    correct: 3,
-    category: "kultur"
-  },
-  {
-    question: "Hva heter verdens mest solgte spillkonsoll (2024)?",
-    options: ["Xbox", "PlayStation 2", "Nintendo Switch", "Wii"],
-    correct: 1,
+    answers: ["Italia", "Italy"],
     category: "kultur"
   },
   {
     question: "Hvilket band sang 'Bohemian Rhapsody'?",
-    options: ["The Beatles", "Led Zeppelin", "Queen", "Pink Floyd"],
-    correct: 2,
+    answers: ["Queen"],
     category: "kultur"
   },
   {
     question: "Hva heter hovedpersonen i Minecraft?",
-    options: ["Alex", "Steve", "Herobrine", "Notch"],
-    correct: 1,
+    answers: ["Steve", "Alex"],
     category: "kultur"
   },
   {
     question: "Hvilket land vant fotball-VM for menn i 2022?",
-    options: ["Brasil", "Frankrike", "Argentina", "Tyskland"],
-    correct: 2,
+    answers: ["Argentina"],
     category: "kultur"
   },
   {
     question: "Hva heter den lille grønne figuren i Star Wars?",
-    options: ["Yoda", "Grogu", "Jabba", "Ewok"],
-    correct: 0,
+    answers: ["Yoda", "Grogu", "Baby Yoda"],
     category: "kultur"
   },
   {
     question: "Hvilket sosialt medium er kjent for korte videoer og ble startet i Kina?",
-    options: ["Instagram", "Snapchat", "TikTok", "YouTube"],
-    correct: 2,
+    answers: ["TikTok"],
     category: "kultur"
   },
   {
     question: "Hvem er skaperen av Tesla og SpaceX?",
-    options: ["Jeff Bezos", "Bill Gates", "Elon Musk", "Mark Zuckerberg"],
-    correct: 2,
+    answers: ["Elon Musk", "Musk"],
     category: "kultur"
   },
   {
     question: "Hvilket spill er kjent for 'Victory Royale'?",
-    options: ["PUBG", "Fortnite", "Apex Legends", "Call of Duty"],
-    correct: 1,
+    answers: ["Fortnite"],
+    category: "kultur"
+  },
+  {
+    question: "Hvem malte det berømte maleriet 'Skrik'?",
+    answers: ["Edvard Munch", "Munch"],
     category: "kultur"
   },
 
   // ==================== MATEMATIKK ====================
   {
     question: "Hva er 15% av 200?",
-    options: ["15", "20", "30", "35"],
-    correct: 2,
+    answers: ["30", "tretti"],
     category: "matte"
   },
   {
     question: "Hva er kvadratroten av 144?",
-    options: ["11", "12", "13", "14"],
-    correct: 1,
+    answers: ["12", "tolv"],
     category: "matte"
   },
   {
     question: "Hvor mange grader er det i en trekant?",
-    options: ["90", "180", "270", "360"],
-    correct: 1,
+    answers: ["180", "hundreogåtti"],
     category: "matte"
   },
   {
     question: "Hva er 7 x 8?",
-    options: ["54", "56", "58", "64"],
-    correct: 1,
+    answers: ["56", "femtiseks"],
     category: "matte"
   },
   {
-    question: "Hva kalles en firkant med fire like sider?",
-    options: ["Rektangel", "Kvadrat", "Trapes", "Parallellogram"],
-    correct: 1,
+    question: "Hva kalles en firkant med fire like sider og fire rette vinkler?",
+    answers: ["Kvadrat"],
     category: "matte"
   },
   {
-    question: "Hva er verdien av pi (ca.)?",
-    options: ["2.14", "3.14", "4.14", "3.41"],
-    correct: 1,
+    question: "Hva er verdien av pi (de to første sifrene)?",
+    answers: ["3.14", "3,14"],
     category: "matte"
   },
   {
-    question: "Hva er 2^5 (2 opphøyd i 5)?",
-    options: ["10", "16", "32", "64"],
-    correct: 2,
-    category: "matte"
-  },
-  {
-    question: "Hvilket tall er et primtall?",
-    options: ["9", "15", "17", "21"],
-    correct: 2,
+    question: "Hva er 2 opphøyd i 5?",
+    answers: ["32", "trettito"],
     category: "matte"
   },
   {
     question: "Hva er 1000 delt på 25?",
-    options: ["40", "45", "50", "55"],
-    correct: 0,
+    answers: ["40", "førti"],
     category: "matte"
   },
   {
-    question: "Hva er arealet av en sirkel med radius 3? (bruk pi = 3)",
-    options: ["18", "27", "9", "36"],
-    correct: 1,
+    question: "Hva er 12 x 8?",
+    answers: ["96", "nittiseks"],
+    category: "matte"
+  },
+  {
+    question: "Hvor mange timer er det i en uke?",
+    answers: ["168"],
+    category: "matte"
+  },
+  {
+    question: "Hvor mange gram er det i et kilogram?",
+    answers: ["1000", "tusen"],
+    category: "matte"
+  },
+  {
+    question: "Hvor mange dager er det i et skuddår?",
+    answers: ["366"],
+    category: "matte"
+  },
+  {
+    question: "Hvor mange grader er det i en sirkel?",
+    answers: ["360", "tre hundre og seksti"],
     category: "matte"
   },
 
   // ==================== SPRÅK & LITTERATUR ====================
   {
     question: "Hvilket språk snakkes i Brasil?",
-    options: ["Spansk", "Portugisisk", "Italiensk", "Fransk"],
-    correct: 1,
+    answers: ["Portugisisk", "Portuguese"],
     category: "sprak"
   },
   {
     question: "Hvem skrev 'Romeo og Julie'?",
-    options: ["Charles Dickens", "William Shakespeare", "Jane Austen", "Mark Twain"],
-    correct: 1,
-    category: "sprak"
-  },
-  {
-    question: "Hva betyr det engelske ordet 'enormous'?",
-    options: ["Liten", "Rask", "Enorm/Kjempestor", "Farlig"],
-    correct: 2,
+    answers: ["William Shakespeare", "Shakespeare"],
     category: "sprak"
   },
   {
     question: "Hvilket land kommer eventyret om 'Den stygge andungen' fra?",
-    options: ["Norge", "Sverige", "Danmark", "Finland"],
-    correct: 2,
-    category: "sprak"
-  },
-  {
-    question: "Hva er flertall av 'barn' på nynorsk?",
-    options: ["Barner", "Barn", "Borna", "Barnene"],
-    correct: 2,
+    answers: ["Danmark", "Denmark"],
     category: "sprak"
   },
   {
     question: "Hvem skrev 'Sofies verden'?",
-    options: ["Jo Nesbø", "Jostein Gaarder", "Erlend Loe", "Lars Saabye Christensen"],
-    correct: 1,
+    answers: ["Jostein Gaarder", "Gaarder"],
     category: "sprak"
   },
   {
     question: "Hva betyr 'carpe diem' på latin?",
-    options: ["Lev livet", "Grip dagen", "Evig liv", "God morgen"],
-    correct: 1,
+    answers: ["Grip dagen"],
     category: "sprak"
   },
   {
     question: "Hvilket alfabet brukes i Russland?",
-    options: ["Latinsk", "Gresk", "Kyrillisk", "Arabisk"],
-    correct: 2,
+    answers: ["Kyrillisk", "Det kyrilliske"],
     category: "sprak"
   },
 
   // ==================== SPORT ====================
   {
     question: "Hvor mange spillere er det på et fotballag på banen?",
-    options: ["9", "10", "11", "12"],
-    correct: 2,
+    answers: ["11", "elleve"],
     category: "sport"
   },
   {
     question: "Hvilket land arrangerte sommer-OL i 2021?",
-    options: ["Kina", "Brasil", "Japan", "Frankrike"],
-    correct: 2,
+    answers: ["Japan"],
     category: "sport"
   },
   {
     question: "Hva kalles tre strokes under par i golf?",
-    options: ["Birdie", "Eagle", "Albatross", "Bogey"],
-    correct: 2,
+    answers: ["Albatross", "Double eagle"],
     category: "sport"
   },
   {
-    question: "Hvilken norsk skiløper har flest VM-gull?",
-    options: ["Bjørn Dæhlie", "Marit Bjørgen", "Petter Northug", "Johannes Høsflot Klæbo"],
-    correct: 1,
-    category: "sport"
-  },
-  {
-    question: "Hvor lenge varer en ordinær fotballkamp?",
-    options: ["60 minutter", "80 minutter", "90 minutter", "120 minutter"],
-    correct: 2,
+    question: "Hvor lenge varer en ordinær fotballkamp (i minutter)?",
+    answers: ["90", "nitti"],
     category: "sport"
   },
   {
     question: "Hvilket land har vunnet flest fotball-VM for menn?",
-    options: ["Tyskland", "Argentina", "Brasil", "Italia"],
-    correct: 2,
+    answers: ["Brasil", "Brazil"],
     category: "sport"
   },
   {
     question: "Hva kalles det når en bowler slår ned alle 10 kjegler på første kast?",
-    options: ["Spare", "Strike", "Split", "Gutter"],
-    correct: 1,
+    answers: ["Strike"],
     category: "sport"
   },
   {
     question: "Hvilken idrett forbindes med Wimbledon?",
-    options: ["Golf", "Cricket", "Tennis", "Polo"],
-    correct: 2,
+    answers: ["Tennis"],
+    category: "sport"
+  },
+  {
+    question: "Hvilken sport er Lionel Messi kjent for?",
+    answers: ["Fotball", "Football", "Soccer"],
     category: "sport"
   },
 
   // ==================== TEKNOLOGI ====================
   {
     question: "Hva står HTML for?",
-    options: ["Hyper Text Markup Language", "High Tech Modern Language", "Home Tool Markup Language", "Hyper Transfer Markup Language"],
-    correct: 0,
+    answers: ["Hyper Text Markup Language", "HyperText Markup Language"],
     category: "teknologi"
   },
   {
     question: "Hvilket selskap laget iPhone?",
-    options: ["Samsung", "Google", "Apple", "Microsoft"],
-    correct: 2,
+    answers: ["Apple"],
     category: "teknologi"
   },
   {
     question: "Hva kalles hjernen i en datamaskin?",
-    options: ["RAM", "CPU", "GPU", "SSD"],
-    correct: 1,
+    answers: ["CPU", "Prosessor", "Prosessoren"],
     category: "teknologi"
   },
   {
-    question: "Hvilket år ble det første iPhone lansert?",
-    options: ["2005", "2007", "2009", "2010"],
-    correct: 1,
+    question: "Hvilket år ble den første iPhone lansert?",
+    answers: ["2007"],
     category: "teknologi"
   },
   {
-    question: "Hva står AI for?",
-    options: ["Automatic Intelligence", "Artificial Intelligence", "Advanced Internet", "Auto Information"],
-    correct: 1,
+    question: "Hva står AI for (på engelsk)?",
+    answers: ["Artificial Intelligence"],
     category: "teknologi"
   },
   {
     question: "Hvem grunnla Microsoft?",
-    options: ["Steve Jobs", "Bill Gates", "Mark Zuckerberg", "Jeff Bezos"],
-    correct: 1,
-    category: "teknologi"
-  },
-  {
-    question: "Hva er 1 gigabyte (GB)?",
-    options: ["1000 megabyte", "1024 megabyte", "100 megabyte", "10000 megabyte"],
-    correct: 1,
+    answers: ["Bill Gates", "Gates", "Bill Gates og Paul Allen"],
     category: "teknologi"
   },
   {
     question: "Hvilket programmeringsspråk er oppkalt etter en slange?",
-    options: ["Java", "Ruby", "Python", "Swift"],
-    correct: 2,
+    answers: ["Python"],
     category: "teknologi"
+  },
+
+  // ==================== DYRERIKET ====================
+  {
+    question: "Hvilket dyr kalles 'skogens konge' i Norge?",
+    answers: ["Elg", "Elgen"],
+    category: "naturfag"
   }
 ];
 

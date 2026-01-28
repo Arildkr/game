@@ -97,12 +97,37 @@ function PlayerGame() {
     };
   }, [socket]);
 
+  // Validate that expression only uses available numbers (each once)
+  const validateNumbers = (expr, availableNumbers) => {
+    // Extract all numbers from expression
+    const usedNumbers = expr.match(/\d+/g)?.map(Number) || [];
+
+    // Create a copy of available numbers to track usage
+    const remaining = [...availableNumbers];
+
+    for (const num of usedNumbers) {
+      const idx = remaining.indexOf(num);
+      if (idx === -1) {
+        return { valid: false, error: `Tallet ${num} er ikke tilgjengelig eller allerede brukt` };
+      }
+      remaining.splice(idx, 1);
+    }
+
+    return { valid: true };
+  };
+
   // Calculate result from expression
   const calculateResult = (expr) => {
     try {
       // Only allow numbers, operators, parentheses and spaces
       if (!/^[\d\s+\-*/().]+$/.test(expr)) {
         return { error: 'Ugyldig tegn i uttrykket' };
+      }
+
+      // Validate that only available numbers are used (each once)
+      const validation = validateNumbers(expr, numbers);
+      if (!validation.valid) {
+        return { error: validation.error };
       }
 
       // Evaluate the expression

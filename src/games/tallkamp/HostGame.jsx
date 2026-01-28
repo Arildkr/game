@@ -56,10 +56,10 @@ function HostGame() {
   useEffect(() => {
     if (!socket) return;
 
-    const handlePlayerSubmitted = ({ playerId, playerName }) => {
+    const handlePlayerSubmitted = ({ playerId, playerName, result, difference }) => {
       setSubmissions(prev => ({
         ...prev,
-        [playerId]: { playerName, hasSubmission: true }
+        [playerId]: { playerName, result, difference, hasSubmission: true }
       }));
     };
 
@@ -240,9 +240,24 @@ function HostGame() {
             </div>
 
             <div className="submission-status">
-              <p>
+              <p className="submission-count">
                 {Object.keys(submissions).length} / {connectedPlayers.length} har sendt inn
               </p>
+              {Object.keys(submissions).length > 0 && (
+                <div className="live-submissions">
+                  {Object.entries(submissions)
+                    .sort((a, b) => Math.abs(a[1].difference) - Math.abs(b[1].difference))
+                    .map(([playerId, sub]) => (
+                      <div key={playerId} className={`live-submission ${sub.difference === 0 ? 'exact' : ''}`}>
+                        <span className="sub-name">{sub.playerName}</span>
+                        <span className="sub-result">{sub.result}</span>
+                        <span className="sub-diff">
+                          ({sub.difference === 0 ? '=' : sub.difference > 0 ? '+' : ''}{sub.difference})
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              )}
             </div>
 
             <button className="btn btn-reveal" onClick={revealResults}>

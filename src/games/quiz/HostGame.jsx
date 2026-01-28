@@ -17,6 +17,7 @@ function HostGame() {
   const [category, setCategory] = useState('all');
   const [timeLeft, setTimeLeft] = useState(20);
   const [totalQuestions, setTotalQuestions] = useState(10);
+  const [playerAnswers, setPlayerAnswers] = useState({});
   const timerRef = useRef(null);
 
   // Initialize questions
@@ -29,13 +30,14 @@ function HostGame() {
   useEffect(() => {
     if (!socket) return;
 
-    const handlePlayerAnswered = ({ answerCount: count }) => {
+    const handlePlayerAnswered = ({ playerId, answerCount: count }) => {
       setAnswerCount(count);
     };
 
     const handleAnswerRevealed = (data) => {
       setRevealData(data);
       setLeaderboard(data.leaderboard);
+      setPlayerAnswers(data.playerAnswers || {});
       setPhase('reveal');
       clearInterval(timerRef.current);
     };
@@ -46,6 +48,7 @@ function HostGame() {
       setPhase('waiting');
       setRevealData(null);
       setAnswerCount(0);
+      setPlayerAnswers({});
     };
 
     const handleQuizEnded = ({ leaderboard: lb }) => {
@@ -70,16 +73,30 @@ function HostGame() {
   const connectedPlayers = players.filter(p => p.isConnected);
 
   const showQuestion = () => {
+    // Safeguard: ensure we have questions loaded
+    if (shuffledQuestions.length === 0) {
+      console.error('No questions available');
+      return;
+    }
+
     if (currentQuestionIndex >= shuffledQuestions.length) {
       setShuffledQuestions(shuffleQuestions(shuffledQuestions));
       setCurrentQuestionIndex(0);
     }
 
     const question = shuffledQuestions[currentQuestionIndex];
+
+    // Safeguard: ensure question has answers
+    if (!question || !question.answers || question.answers.length === 0) {
+      console.error('Invalid question:', question);
+      return;
+    }
+
     setCurrentQuestion(question);
     setPhase('question');
     setAnswerCount(0);
     setTimeLeft(20);
+    setPlayerAnswers({});
 
     sendGameAction('show-question', {
       question,
@@ -164,7 +181,7 @@ function HostGame() {
       {/* Header */}
       <header className="game-header">
         <div className="game-info">
-          <span className="game-badge">❓ Quiz</span>
+          <span className="game-badge">🧠 Quiz</span>
           <span className="room-code">Rom: {roomCode}</span>
           <span className="question-progress">
             Spørsmål {currentQuestionIndex + 1} / {totalQuestions}
@@ -217,13 +234,8 @@ function HostGame() {
               <div className="question-text">{currentQuestion.question}</div>
             </div>
 
-            <div className="options-grid">
-              {currentQuestion.options.map((option, index) => (
-                <div key={index} className={`option-card option-${index}`}>
-                  <span className="option-letter">{['A', 'B', 'C', 'D'][index]}</span>
-                  <span className="option-text">{option}</span>
-                </div>
-              ))}
+            <div className="answer-hint">
+              <p>Elevene skriver inn svaret på sin enhet</p>
             </div>
 
             <div className="answer-status">
@@ -248,30 +260,27 @@ function HostGame() {
               <div className="question-text">{currentQuestion?.question}</div>
             </div>
 
-            <div className="options-grid reveal">
-              {currentQuestion?.options.map((option, index) => (
-                <div
-                  key={index}
-                  className={`option-card option-${index} ${index === revealData.correctAnswer ? 'correct' : 'wrong'}`}
-                >
-                  <span className="option-letter">{['A', 'B', 'C', 'D'][index]}</span>
-                  <span className="option-text">{option}</span>
-                  {index === revealData.correctAnswer && <span className="check">✓</span>}
-                </div>
-              ))}
+            <div className="correct-answer-display">
+              <span className="label">Riktig svar:</span>
+              <span className="answer">{revealData.correctAnswer}</span>
             </div>
 
             <div className="results-summary">
               <h3>Resultater denne runden:</h3>
               <div className="round-results">
                 {revealData.results
-                  .filter(r => r.isCorrect)
-                  .sort((a, b) => b.points - a.points)
-                  .slice(0, 5)
-                  .map((result, idx) => (
-                    <div key={result.playerId} className="result-item correct">
+                  .sort((a, b) => {
+                    // Sort by correct first, then by points
+                    if (a.isCorrect && !b.isCorrect) return -1;
+                    if (!a.isCorrect && b.isCorrect) return 1;
+                    return b.points - a.points;
+                  })
+                  .slice(0, 8)
+                  .map((result) => (
+                    <div key={result.playerId} className={`result-item ${result.isCorrect ? 'correct' : 'wrong'}`}>
                       <span className="name">{result.playerName}</span>
-                      <span className="points">+{result.points}</span>
+                      <span className="player-answer">"{result.answer || '-'}"</span>
+                      <span className="points">{result.isCorrect ? `+${result.points}` : '0'}</span>
                     </div>
                   ))}
               </div>

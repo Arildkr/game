@@ -29,7 +29,8 @@ export const GameProvider = ({ children }) => {
 
   // Initialize socket connection
   useEffect(() => {
-    const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_SERVER_URL || 'http://localhost:3003';
+    // Alltid bruk Render-serveren
+    const SOCKET_SERVER_URL = 'https://game-p2u5.onrender.com';
 
     const newSocket = io(SOCKET_SERVER_URL, {
       transports: ['websocket', 'polling'],
@@ -108,9 +109,13 @@ export const GameProvider = ({ children }) => {
     });
 
     newSocket.on('game:ended', ({ room, results }) => {
-      setGameState('GAME_OVER');
-      setGameData(prev => ({ ...prev, results }));
-      if (room?.players) setPlayers(room.players);
+      // Avslutt tar alle tilbake til startsiden
+      setRoomCode(null);
+      setPlayers([]);
+      setIsHost(false);
+      setCurrentGame(null);
+      setGameState('LOBBY');
+      setGameData(null);
     });
 
     newSocket.on('game:state-sync', ({ room }) => {
@@ -170,11 +175,12 @@ export const GameProvider = ({ children }) => {
     }
   }, [socket, isHost]);
 
-  const sendGameAction = useCallback((action, data = {}) => {
-    if (socket && isHost) {
-      socket.emit('host:game-action', { action, ...data });
-    }
-  }, [socket, isHost]);
+ const sendGameAction = useCallback((action, data = {}) => {
+  if (socket && isHost) {
+    // Send data som et eget felt, ikke spre det ut
+    socket.emit('host:game-action', { action, data }); 
+  }
+}, [socket, isHost]);
 
   // Player actions
   const joinRoom = useCallback(({ playerName: name, roomCode: code }) => {
@@ -185,10 +191,11 @@ export const GameProvider = ({ children }) => {
   }, [socket]);
 
   const sendPlayerAction = useCallback((action, data = {}) => {
-    if (socket && !isHost) {
-      socket.emit('player:game-action', { action, ...data });
-    }
-  }, [socket, isHost]);
+  if (socket && !isHost) {
+    // Send data som et eget felt
+    socket.emit('player:game-action', { action, data });
+  }
+}, [socket, isHost]);
 
   // Retry connection
   const retryConnection = useCallback(() => {

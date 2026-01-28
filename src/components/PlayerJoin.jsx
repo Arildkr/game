@@ -26,19 +26,6 @@ function PlayerJoin() {
 
       <form onSubmit={handleSubmit} className="join-form">
         <div className="form-group">
-          <label htmlFor="playerName">Ditt navn:</label>
-          <input
-            id="playerName"
-            type="text"
-            value={playerName}
-            onChange={(e) => setPlayerName(e.target.value)}
-            placeholder="Skriv inn navnet ditt"
-            maxLength={20}
-            autoComplete="off"
-          />
-        </div>
-
-        <div className="form-group">
           <label htmlFor="roomCode">Romkode:</label>
           <input
             id="roomCode"
@@ -49,6 +36,19 @@ function PlayerJoin() {
             maxLength={6}
             autoComplete="off"
             className="room-code-input"
+          />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="playerName">Ditt navn:</label>
+          <input
+            id="playerName"
+            type="text"
+            value={playerName}
+            onChange={(e) => setPlayerName(e.target.value)}
+            placeholder="Skriv inn navnet ditt"
+            maxLength={20}
+            autoComplete="off"
           />
         </div>
 

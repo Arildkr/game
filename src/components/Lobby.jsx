@@ -32,47 +32,55 @@ function Lobby() {
           <span className="game-badge">
             {gameInfo.icon} {gameInfo.name}
           </span>
-          <button className="btn-close" onClick={resetGameState}>✕</button>
+          <button className="btn-close" onClick={resetGameState} title="Avslutt rom">✕</button>
         </div>
 
-        <div className="room-code-display">
-          <span className="room-code-label">Romkode:</span>
-          <span className="room-code-value">{roomCode}</span>
-        </div>
+        <div className="lobby-main-layout">
+          {/* Left side - Room info and start action */}
+          <div className="lobby-info-section">
+            <div className="room-code-display">
+              <span className="room-code-label">Romkode:</span>
+              <span className="room-code-value">{roomCode}</span>
+            </div>
 
-        <div className="join-url">
-          <span>game.ak-kreativ.no</span>
-        </div>
+            <div className="join-url">
+              <span>Gå inn på: <strong>game.ak-kreativ.no</strong></span>
+            </div>
 
-        <div className="players-section">
-          <h3>Spillere ({players.length})</h3>
-          {players.length === 0 ? (
-            <p className="no-players">Venter på at elever skal bli med...</p>
-          ) : (
-            <ul className="players-list">
-              {players.map((player) => (
-                <li key={player.id} className="player-item">
-                  <span className="player-name">{player.name}</span>
-                  <button
-                    className="btn-kick"
-                    onClick={() => kickPlayer(player.id)}
-                    title="Fjern spiller"
-                  >
-                    ✕
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+            <button
+              className="btn btn-start"
+              onClick={() => startGame()}
+              disabled={players.length === 0}
+            >
+              Start spill
+            </button>
+          </div>
 
-        <button
-          className="btn btn-start"
-          onClick={() => startGame()}
-          disabled={players.length === 0}
-        >
-          Start spill
-        </button>
+          {/* Right side - Player list */}
+          <aside className="players-sidebar">
+            <h3>Spillere ({players.length})</h3>
+            <div className="sidebar-content">
+              {players.length === 0 ? (
+                <p className="no-players">Venter på at elever skal bli med...</p>
+              ) : (
+                <ul className="players-list">
+                  {players.map((player) => (
+                    <li key={player.id} className="player-item">
+                      <span className="player-name">{player.name}</span>
+                      <button
+                        className="btn-kick"
+                        onClick={() => kickPlayer(player.id)}
+                        title="Fjern spiller"
+                      >
+                        ✕
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </aside>
+        </div>
       </div>
     );
   }

@@ -180,6 +180,13 @@
   background: #d97706;
 }
 
+.jaellernei-host .force-hint {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
+}
+
 /* Reveal phase */
 .jaellernei-host .reveal-phase {
   text-align: center;

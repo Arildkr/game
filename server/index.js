@@ -108,19 +108,19 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('host:game-action', ({ action, ...data }) => {
-    const roomCode = socketToRoom.get(socket.id);
-    const result = handleGameAction(roomCode, action, data);
-    if (result) {
-      // Emit appropriate events based on the action result
-      if (result.broadcast) {
-        io.to(roomCode).emit(result.event, result.data);
-      }
-      if (result.toPlayer) {
-        io.to(result.toPlayer).emit(result.playerEvent, result.playerData);
-      }
+
+socket.on('host:game-action', ({ action, data }) => { // Fjernet ...
+  const roomCode = socketToRoom.get(socket.id);
+  const result = handleGameAction(roomCode, action, data);
+  if (result) {
+    if (result.broadcast) {
+      io.to(roomCode).emit(result.event, result.data);
     }
-  });
+    if (result.toPlayer) {
+      io.to(result.toPlayer).emit(result.playerEvent, result.playerData);
+    }
+  }
+});
 
   // ==================
   // PLAYER EVENTS
@@ -146,25 +146,24 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('player:game-action', ({ action, ...data }) => {
-    const roomCode = socketToRoom.get(socket.id);
-    const result = handlePlayerAction(roomCode, socket.id, action, data);
-    if (result) {
-      // Emit appropriate events based on the action result
-      if (result.broadcast) {
-        io.to(roomCode).emit(result.event, result.data);
-      }
-      if (result.toHost) {
-        const room = rooms[roomCode];
-        if (room) {
-          io.to(room.hostId).emit(result.hostEvent, result.hostData);
-        }
-      }
-      if (result.toPlayer) {
-        socket.emit(result.playerEvent, result.playerData);
+socket.on('player:game-action', ({ action, data }) => { // Fjernet ...
+  const roomCode = socketToRoom.get(socket.id);
+  const result = handlePlayerAction(roomCode, socket.id, action, data);
+  if (result) {
+    if (result.broadcast) {
+      io.to(roomCode).emit(result.event, result.data);
+    }
+    if (result.toHost) {
+      const room = rooms[roomCode];
+      if (room) {
+        io.to(room.hostId).emit(result.hostEvent, result.hostData);
       }
     }
-  });
+    if (result.toPlayer) {
+      socket.emit(result.playerEvent, result.playerData);
+    }
+  }
+});
 
   // ==================
   // DISCONNECT

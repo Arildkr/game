@@ -16,7 +16,6 @@ function Home() {
           className="btn btn-host"
           onClick={() => navigate('/host')}
         >
-          <span className="btn-icon">👩‍🏫</span>
           <span className="btn-text">Jeg er lærer</span>
         </button>
 
@@ -24,14 +23,13 @@ function Home() {
           className="btn btn-join"
           onClick={() => navigate('/join')}
         >
-          <span className="btn-icon">🙋</span>
           <span className="btn-text">Jeg er elev</span>
         </button>
       </div>
 
       <footer className="home-footer">
-        <a href="https://brainbreak.ak-kreativ.no" className="back-link">
-          Tilbake til Brainbreak
+        <a href="https://www.ak-kreativ.no/aktiviteter" className="back-link">
+          Tilbake til Aktiviteter
         </a>
       </footer>
     </div>

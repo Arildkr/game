@@ -27,9 +27,16 @@ function HostGame() {
   useEffect(() => {
     if (!socket) return;
 
-    const handlePlayerAnswered = ({ playerId, answerCount: count }) => {
+    const handlePlayerAnswered = ({ playerId, answerCount: count, allAnswered }) => {
       setAnswerCount(count);
       setLocalAnswers(prev => ({ ...prev, [playerId]: true }));
+
+      // Auto-reveal when all players have answered
+      if (allAnswered && phase === 'question') {
+        setTimeout(() => {
+          sendGameAction('reveal-answer');
+        }, 500); // Small delay for dramatic effect
+      }
     };
 
     const handleAnswerRevealed = (data) => {
@@ -58,7 +65,7 @@ function HostGame() {
       socket.off('game:answer-revealed', handleAnswerRevealed);
       socket.off('game:ready-for-question', handleReadyForQuestion);
     };
-  }, [socket]);
+  }, [socket, phase, sendGameAction]);
 
   const alivePlayers = players.filter(p => !p.isEliminated && p.isConnected);
   const eliminatedPlayers = players.filter(p => p.isEliminated);
@@ -173,8 +180,13 @@ function HostGame() {
               className="btn btn-reveal"
               onClick={revealAnswer}
             >
-              Vis fasit
+              {answerCount < alivePlayers.length ? 'Tving fasit (uten svar = ute)' : 'Vis fasit'}
             </button>
+            {answerCount < alivePlayers.length && (
+              <p className="force-hint">
+                De som ikke har svart blir eliminert
+              </p>
+            )}
           </div>
         )}
 

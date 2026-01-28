@@ -1,5 +1,5 @@
 // game/src/games/quiz/PlayerGame.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useGame } from '../../contexts/GameContext';
 import './Quiz.css';
 
@@ -8,39 +8,30 @@ function PlayerGame() {
 
   const [phase, setPhase] = useState('waiting'); // waiting, question, answered, reveal, finished
   const [currentQuestion, setCurrentQuestion] = useState(null);
-  const [options, setOptions] = useState([]);
-  const [myAnswer, setMyAnswer] = useState(null);
+  const [myAnswer, setMyAnswer] = useState('');
+  const [hasSubmitted, setHasSubmitted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(20);
   const [revealData, setRevealData] = useState(null);
   const [myResult, setMyResult] = useState(null);
   const [myScore, setMyScore] = useState(0);
   const [myRank, setMyRank] = useState(0);
   const [leaderboard, setLeaderboard] = useState([]);
+  const inputRef = useRef(null);
 
   useEffect(() => {
     if (!socket) return;
 
-    const handleQuestionShown = ({ question, options: opts, timeLimit }) => {
+    const handleQuestionShown = ({ question, timeLimit }) => {
       setCurrentQuestion(question);
-      setOptions(opts);
       setPhase('question');
-      setMyAnswer(null);
+      setMyAnswer('');
+      setHasSubmitted(false);
       setRevealData(null);
       setMyResult(null);
       setTimeLeft(timeLimit);
 
-      // Client-side timer for display
-      const timer = setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-
-      return () => clearInterval(timer);
+      // Focus input
+      setTimeout(() => inputRef.current?.focus(), 100);
     };
 
     const handleAnswerRevealed = (data) => {
@@ -63,8 +54,8 @@ function PlayerGame() {
     const handleReadyForQuestion = ({ leaderboard: lb }) => {
       setPhase('waiting');
       setCurrentQuestion(null);
-      setOptions([]);
-      setMyAnswer(null);
+      setMyAnswer('');
+      setHasSubmitted(false);
       setRevealData(null);
       setLeaderboard(lb);
 
@@ -107,15 +98,28 @@ function PlayerGame() {
     };
   }, [socket]);
 
-  const submitAnswer = (answerIndex) => {
-    if (phase !== 'question' || myAnswer !== null) return;
+  // Client-side timer
+  useEffect(() => {
+    if (phase === 'question' && timeLeft > 0 && !hasSubmitted) {
+      const timer = setTimeout(() => setTimeLeft(t => t - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+    if (phase === 'question' && timeLeft === 0 && !hasSubmitted) {
+      // Auto-submit empty answer when time runs out
+      submitAnswer();
+    }
+  }, [phase, timeLeft, hasSubmitted]);
 
-    setMyAnswer(answerIndex);
+  const submitAnswer = (e) => {
+    if (e) e.preventDefault();
+    if (hasSubmitted) return;
+
+    setHasSubmitted(true);
     setPhase('answered');
 
     socket.emit('player:game-action', {
       action: 'answer',
-      answer: answerIndex
+      answer: myAnswer.trim()
     });
   };
 
@@ -176,7 +180,7 @@ function PlayerGame() {
 
         {/* Question phase */}
         {phase === 'question' && (
-          <div className="question-phase">
+          <div className="question-phase text-answer">
             <div className="timer-display">
               <div className={`timer-circle ${timeLeft <= 5 ? 'urgent' : ''}`}>
                 {timeLeft}
@@ -185,28 +189,35 @@ function PlayerGame() {
 
             <div className="question-text-mobile">{currentQuestion}</div>
 
-            <div className="answer-buttons">
-              {options.map((option, index) => (
-                <button
-                  key={index}
-                  className={`btn-option btn-option-${index}`}
-                  onClick={() => submitAnswer(index)}
-                >
-                  <span className="option-letter">{['A', 'B', 'C', 'D'][index]}</span>
-                  <span className="option-text">{option}</span>
-                </button>
-              ))}
-            </div>
+            <form className="answer-form" onSubmit={submitAnswer}>
+              <input
+                ref={inputRef}
+                type="text"
+                value={myAnswer}
+                onChange={(e) => setMyAnswer(e.target.value)}
+                placeholder="Skriv svaret ditt..."
+                autoComplete="off"
+                autoFocus
+                disabled={hasSubmitted}
+              />
+              <button
+                type="submit"
+                className="btn-submit"
+                disabled={hasSubmitted || !myAnswer.trim()}
+              >
+                Send svar
+              </button>
+            </form>
           </div>
         )}
 
         {/* Answered phase */}
         {phase === 'answered' && (
           <div className="answered-phase">
-            <div className="my-answer">
-              <p>Du valgte:</p>
-              <div className={`answer-display option-${myAnswer}`}>
-                {['A', 'B', 'C', 'D'][myAnswer]}
+            <div className="my-answer text-answer-display">
+              <p>Du svarte:</p>
+              <div className="answer-display">
+                "{myAnswer || '(ingen svar)'}"
               </div>
             </div>
             <p className="waiting-text">Venter på fasit...</p>
@@ -214,28 +225,43 @@ function PlayerGame() {
         )}
 
         {/* Reveal phase */}
-        {phase === 'reveal' && myResult && (
+        {phase === 'reveal' && (
           <div className="reveal-phase">
-            <div className={`result-display ${myResult.isCorrect ? 'correct' : 'wrong'}`}>
-              {myResult.isCorrect ? (
-                <>
-                  <div className="result-icon">✅</div>
-                  <h2>Riktig!</h2>
-                  <div className="points-earned">+{myResult.points} poeng</div>
-                </>
-              ) : (
-                <>
-                  <div className="result-icon">❌</div>
-                  <h2>Feil</h2>
-                  <div className="correct-was">
-                    Riktig svar: {['A', 'B', 'C', 'D'][revealData?.correctAnswer]}
-                  </div>
-                </>
-              )}
-            </div>
+            {myResult ? (
+              <div className={`result-display ${myResult.isCorrect ? 'correct' : 'wrong'}`}>
+                {myResult.isCorrect ? (
+                  <>
+                    <div className="result-icon">✅</div>
+                    <h2>Riktig!</h2>
+                    <div className="points-earned">+{myResult.points} poeng</div>
+                  </>
+                ) : (
+                  <>
+                    <div className="result-icon">❌</div>
+                    <h2>Feil</h2>
+                    <div className="correct-was">
+                      Riktig svar: {revealData?.correctAnswer}
+                    </div>
+                    {myResult.answer && (
+                      <div className="your-answer">
+                        Du svarte: "{myResult.answer}"
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="result-display wrong">
+                <div className="result-icon">❌</div>
+                <h2>Ikke svart</h2>
+                <div className="correct-was">
+                  Riktig svar: {revealData?.correctAnswer}
+                </div>
+              </div>
+            )}
 
             <div className="current-standing">
-              <p>Du er på <strong>{myRank}. plass</strong></p>
+              <p>Du er på <strong>{myRank > 0 ? myRank : '?'}. plass</strong></p>
               <p className="total-score">{myScore} poeng totalt</p>
             </div>
           </div>
