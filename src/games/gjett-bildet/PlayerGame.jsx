@@ -132,21 +132,23 @@ function PlayerGame() {
     }
   }, [penaltyActive, penaltyTime]);
 
-  const handleBuzz = () => {
-    if (!hasBuzzed && !currentPlayer && !penaltyActive && phase === 'playing') {
-      sendGameAction('buzz');
-      setHasBuzzed(true);
-      if (navigator.vibrate) navigator.vibrate(200);
-    }
-  };
+ const handleBuzz = () => {
+  if (!hasBuzzed && !currentPlayer && !penaltyActive && phase === 'playing') {
+    // Bruk sendPlayerAction i stedet for socket.emit
+    sendPlayerAction('buzz'); 
+    setHasBuzzed(true);
+    if (navigator.vibrate) navigator.vibrate(200);
+  }
+};
 
-  const handleSubmitGuess = (e) => {
-    e.preventDefault();
-    if (!hasSubmitted) {
-      sendGameAction('submit-guess', { guess: guess.trim() || 'TIDEN UTE' });
-      setHasSubmitted(true);
-    }
-  };
+const handleSubmitGuess = (e) => {
+  e.preventDefault();
+  if (!hasSubmitted) {
+    // Bruk sendPlayerAction i stedet for socket.emit
+    sendPlayerAction('submit-guess', { guess: guess.trim() || 'TIDEN UTE' });
+    setHasSubmitted(true);
+  }
+};
 
   // Game Over screen
   if (phase === 'gameOver') {
