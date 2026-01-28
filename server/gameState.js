@@ -3,6 +3,18 @@
 export const rooms = {};
 export const socketToRoom = new Map();
 
+// Norwegian alphabet for Slange game (removed difficult letters)
+const NORWEGIAN_LETTERS = 'ABCDEFGHIJKLMNOPRSTUVWY'.split('');
+
+function getRandomLetter() {
+  return NORWEGIAN_LETTERS[Math.floor(Math.random() * NORWEGIAN_LETTERS.length)];
+}
+
+function getLastLetter(word) {
+  const normalized = word.toUpperCase().trim();
+  return normalized[normalized.length - 1];
+}
+
 /**
  * Generates a random 6-character alphanumeric room code.
  */
@@ -113,10 +125,12 @@ function initializeGameData(game, players, config) {
     case 'gjett-bildet':
       return {
         currentImageIndex: 0,
-        revealedTiles: [],
+        revealStep: 0,
         buzzerQueue: [],
         currentPlayer: null,
-        pendingGuess: null
+        pendingGuess: null,
+        category: config.category || 'blanding',
+        mode: config.mode || 'blur'
       };
 
     case 'tallkamp':
@@ -130,19 +144,24 @@ function initializeGameData(game, players, config) {
     case 'tidslinje':
       return {
         events: [],
-        submissions: {}, // playerId -> [orderedEventIds]
-        timeLeft: 60
+        correctOrder: [],
+        buzzerQueue: [],
+        currentPlayer: null,
+        pendingOrder: null,
+        currentRound: 1,
+        timeLimit: 30000
       };
 
     case 'slange':
       return {
-        currentLetter: 'S',
+        currentLetter: getRandomLetter(),
         wordChain: [],
         usedWords: new Set(),
         buzzerQueue: [],
         currentPlayer: null,
         pendingWord: null,
-        mode: config.mode || 'samarbeid'
+        mode: config.mode || 'samarbeid',
+        category: config.category || 'blanding'
       };
 
     default:
@@ -348,13 +367,18 @@ function handleJaEllerNeiPlayerAction(room, playerId, action, data) {
       const { answer } = data; // 'yes' or 'no'
       gd.answers[playerId] = answer;
 
+      const alivePlayers = room.players.filter(p => !p.isEliminated && p.isConnected);
+      const answerCount = Object.keys(gd.answers).length;
+      const allAnswered = answerCount >= alivePlayers.length;
+
       return {
         broadcast: true,
         event: 'game:player-answered',
         data: {
           playerId,
-          answerCount: Object.keys(gd.answers).length,
-          totalPlayers: room.players.filter(p => !p.isEliminated && p.isConnected).length
+          answerCount,
+          totalPlayers: alivePlayers.length,
+          allAnswered
         }
       };
     }
@@ -367,6 +391,52 @@ function handleJaEllerNeiPlayerAction(room, playerId, action, data) {
 // ==================
 // QUIZ
 // ==================
+
+// Levenshtein distance for typo tolerance
+function levenshteinDistance(str1, str2) {
+  const m = str1.length;
+  const n = str2.length;
+  const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (str1[i - 1] === str2[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1];
+      } else {
+        dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+      }
+    }
+  }
+  return dp[m][n];
+}
+
+// Check if answer is correct (with typo tolerance)
+function checkQuizAnswer(userAnswer, correctAnswers) {
+  const normalized = userAnswer.toLowerCase().trim();
+  if (!normalized) return false;
+
+  return correctAnswers.some(answer => {
+    const correct = answer.toLowerCase();
+
+    // Exact match
+    if (correct === normalized) return true;
+
+    // Contains each other
+    if (correct.includes(normalized) || normalized.includes(correct)) {
+      const lengthRatio = Math.min(normalized.length, correct.length) / Math.max(normalized.length, correct.length);
+      if (lengthRatio >= 0.6) return true;
+    }
+
+    // Allow typos based on word length
+    const maxDistance = correct.length <= 4 ? 1 : correct.length <= 8 ? 2 : 3;
+    const distance = levenshteinDistance(normalized, correct);
+
+    return distance <= maxDistance;
+  });
+}
 
 function handleQuizHostAction(room, action, data) {
   const gd = room.gameData;
@@ -387,7 +457,6 @@ function handleQuizHostAction(room, action, data) {
         event: 'game:question-shown',
         data: {
           question: question.question,
-          options: question.options,
           questionIndex,
           timeLimit
         }
@@ -397,14 +466,20 @@ function handleQuizHostAction(room, action, data) {
     case 'reveal-answer': {
       // Host reveals the answer
       gd.showAnswer = true;
-      const correctIndex = gd.currentQuestion.correct;
+
+      // Defensive check: ensure we have a current question with answers
+      const correctAnswers = gd.currentQuestion?.answers || [];
+      if (correctAnswers.length === 0) {
+        console.error('Quiz reveal-answer: No correct answers found', gd.currentQuestion);
+      }
+
       const results = [];
 
       // Calculate points for each player
       for (const [playerId, answerData] of Object.entries(gd.answers)) {
         const player = room.players.find(p => p.id === playerId);
         if (player) {
-          const isCorrect = answerData.answer === correctIndex;
+          const isCorrect = correctAnswers.length > 0 && checkQuizAnswer(answerData.answer, correctAnswers);
           let points = 0;
 
           if (isCorrect) {
@@ -451,7 +526,7 @@ function handleQuizHostAction(room, action, data) {
         broadcast: true,
         event: 'game:answer-revealed',
         data: {
-          correctAnswer: correctIndex,
+          correctAnswer: correctAnswers[0] || 'Ukjent svar',
           results,
           leaderboard,
           questionIndex: gd.currentQuestionIndex - 1
@@ -506,15 +581,15 @@ function handleQuizPlayerAction(room, playerId, action, data) {
 
   switch (action) {
     case 'answer': {
-      // Player submits their answer
+      // Player submits their answer (text)
       if (gd.showAnswer) return null; // Too late
       if (gd.answers[playerId]) return null; // Already answered
 
-      const { answer } = data; // 0, 1, 2, or 3
+      const { answer } = data; // Text answer
       const timeTaken = Date.now() - gd.questionStartTime;
 
       gd.answers[playerId] = {
-        answer,
+        answer: answer || '',
         time: timeTaken
       };
 
@@ -539,13 +614,159 @@ function handleQuizPlayerAction(room, playerId, action, data) {
 // ==================
 
 function handleGjettBildetHostAction(room, action, data) {
-  // TODO: Implement
-  return null;
+  const gd = room.gameData;
+
+  switch (action) {
+    case 'reveal-step': {
+      const { step } = data;
+      gd.revealStep = step;
+
+      return {
+        broadcast: true,
+        event: 'game:reveal-step',
+        data: { step }
+      };
+    }
+
+    case 'select-player': {
+      const { playerId } = data;
+      const player = room.players.find(p => p.id === playerId);
+      if (!player) return null;
+
+      gd.currentPlayer = { id: playerId, name: player.name };
+      gd.buzzerQueue = [];
+      gd.pendingGuess = null;
+
+      return {
+        broadcast: true,
+        event: 'game:player-selected',
+        data: { playerId, playerName: player.name }
+      };
+    }
+
+    case 'validate-guess': {
+      const { playerId, isCorrect, correctAnswer } = data;
+      const player = room.players.find(p => p.id === playerId);
+
+      let points = 0;
+      if (isCorrect && player) {
+        // Points based on reveal step (earlier = more points)
+        const revealSteps = [10, 20, 35, 50, 70, 85, 100];
+        const stepIndex = gd.revealStep || 0;
+        points = Math.max(100, 1000 - (stepIndex * 150));
+        player.score = (player.score || 0) + points;
+      }
+
+      // Reset turn state
+      gd.currentPlayer = null;
+      gd.pendingGuess = null;
+
+      return {
+        broadcast: true,
+        event: 'game:guess-result',
+        data: {
+          playerId,
+          isCorrect,
+          correctAnswer,
+          points,
+          players: room.players.map(p => ({
+            id: p.id,
+            name: p.name,
+            score: p.score || 0
+          }))
+        }
+      };
+    }
+
+    case 'next-image': {
+      const { imageIndex } = data;
+      gd.currentImageIndex = imageIndex;
+      gd.revealStep = 0;
+      gd.buzzerQueue = [];
+      gd.currentPlayer = null;
+      gd.pendingGuess = null;
+
+      return {
+        broadcast: true,
+        event: 'game:next-image',
+        data: { imageIndex }
+      };
+    }
+
+    case 'clear-buzzer': {
+      gd.buzzerQueue = [];
+      gd.currentPlayer = null;
+      gd.pendingGuess = null;
+
+      return {
+        broadcast: true,
+        event: 'game:buzzer-cleared',
+        data: {}
+      };
+    }
+
+    case 'end-gjett-bildet': {
+      const leaderboard = room.players
+        .map(p => ({ id: p.id, name: p.name, score: p.score || 0 }))
+        .sort((a, b) => b.score - a.score);
+
+      return {
+        broadcast: true,
+        event: 'game:gjett-bildet-ended',
+        data: { leaderboard, winner: leaderboard[0] || null }
+      };
+    }
+
+    default:
+      return null;
+  }
 }
 
 function handleGjettBildetPlayerAction(room, playerId, action, data) {
-  // TODO: Implement
-  return null;
+  const gd = room.gameData;
+  const player = room.players.find(p => p.id === playerId);
+
+  if (!player) return null;
+
+  switch (action) {
+    case 'buzz': {
+      // Can't buzz if game not playing
+      if (room.gameState !== 'PLAYING') return null;
+
+      // Can't buzz if someone is already answering
+      if (gd.currentPlayer) return null;
+
+      // Can't buzz if already in queue
+      if (gd.buzzerQueue.includes(playerId)) return null;
+
+      gd.buzzerQueue.push(playerId);
+
+      return {
+        broadcast: true,
+        event: 'game:player-buzzed',
+        data: { playerId, playerName: player.name, buzzerQueue: gd.buzzerQueue }
+      };
+    }
+
+    case 'submit-guess': {
+      // Check if it's this player's turn
+      if (!gd.currentPlayer || gd.currentPlayer.id !== playerId) {
+        return null;
+      }
+
+      const { guess } = data;
+      gd.pendingGuess = { playerId, guess };
+
+      return {
+        broadcast: true,
+        event: 'game:guess-submitted',
+        data: { playerId, playerName: player.name, guess }
+      };
+    }
+
+    default:
+      return null;
+  }
 }
 
 // ==================
@@ -679,12 +900,17 @@ function handleTallkampPlayerAction(room, playerId, action, data) {
       const { expression, result } = data;
       gd.solutions[playerId] = { expression, result };
 
+      // Beregn differanse fra målet
+      const difference = result - gd.targetNumber;
+
       return {
         broadcast: true,
         event: 'game:player-submitted',
         data: {
           playerId,
           playerName: player.name,
+          result,
+          difference,
           submissionCount: Object.keys(gd.solutions).length
         }
       };
@@ -704,72 +930,55 @@ function handleTidslinjeHostAction(room, action, data) {
 
   switch (action) {
     case 'start-round': {
+      // Host starts a round - send events to all players so they can see before buzzing
       const { setName, events, correctOrder, timeLimit, round } = data;
       gd.events = events;
       gd.correctOrder = correctOrder;
-      gd.submissions = {};
       gd.timeLimit = timeLimit * 1000;
       gd.currentRound = round;
+      gd.buzzerQueue = [];
+      gd.currentPlayer = null;
+      gd.pendingOrder = null;
 
       return {
         broadcast: true,
         event: 'game:round-started',
-        data: { setName, events, timeLimit, round }
+        data: {
+          setName,
+          events: events.map(e => ({ id: e.id, text: e.text })), // Send events (without correct order)
+          timeLimit,
+          round
+        }
       };
     }
 
-    case 'reveal-round': {
-      const results = [];
-      const correctOrder = gd.correctOrder;
+    case 'select-player': {
+      // Host selects a player from the buzzer queue
+      const { playerId } = data;
+      const player = room.players.find(p => p.id === playerId);
+      if (!player) return null;
 
-      for (const player of room.players) {
-        const submission = gd.submissions[player.id];
-        let correctCount = 0;
-        let points = 0;
-
-        if (submission) {
-          // Count correct positions
-          for (let i = 0; i < submission.order.length; i++) {
-            if (submission.order[i] === correctOrder[i]) {
-              correctCount++;
-            }
-          }
-
-          // Points based on correct count
-          points = correctCount * 200;
-          if (correctCount === correctOrder.length) {
-            points += 500; // Perfect bonus
-          }
-
-          player.score += points;
-        }
-
-        results.push({
-          playerId: player.id,
-          playerName: player.name,
-          correctCount,
-          points,
-          totalScore: player.score
-        });
-      }
-
-      // Sort by correct count
-      results.sort((a, b) => b.correctCount - a.correctCount);
-
-      const leaderboard = room.players
-        .map(p => ({ id: p.id, name: p.name, score: p.score }))
-        .sort((a, b) => b.score - a.score);
+      gd.currentPlayer = { id: playerId, name: player.name };
+      gd.buzzerQueue = [];
+      gd.pendingOrder = null;
 
       return {
         broadcast: true,
-        event: 'game:round-revealed',
-        data: { results, leaderboard, correctOrder }
+        event: 'game:player-selected',
+        data: {
+          playerId,
+          playerName: player.name,
+          events: gd.events, // Send events to the selected player
+          timeLimit: gd.timeLimit / 1000
+        }
       };
     }
 
     case 'next-round': {
-      gd.submissions = {};
       gd.currentRound++;
+      gd.buzzerQueue = [];
+      gd.currentPlayer = null;
+      gd.pendingOrder = null;
 
       const leaderboard = room.players
         .map(p => ({ id: p.id, name: p.name, score: p.score }))
@@ -806,19 +1015,74 @@ function handleTidslinjePlayerAction(room, playerId, action, data) {
   if (!player) return null;
 
   switch (action) {
-    case 'submit': {
-      if (gd.submissions[playerId]) return null; // Already submitted
+    case 'buzz': {
+      // Can't buzz if game not playing
+      if (room.gameState !== 'PLAYING') return null;
 
-      const { order } = data;
-      gd.submissions[playerId] = { order };
+      // Can't buzz if someone is already sorting
+      if (gd.currentPlayer) return null;
+
+      // Can't buzz if already in queue
+      if (gd.buzzerQueue.includes(playerId)) return null;
+
+      gd.buzzerQueue.push(playerId);
 
       return {
         broadcast: true,
-        event: 'game:player-submitted',
+        event: 'game:player-buzzed',
+        data: { playerId, playerName: player.name, buzzerQueue: gd.buzzerQueue }
+      };
+    }
+
+    case 'submit-order': {
+      // Check if it's this player's turn
+      if (!gd.currentPlayer || gd.currentPlayer.id !== playerId) {
+        return null;
+      }
+
+      const { order } = data;
+      if (!order || order.length !== gd.correctOrder.length) return null;
+
+      // Calculate correctness
+      let correctCount = 0;
+      for (let i = 0; i < order.length; i++) {
+        if (order[i] === gd.correctOrder[i]) {
+          correctCount++;
+        }
+      }
+
+      const totalCount = gd.correctOrder.length;
+      const isCorrect = correctCount === totalCount;
+
+      // Award points: 200 per correct position, +500 bonus for perfect
+      let points = correctCount * 200;
+      if (isCorrect) {
+        points += 500;
+      }
+      player.score += points;
+
+      // Get updated leaderboard
+      const leaderboard = room.players
+        .map(p => ({ id: p.id, name: p.name, score: p.score }))
+        .sort((a, b) => b.score - a.score);
+
+      // Reset turn state
+      const sortingPlayer = gd.currentPlayer;
+      gd.currentPlayer = null;
+      gd.pendingOrder = null;
+
+      return {
+        broadcast: true,
+        event: 'game:sort-result',
         data: {
           playerId,
-          playerName: player.name,
-          submissionCount: Object.keys(gd.submissions).length
+          playerName: sortingPlayer.name,
+          isCorrect,
+          correctCount,
+          totalCount,
+          points,
+          correctOrder: gd.correctOrder,
+          leaderboard
         }
       };
     }
@@ -833,13 +1097,212 @@ function handleTidslinjePlayerAction(room, playerId, action, data) {
 // ==================
 
 function handleSlangeHostAction(room, action, data) {
-  // TODO: Implement
-  return null;
+  const gd = room.gameData;
+
+  switch (action) {
+    case 'select-player': {
+      const { playerId } = data;
+      const player = room.players.find(p => p.id === playerId);
+      if (!player) return null;
+
+      gd.currentPlayer = { id: playerId, name: player.name };
+      gd.buzzerQueue = [];
+      gd.pendingWord = null;
+
+      return {
+        broadcast: true,
+        event: 'game:player-selected',
+        data: { playerId, playerName: player.name }
+      };
+    }
+
+    case 'approve-word': {
+      if (!gd.pendingWord || !gd.currentPlayer) return null;
+
+      const word = gd.pendingWord;
+      const playerId = gd.currentPlayer.id;
+      const player = room.players.find(p => p.id === playerId);
+
+      // Add word to chain
+      gd.wordChain.push({
+        word: word,
+        playerId: playerId,
+        playerName: player?.name || 'Ukjent'
+      });
+
+      // Mark word as used
+      gd.usedWords.add(word.toLowerCase().trim());
+
+      // Update current letter to last letter of word
+      const newLetter = getLastLetter(word);
+      gd.currentLetter = newLetter;
+
+      // Update player stats
+      if (player) {
+        player.wordsSubmitted = (player.wordsSubmitted || 0) + 1;
+        if (gd.mode === 'konkurranse') {
+          player.score = (player.score || 0) + 10;
+        }
+      }
+
+      // Reset turn state
+      const currentPlayerId = gd.currentPlayer.id;
+      gd.currentPlayer = null;
+      gd.pendingWord = null;
+
+      // Reset all players' buzz ability
+      room.players.forEach(p => p.canBuzz = true);
+
+      return {
+        broadcast: true,
+        event: 'game:word-approved',
+        data: {
+          word,
+          playerId: currentPlayerId,
+          playerName: player?.name,
+          newLetter,
+          wordChain: gd.wordChain
+        }
+      };
+    }
+
+    case 'reject-word': {
+      if (!gd.currentPlayer) return null;
+
+      const playerId = gd.currentPlayer.id;
+      const player = room.players.find(p => p.id === playerId);
+
+      // Player can't buzz temporarily
+      if (player) {
+        player.canBuzz = false;
+        if (gd.mode === 'konkurranse') {
+          player.score = (player.score || 0) - 5;
+        }
+      }
+
+      // Reset turn state
+      gd.currentPlayer = null;
+      gd.pendingWord = null;
+
+      return {
+        broadcast: true,
+        event: 'game:word-rejected',
+        data: { playerId, reason: 'Avslatt av laerer' }
+      };
+    }
+
+    case 'skip-letter': {
+      const oldLetter = gd.currentLetter;
+      gd.currentLetter = getRandomLetter();
+
+      // Reset current player and pending word
+      gd.currentPlayer = null;
+      gd.pendingWord = null;
+      gd.buzzerQueue = [];
+
+      // Reset all players' buzz ability
+      room.players.forEach(p => p.canBuzz = true);
+
+      return {
+        broadcast: true,
+        event: 'game:letter-skipped',
+        data: { oldLetter, newLetter: gd.currentLetter }
+      };
+    }
+
+    default:
+      return null;
+  }
 }
 
 function handleSlangePlayerAction(room, playerId, action, data) {
-  // TODO: Implement
-  return null;
+  const gd = room.gameData;
+  const player = room.players.find(p => p.id === playerId);
+
+  if (!player) return null;
+
+  switch (action) {
+    case 'buzz': {
+      // Can't buzz if game not playing
+      if (room.gameState !== 'PLAYING') return null;
+
+      // Can't buzz if someone is already answering
+      if (gd.currentPlayer) return null;
+
+      // Can't buzz if already in queue
+      if (gd.buzzerQueue.includes(playerId)) return null;
+
+      // Can't buzz if player can't buzz (penalty)
+      if (player.canBuzz === false) return null;
+
+      gd.buzzerQueue.push(playerId);
+
+      return {
+        broadcast: true,
+        event: 'game:player-buzzed',
+        data: { playerId, playerName: player.name, buzzerQueue: gd.buzzerQueue }
+      };
+    }
+
+    case 'submit-word': {
+      // Check if it's this player's turn
+      if (!gd.currentPlayer || gd.currentPlayer.id !== playerId) {
+        return null;
+      }
+
+      const { word } = data;
+      if (!word || word.trim().length < 2) return null;
+
+      const normalizedWord = word.trim();
+      const firstLetter = normalizedWord.toUpperCase()[0];
+
+      // Check if word starts with correct letter
+      if (firstLetter !== gd.currentLetter) {
+        // Auto-reject wrong letter
+        player.canBuzz = false;
+        if (gd.mode === 'konkurranse') {
+          player.score = (player.score || 0) - 10;
+        }
+        gd.currentPlayer = null;
+        gd.pendingWord = null;
+
+        return {
+          broadcast: true,
+          event: 'game:word-rejected',
+          data: { playerId, reason: `Ordet ma begynne med ${gd.currentLetter}` }
+        };
+      }
+
+      // Check if word already used
+      if (gd.usedWords.has(normalizedWord.toLowerCase())) {
+        // Auto-reject duplicate
+        player.canBuzz = false;
+        if (gd.mode === 'konkurranse') {
+          player.score = (player.score || 0) - 5;
+        }
+        gd.currentPlayer = null;
+        gd.pendingWord = null;
+
+        return {
+          broadcast: true,
+          event: 'game:word-rejected',
+          data: { playerId, reason: 'Ordet er allerede brukt' }
+        };
+      }
+
+      // Word is valid, send to host for approval
+      gd.pendingWord = normalizedWord;
+
+      return {
+        broadcast: true,
+        event: 'game:word-submitted',
+        data: { playerId, playerName: player.name, word: normalizedWord }
+      };
+    }
+
+    default:
+      return null;
+  }
 }
 
 // ==================
