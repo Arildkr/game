@@ -109,20 +109,16 @@ io.on('connection', (socket) => {
   });
 
   socket.on('host:game-action', ({ action, ...data }) => {
-    try {
-      const roomCode = socketToRoom.get(socket.id);
-      const result = handleGameAction(roomCode, action, data);
-      if (result) {
-        // Emit appropriate events based on the action result
-        if (result.broadcast) {
-          io.to(roomCode).emit(result.event, result.data);
-        }
-        if (result.toPlayer) {
-          io.to(result.toPlayer).emit(result.playerEvent, result.playerData);
-        }
+    const roomCode = socketToRoom.get(socket.id);
+    const result = handleGameAction(roomCode, action, data);
+    if (result) {
+      // Emit appropriate events based on the action result
+      if (result.broadcast) {
+        io.to(roomCode).emit(result.event, result.data);
       }
-    } catch (error) {
-      console.error('Error handling host game action:', action, error);
+      if (result.toPlayer) {
+        io.to(result.toPlayer).emit(result.playerEvent, result.playerData);
+      }
     }
   });
 
@@ -151,26 +147,22 @@ io.on('connection', (socket) => {
   });
 
   socket.on('player:game-action', ({ action, ...data }) => {
-    try {
-      const roomCode = socketToRoom.get(socket.id);
-      const result = handlePlayerAction(roomCode, socket.id, action, data);
-      if (result) {
-        // Emit appropriate events based on the action result
-        if (result.broadcast) {
-          io.to(roomCode).emit(result.event, result.data);
-        }
-        if (result.toHost) {
-          const room = rooms[roomCode];
-          if (room) {
-            io.to(room.hostId).emit(result.hostEvent, result.hostData);
-          }
-        }
-        if (result.toPlayer) {
-          socket.emit(result.playerEvent, result.playerData);
+    const roomCode = socketToRoom.get(socket.id);
+    const result = handlePlayerAction(roomCode, socket.id, action, data);
+    if (result) {
+      // Emit appropriate events based on the action result
+      if (result.broadcast) {
+        io.to(roomCode).emit(result.event, result.data);
+      }
+      if (result.toHost) {
+        const room = rooms[roomCode];
+        if (room) {
+          io.to(room.hostId).emit(result.hostEvent, result.hostData);
         }
       }
-    } catch (error) {
-      console.error('Error handling player game action:', action, error);
+      if (result.toPlayer) {
+        socket.emit(result.playerEvent, result.playerData);
+      }
     }
   });
 

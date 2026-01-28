@@ -1,0 +1,185 @@
+/* game/src/games/gjett-bildet/GjettBildet.css */
+
+.gjett-bildet-host {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #111;
+  color: white;
+}
+
+.gjett-bildet-host .game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #222;
+}
+
+.gjett-bildet-host .host-main-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.gjett-bildet-host .image-grid-container {
+  flex: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  position: relative;
+}
+
+.gjett-bildet-host .image-grid {
+  display: grid;
+  width: 80vh;
+  height: 80vh;
+  max-width: 80vw;
+  max-height: 80vw;
+  position: relative;
+  border: 2px solid #fff;
+}
+
+.gjett-bildet-host .grid-tile {
+  background: #333;
+  border: 1px solid #444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.3s;
+  color: #666;
+}
+
+.gjett-bildet-host .grid-tile:hover {
+  background: #444;
+}
+
+.gjett-bildet-host .grid-tile.revealed {
+  background: transparent;
+  cursor: default;
+  color: transparent;
+}
+
+.gjett-bildet-host .hidden-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -1;
+}
+
+.gjett-bildet-host .answer-display {
+    margin-top: 1rem;
+    height: 60px;
+}
+
+.gjett-bildet-host .revealed-answer-text {
+    font-size: 2rem;
+    color: #ffc107;
+}
+
+.gjett-bildet-host .host-sidebar {
+  flex: 1;
+  padding: 1rem;
+  background: #1a1a1a;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.gjett-bildet-host .buzzer-queue-section,
+.gjett-bildet-host .current-player-section,
+.gjett-bildet-host .leaderboard-section {
+  background: #222;
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.gjett-bildet-host .buzzer-list, .leaderboard-list {
+  list-style: none;
+}
+
+.gjett-bildet-host .buzzer-list li {
+  padding: 0.5rem;
+  cursor: pointer;
+  background: #444;
+  margin-bottom: 0.5rem;
+  border-radius: 4px;
+}
+.gjett-bildet-host .buzzer-list li.disabled {
+    cursor: not-allowed;
+    background: #333;
+    opacity: 0.6;
+}
+
+
+.gjett-bildet-host .pending-guess .guess-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+
+/* Player Styles */
+.gjett-bildet-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: #111;
+  color: white;
+  text-align: center;
+}
+
+.gjett-bildet-player .buzz-button {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: red;
+  color: white;
+  font-size: 2rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.gjett-bildet-player .buzz-button.buzzed,
+.gjett-bildet-player .buzz-button:disabled {
+  background: #555;
+  cursor: not-allowed;
+}
+
+.gjett-bildet-player .answering-screen,
+.gjett-bildet-player .waiting-screen {
+    padding: 2rem;
+}
+
+.gjett-bildet-player .guess-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    align-items: center;
+}
+
+.gjett-bildet-player .guess-form input {
+    padding: 0.75rem;
+    font-size: 1.2rem;
+    width: 300px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+}
+
+.gjett-bildet-player .guess-form button {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    background: #10b981;
+    color: white;
+    border: none;
+    border-radius: 8px;
+}

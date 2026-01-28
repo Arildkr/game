@@ -1,0 +1,854 @@
+/* Slange Game Styles */
+
+/* =================== */
+/* HOST GAME */
+/* =================== */
+
+.slange-host {
+  display: grid;
+  grid-template-columns: 1fr 250px;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: white;
+}
+
+.slange-host .game-header {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.slange-host .game-info {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.slange-host .category-badge,
+.slange-host .mode-badge {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+}
+
+.slange-host .room-info {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.slange-host .room-code {
+  font-family: monospace;
+  font-size: 1.1rem;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+}
+
+.slange-host .game-main {
+  display: grid;
+  grid-template-columns: 1fr 350px;
+  gap: 2rem;
+  padding: 2rem;
+  overflow: auto;
+}
+
+/* Word Chain Section */
+.slange-host .word-chain-section {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 1.5rem;
+}
+
+.slange-host .chain-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.slange-host .chain-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.slange-host .chain-stats {
+  text-align: center;
+}
+
+.slange-host .stat-value {
+  display: block;
+  font-size: 2rem;
+  font-weight: bold;
+  color: #4ade80;
+}
+
+.slange-host .stat-label {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.slange-host .chain-empty {
+  text-align: center;
+  padding: 3rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.slange-host .start-letter {
+  display: block;
+  font-size: 5rem;
+  font-weight: bold;
+  color: #4ade80;
+  margin-top: 1rem;
+}
+
+/* Snake Display */
+.slange-host .snake-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.slange-host .snake-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.slange-host .snake-row.reversed {
+  flex-direction: row-reverse;
+}
+
+.slange-host .snake-segment {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  min-width: 120px;
+  text-align: center;
+}
+
+.slange-host .snake-head {
+  background: linear-gradient(135deg, #eab308, #ca8a04);
+}
+
+.slange-host .snake-tail {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.slange-host .segment-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.slange-host .segment-word {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.slange-host .segment-connector {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.slange-host .segment-player {
+  display: block;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 0.25rem;
+}
+
+.slange-host .snake-turn {
+  font-size: 1.5rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Next Letter Display */
+.slange-host .next-letter-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+}
+
+.slange-host .next-letter-display .label {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.slange-host .next-letter-display .letter {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #4ade80;
+}
+
+/* Control Panel */
+.slange-host .control-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.slange-host .pending-word-card,
+.slange-host .waiting-card {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.slange-host .pending-player {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+}
+
+.slange-host .pending-word {
+  font-size: 2rem;
+  font-weight: bold;
+  margin: 1rem 0;
+  color: #fbbf24;
+}
+
+.slange-host .pending-check {
+  margin-bottom: 1.5rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.slange-host .pending-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.slange-host .waiting-info {
+  margin-bottom: 1rem;
+}
+
+.slange-host .waiting-name {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.slange-host .waiting-text {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.slange-host .timer-display {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto;
+}
+
+.slange-host .timer-ring {
+  transform: rotate(-90deg);
+}
+
+.slange-host .timer-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 8;
+}
+
+.slange-host .timer-progress {
+  fill: none;
+  stroke: #4ade80;
+  stroke-width: 8;
+  stroke-linecap: round;
+  stroke-dasharray: 283;
+  transition: stroke-dashoffset 1s linear;
+}
+
+.slange-host .timer-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+/* Buzzer Section */
+.slange-host .buzzer-section {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 1.5rem;
+}
+
+.slange-host .buzzer-section h3 {
+  margin: 0 0 1rem 0;
+  text-align: center;
+}
+
+.slange-host .buzzer-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.slange-host .buzzer-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.75rem;
+  border-radius: 8px;
+}
+
+.slange-host .buzzer-position {
+  background: #fbbf24;
+  color: black;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.8rem;
+}
+
+.slange-host .buzzer-name {
+  flex: 1;
+}
+
+/* Waiting for buzz */
+.slange-host .waiting-buzz {
+  text-align: center;
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+}
+
+.slange-host .waiting-buzz-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.slange-host .waiting-buzz .hint {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+/* Players Sidebar */
+.slange-host .players-sidebar {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1.5rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.slange-host .players-sidebar h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+}
+
+.slange-host .sidebar-hint {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.8rem;
+  margin: 0 0 1rem 0;
+}
+
+.slange-host .player-stats-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.slange-host .player-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  cursor: default;
+  transition: all 0.2s;
+}
+
+.slange-host .player-stat-item.selectable {
+  cursor: pointer;
+}
+
+.slange-host .player-stat-item.selectable:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.slange-host .player-stat-item.active {
+  background: rgba(74, 222, 128, 0.3);
+  border: 1px solid #4ade80;
+}
+
+.slange-host .player-stat-item.penalty {
+  opacity: 0.5;
+}
+
+.slange-host .player-rank {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.85rem;
+  min-width: 20px;
+}
+
+.slange-host .player-name {
+  flex: 1;
+  font-weight: 500;
+}
+
+.slange-host .player-words {
+  font-weight: bold;
+  color: #4ade80;
+}
+
+.slange-host .player-words.negative {
+  color: #f87171;
+}
+
+/* Buttons */
+.slange-host .btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.slange-host .btn-end {
+  background: #ef4444;
+  color: white;
+}
+
+.slange-host .btn-end:hover {
+  background: #dc2626;
+}
+
+.slange-host .btn-approve {
+  background: #22c55e;
+  color: white;
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
+}
+
+.slange-host .btn-approve:hover {
+  background: #16a34a;
+}
+
+.slange-host .btn-reject {
+  background: #ef4444;
+  color: white;
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
+}
+
+.slange-host .btn-reject:hover {
+  background: #dc2626;
+}
+
+.slange-host .btn-select {
+  background: #3b82f6;
+  color: white;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+}
+
+.slange-host .btn-select:hover {
+  background: #2563eb;
+}
+
+.slange-host .btn-skip {
+  background: #f59e0b;
+  color: white;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+}
+
+.slange-host .btn-skip:hover {
+  background: #d97706;
+}
+
+/* =================== */
+/* PLAYER GAME */
+/* =================== */
+
+.slange-player {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: white;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Result Screen */
+.slange-player.result-screen {
+  justify-content: center;
+  align-items: center;
+}
+
+.slange-player.result-screen.approved {
+  background: linear-gradient(135deg, #166534, #15803d);
+}
+
+.slange-player.result-screen.rejected {
+  background: linear-gradient(135deg, #991b1b, #b91c1c);
+}
+
+.slange-player .result-content {
+  text-align: center;
+}
+
+.slange-player .result-icon {
+  font-size: 5rem;
+  margin-bottom: 1rem;
+}
+
+.slange-player .result-content h2 {
+  font-size: 2rem;
+  margin: 0;
+}
+
+/* My Turn Screen */
+.slange-player.my-turn {
+  padding: 2rem;
+  justify-content: center;
+}
+
+.slange-player .turn-content {
+  max-width: 400px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.slange-player .turn-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.slange-player .category-tag {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+}
+
+.slange-player .timer-tag {
+  background: #22c55e;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-weight: bold;
+}
+
+.slange-player .timer-tag.urgent {
+  background: #ef4444;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.slange-player .turn-title {
+  font-size: 1.5rem;
+  margin: 0 0 1.5rem 0;
+}
+
+.slange-player .letter-box {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+
+.slange-player .letter-big {
+  font-size: 5rem;
+  font-weight: bold;
+  color: #4ade80;
+}
+
+.slange-player .word-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.slange-player .word-form input {
+  padding: 1rem;
+  font-size: 1.2rem;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  text-align: center;
+}
+
+.slange-player .word-form input:focus {
+  outline: none;
+  border-color: #4ade80;
+}
+
+.slange-player .word-form input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.slange-player .word-form button {
+  padding: 1rem;
+  font-size: 1.2rem;
+  font-weight: bold;
+  background: #22c55e;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.slange-player .word-form button:disabled {
+  background: rgba(255, 255, 255, 0.2);
+  cursor: not-allowed;
+}
+
+.slange-player .word-form button:not(:disabled):hover {
+  background: #16a34a;
+}
+
+.slange-player .submitted-state {
+  padding: 2rem;
+}
+
+.slange-player .submitted-word {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #fbbf24;
+  margin: 0 0 1rem 0;
+}
+
+.slange-player .submitted-text {
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
+}
+
+.slange-player .last-word-hint {
+  margin-top: 1.5rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Waiting View */
+.slange-player.waiting-view {
+  padding: 2rem;
+  justify-content: center;
+}
+
+.slange-player .waiting-content {
+  max-width: 350px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.slange-player .player-badge {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  display: inline-block;
+  margin-bottom: 2rem;
+}
+
+.slange-player .letter-display-large {
+  margin-bottom: 2rem;
+}
+
+.slange-player .letter-label {
+  display: block;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 0.5rem;
+}
+
+.slange-player .letter-huge {
+  font-size: 8rem;
+  font-weight: bold;
+  color: #4ade80;
+  line-height: 1;
+}
+
+/* Watching Section */
+.slange-player .watching-section {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1.5rem;
+  border-radius: 16px;
+  margin-bottom: 2rem;
+}
+
+.slange-player .watching-text {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.slange-player .pending-word-display {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.slange-player .pending-label {
+  display: block;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.slange-player .pending-text {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #fbbf24;
+}
+
+/* Queue Section */
+.slange-player .queue-section {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2rem;
+  border-radius: 16px;
+  margin-bottom: 2rem;
+}
+
+.slange-player .queue-number {
+  display: block;
+  font-size: 4rem;
+  font-weight: bold;
+  color: #fbbf24;
+}
+
+.slange-player .queue-text {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Cooldown Section */
+.slange-player .cooldown-section {
+  margin-bottom: 2rem;
+}
+
+.slange-player .cooldown-circle {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.2);
+  border: 4px solid #ef4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem auto;
+}
+
+.slange-player .cooldown-number {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #ef4444;
+}
+
+.slange-player .cooldown-text {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Buzz Button */
+.slange-player .buzz-button {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 2rem auto;
+  transition: all 0.2s;
+  box-shadow: 0 8px 30px rgba(251, 191, 36, 0.4);
+}
+
+.slange-player .buzz-button:hover {
+  transform: scale(1.05);
+}
+
+.slange-player .buzz-button:active {
+  transform: scale(0.95);
+}
+
+.slange-player .buzz-icon {
+  font-size: 3rem;
+}
+
+.slange-player .buzz-label {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: white;
+  margin-top: 0.5rem;
+}
+
+/* Chain Info */
+.slange-player .chain-info {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.9rem;
+}
+
+.slange-player .last-word {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .slange-host {
+    grid-template-columns: 1fr;
+  }
+
+  .slange-host .game-main {
+    grid-template-columns: 1fr;
+  }
+
+  .slange-host .players-sidebar {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .slange-host .game-header {
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .slange-host .game-main {
+    padding: 1rem;
+  }
+
+  .slange-player .letter-huge {
+    font-size: 6rem;
+  }
+
+  .slange-player .buzz-button {
+    width: 150px;
+    height: 150px;
+  }
+}
