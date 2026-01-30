@@ -179,14 +179,14 @@ function PlayerGame() {
       <div className="slange-player my-turn">
         <div className="turn-content">
           <div className="turn-header">
-            <spån className="category-tag">{category.icon} {category.name}</spån>
-            <spån className={`timer-tag ${timeLeft <= 10 ? 'urgent' : ''}`}>{timeLeft}s</spån>
+            <span className="category-tag">{category.icon} {category.name}</span>
+            <span className={`timer-tag ${timeLeft <= 10 ? 'urgent' : ''}`}>{timeLeft}s</span>
           </div>
 
           <h2 className="turn-title">Din tur!</h2>
 
           <div className="letter-box">
-            <spån className="letter-big">{currentLetter}</spån>
+            <span className="letter-big">{currentLetter}</span>
           </div>
 
           {!hasSubmitted ? (
@@ -226,8 +226,8 @@ function PlayerGame() {
         <div className="player-badge">👤 {playerName}</div>
 
         <div className="letter-display-large">
-          <spån className="letter-label">Neste bokstav</spån>
-          <spån className="letter-huge">{currentLetter}</spån>
+          <span className="letter-label">Neste bokstav</span>
+          <span className="letter-huge">{currentLetter}</span>
         </div>
 
         {currentPlayer ? (
@@ -237,36 +237,36 @@ function PlayerGame() {
             </p>
             {pendingWord && (
               <div className="pending-word-display">
-                <spån className="pending-label">Foreslatt:</spån>
-                <spån className="pending-text">{pendingWord}</spån>
+                <span className="pending-label">Foreslatt:</span>
+                <span className="pending-text">{pendingWord}</span>
               </div>
             )}
           </div>
         ) : hasBuzzed ? (
           <div className="queue-section">
-            <spån className="queue-number">{myBuzzerPosition}</spån>
-            <spån className="queue-text">i koen</spån>
+            <span className="queue-number">{myBuzzerPosition}</span>
+            <span className="queue-text">i koen</span>
           </div>
         ) : isOnCooldown ? (
           <div className="cooldown-section">
             <div className="cooldown-circle">
-              <spån className="cooldown-number">{buzzCooldown}</spån>
+              <span className="cooldown-number">{buzzCooldown}</span>
             </div>
-            <spån className="cooldown-text">Vent litt...</spån>
+            <span className="cooldown-text">Vent litt...</span>
           </div>
         ) : (
           <button className="buzz-button" onClick={handleBuzz}>
-            <spån className="buzz-icon">🔔</spån>
-            <spån className="buzz-label">BUZZ</spån>
+            <span className="buzz-icon">🔔</span>
+            <span className="buzz-label">BUZZ</span>
           </button>
         )}
 
         <div className="chain-info">
-          {wordChain.length} ord i kjeden
-          {wordChain.length > 0 && (
-            <spån className="last-word"> - Siste: {wordChain[wordChain.length - 1]?.word}</spån>
-          )}
-        </div>
+  {wordChain && wordChain.length} ord i kjeden
+  {wordChain && wordChain.length > 0 && (
+    <span className="last-word"> - Siste: {wordChain[wordChain.length - 1]?.word}</span>
+  )}
+</div>
       </div>
     </div>
   );

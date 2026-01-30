@@ -928,16 +928,30 @@ function handleSlangeHostAction(room, action, data) {
         data: { playerId: data.playerId, playerName: player?.name }
       };
 
-    case 'approve-word':
-      // Her legger vi til logikk for å godkjenne ordet og bytte bokstav
-      // Dette kan utvides senere, men for nå nullstiller vi tilstand
-      gd.currentPlayer = null;
-      gd.pendingWord = null;
-      return {
-        broadcast: true,
-        event: 'game:word-approved',
-        data: { /* data for ordkjeden */ }
-      };
+  case 'approve-word': {
+  const newWord = { 
+    word: gd.pendingWord, 
+    playerName: gd.currentPlayer?.name,
+    timestamp: Date.now() 
+  };
+  
+  // Oppdater serverens tilstand
+  gd.wordChain.push(newWord);
+  gd.currentLetter = newWord.word.slice(-1).toUpperCase();
+  gd.currentPlayer = null;
+  gd.pendingWord = null;
+
+  return {
+    broadcast: true,
+    event: 'game:word-approved',
+    data: { 
+      word: newWord.word,
+      playerName: newWord.playerName,
+      newLetter: gd.currentLetter,
+      wordChain: gd.wordChain // Sender hele den oppdaterte kjeden
+    }
+  };
+}
 
     case 'skip-letter':
       return {
