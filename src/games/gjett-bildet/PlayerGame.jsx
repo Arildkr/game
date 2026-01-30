@@ -4,8 +4,8 @@ import { useGame } from '../../contexts/GameContext';
 import './GjettBildet.css';
 
 function PlayerGame() {
-  const { socket, playerName, players, sendGameAction } = useGame();
-
+  const { socket, playerName, players, sendPlayerAction } = useGame();
+  
   const [phase, setPhase] = useState('playing'); // playing, answering, waiting, roundEnd, gameOver
   const [buzzerQueue, setBuzzerQueue] = useState([]);
   const [currentPlayer, setCurrentPlayer] = useState(null);

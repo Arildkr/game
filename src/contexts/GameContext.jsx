@@ -175,10 +175,10 @@ export const GameProvider = ({ children }) => {
     }
   }, [socket, isHost]);
 
- const sendGameAction = useCallback((action, data = {}) => {
+const sendGameAction = useCallback((action, data = {}) => {
   if (socket && isHost) {
-    // Send data som et eget felt, ikke spre det ut
-    socket.emit('host:game-action', { action, data }); 
+    // Vi sender action og data som to separate felt i ett objekt
+    socket.emit('host:game-action', { action, data });
   }
 }, [socket, isHost]);
 
@@ -190,9 +190,9 @@ export const GameProvider = ({ children }) => {
     }
   }, [socket]);
 
-  const sendPlayerAction = useCallback((action, data = {}) => {
+const sendPlayerAction = useCallback((action, data = {}) => {
   if (socket && !isHost) {
-    // Send data som et eget felt
+    // Samme her for spiller-handlinger
     socket.emit('player:game-action', { action, data });
   }
 }, [socket, isHost]);

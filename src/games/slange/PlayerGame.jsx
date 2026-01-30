@@ -5,7 +5,7 @@ import { categories } from '../../data/slangeCategories';
 import './Slange.css';
 
 function PlayerGame() {
-  const { socket, playerName, gameData } = useGame();
+  const { socket, playerName, gameData, myPlayerId, sendPlayerAction } = useGame();
 
   const [wordChain, setWordChain] = useState([]);
   const [currentLetter, setCurrentLetter] = useState('S');
@@ -13,7 +13,7 @@ function PlayerGame() {
   const [currentPlayer, setCurrentPlayer] = useState(null);
   const [pendingWord, setPendingWord] = useState(null);
   const [config, setConfig] = useState({ category: 'blanding', mode: 'samarbeid' });
-  const [myPlayerId, setMyPlayerId] = useState(null);
+  
 
   const [word, setWord] = useState('');
   const [hasSubmitted, setHasSubmitted] = useState(false);
@@ -27,12 +27,6 @@ function PlayerGame() {
   const myBuzzerPosition = buzzerQueue.indexOf(myPlayerId) + 1;
   const hasBuzzed = myBuzzerPosition > 0;
   const isOnCooldown = buzzCooldown > 0;
-
-  useEffect(() => {
-    if (socket) {
-      setMyPlayerId(socket.id);
-    }
-  }, [socket]);
 
   // Initialize from gameData
   useEffect(() => {
@@ -141,17 +135,19 @@ function PlayerGame() {
     }
   }, [isMyTurn]);
 
-  const handleBuzz = () => {
+ const handleBuzz = () => {
     if (!hasBuzzed && !currentPlayer && !isOnCooldown) {
-      socket.emit('player:game-action', { action: 'buzz' });
+      // Bruk sendPlayerAction slik læreren forventer i index.js
+      sendPlayerAction('buzz'); 
       if (navigator.vibrate) navigator.vibrate(100);
     }
   };
 
-  const handleSubmit = (e) => {
+ const handleSubmit = (e) => {
     e.preventDefault();
     if (word.trim() && isMyTurn && !hasSubmitted) {
-      socket.emit('player:game-action', { action: 'submit-word', word: word.trim() });
+      // Bruk sendPlayerAction her også
+      sendPlayerAction('submit-word', { word: word.trim() });
       setHasSubmitted(true);
     }
   };

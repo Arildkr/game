@@ -912,14 +912,74 @@ function handleTidslinjePlayerAction(room, playerId, action, data) {
 // SLANGE
 // ==================
 
+// Finn handleSlangeHostAction (linje 586) og erstatt med:
 function handleSlangeHostAction(room, action, data) {
-  // TODO: Implement
-  return null;
+  const gd = room.gameData;
+  if (!gd) return null;
+
+  switch (action) {
+    case 'select-player':
+      const player = room.players.find(p => p.id === data.playerId);
+      gd.currentPlayer = { id: data.playerId, name: player?.name };
+      gd.buzzerQueue = [];
+      return {
+        broadcast: true,
+        event: 'game:player-selected',
+        data: { playerId: data.playerId, playerName: player?.name }
+      };
+
+    case 'approve-word':
+      // Her legger vi til logikk for å godkjenne ordet og bytte bokstav
+      // Dette kan utvides senere, men for nå nullstiller vi tilstand
+      gd.currentPlayer = null;
+      gd.pendingWord = null;
+      return {
+        broadcast: true,
+        event: 'game:word-approved',
+        data: { /* data for ordkjeden */ }
+      };
+
+    case 'skip-letter':
+      return {
+        broadcast: true,
+        event: 'game:letter-skipped',
+        data: { newLetter: 'A' } // Eksempel
+      };
+
+    default:
+      return null;
+  }
 }
 
+// Finn handleSlangePlayerAction (linje 591) og erstatt med:
 function handleSlangePlayerAction(room, playerId, action, data) {
-  // TODO: Implement
-  return null;
+  const gd = room.gameData;
+  if (!gd) return null;
+
+  switch (action) {
+    case 'buzz':
+      // Legg spilleren i køen hvis de ikke er der og ingen er valgt
+      if (!gd.buzzerQueue.includes(playerId) && !gd.currentPlayer) {
+        gd.buzzerQueue.push(playerId);
+        return {
+          broadcast: true,
+          event: 'game:player-buzzed',
+          data: { playerId, buzzerQueue: gd.buzzerQueue }
+        };
+      }
+      return null;
+
+    case 'submit-word':
+      gd.pendingWord = data.word;
+      return {
+        broadcast: true,
+        event: 'game:word-submitted',
+        data: { playerId, word: data.word }
+      };
+
+    default:
+      return null;
+  }
 }
 
 // ==================
