@@ -57,18 +57,21 @@ export const GameProvider = ({ children }) => {
     const SOCKET_SERVER_URL = 'https://game-p2u5.onrender.com';
 
     const newSocket = io(SOCKET_SERVER_URL, {
-      // Bruk polling først for bedre kompatibilitet med Render cold starts
-      transports: ['polling', 'websocket'],
+      // Bruk websocket først - polling kan ha CORS-problemer
+      transports: ['websocket', 'polling'],
       // Øk timeout for trege cold starts
-      timeout: 45000,
+      timeout: 60000,
       // Reduser aggressiv reconnection
-      reconnectionAttempts: 5,
-      reconnectionDelay: 3000,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 2000,
       reconnectionDelayMax: 10000,
-      // Ikke koble fra ved feil - la socket.io håndtere det
+      // Randomisering for å unngå thundering herd
+      randomizationFactor: 0.5,
+      // Ikke lag ny socket ved hver reconnect
       forceNew: false,
-      // Unngå at gamle sockets henger igjen
-      autoConnect: true
+      autoConnect: true,
+      // Viktig: withCredentials for CORS
+      withCredentials: true
     });
 
     setSocket(newSocket);
@@ -85,16 +88,20 @@ export const GameProvider = ({ children }) => {
     newSocket.on('disconnect', (reason) => {
       console.log('Disconnected from socket server:', reason);
       setIsConnected(false);
-      // Hvis serveren stengte forbindelsen, ikke sett isConnecting til true
+      // Ikke kall connect() manuelt - socket.io håndterer reconnection automatisk
+      // Dette forhindrer uendelig loop
       if (reason === 'io server disconnect') {
-        // Serveren disconnected oss - prøv å koble til på nytt
-        newSocket.connect();
+        // Server avsluttet tilkoblingen med vilje - ikke reconnect automatisk
+        console.log('Server closed connection intentionally');
       }
     });
 
     newSocket.on('reconnect_attempt', (attempt) => {
       console.log(`Reconnection attempt ${attempt}`);
-      setIsConnecting(true);
+      // Bare oppdater UI ved første forsøk for å unngå flimring
+      if (attempt === 1) {
+        setIsConnecting(true);
+      }
     });
 
     newSocket.on('reconnect', () => {
@@ -102,10 +109,16 @@ export const GameProvider = ({ children }) => {
       setIsConnecting(false);
     });
 
+    newSocket.on('reconnect_failed', () => {
+      console.log('Reconnection failed after all attempts');
+      setIsConnecting(false);
+      setConnectionError('Kunne ikke koble til serveren. Prøv å laste siden på nytt.');
+    });
+
     newSocket.on('connect_error', (err) => {
-      console.error('Socket connection error:', err);
-      setConnectionError('Prøver å koble til serveren...');
-      setIsConnected(false);
+      console.error('Socket connection error:', err.message);
+      // Ikke oppdater state for hver feil - vent på reconnect_failed
+      // Dette forhindrer uendelig re-render loop
     });
 
     // Room events

@@ -1,6 +1,7 @@
 // Klassespill Server
 import express from 'express';
 import http from 'http';
+import cors from 'cors';
 import { Server } from 'socket.io';
 import {
   rooms,
@@ -30,12 +31,37 @@ const allowedOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:5173')
 
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
-    methods: ['GET', 'POST']
-  }
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl, etc)
+      if (!origin) return callback(null, true);
+      // Allow all origins in list, or all if wildcard
+      if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      // Also allow any *.vercel.app or *.netlify.app for staging
+      if (origin.endsWith('.vercel.app') || origin.endsWith('.netlify.app') || origin.includes('localhost')) {
+        return callback(null, true);
+      }
+      callback(null, true); // Allow all for now to debug
+    },
+    methods: ['GET', 'POST'],
+    credentials: true
+  },
+  // Stabilitet for Render cold starts
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  // Bruk websocket primært, med polling som fallback
+  transports: ['websocket', 'polling'],
+  allowUpgrades: true
 });
 
 const PORT = process.env.PORT || 3003;
+
+// Enable CORS for all Express routes
+app.use(cors({
+  origin: true, // Allow all origins
+  credentials: true
+}));
 
 // Health check endpoint
 app.get('/', (req, res) => {
