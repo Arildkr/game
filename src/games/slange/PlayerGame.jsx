@@ -245,7 +245,7 @@ function PlayerGame() {
         ) : hasBuzzed ? (
           <div className="queue-section">
             <span className="queue-number">{myBuzzerPosition}</span>
-            <span className="queue-text">i koen</span>
+            <span className="queue-text">i køen</span>
           </div>
         ) : isOnCooldown ? (
           <div className="cooldown-section">
