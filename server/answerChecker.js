@@ -79,6 +79,9 @@ export function checkAnswer(playerAnswer, correctAnswers, options = {}) {
     return { isCorrect: false, matchedAnswer: null, distance: Infinity };
   }
 
+  // Sjekk om spillerens svar er et rent tall
+  const isNumericPlayerAnswer = /^\d+$/.test(playerAnswer.trim());
+
   // Konverter til array hvis nødvendig
   const answersArray = Array.isArray(correctAnswers) ? correctAnswers : [correctAnswers];
 
@@ -90,27 +93,40 @@ export function checkAnswer(playerAnswer, correctAnswers, options = {}) {
 
     if (!normalizedCorrect) continue;
 
+    // Sjekk om riktig svar er et rent tall
+    const isNumericCorrectAnswer = /^\d+$/.test(correctAnswer.trim());
+
     // Eksakt match (etter normalisering)
     if (normalizedPlayerAnswer === normalizedCorrect) {
       return { isCorrect: true, matchedAnswer: correctAnswer, distance: 0 };
     }
 
+    // For tallsvar: KREVER eksakt match
+    // Dette forhindrer at "6" matcher "8" eller lignende
+    if (isNumericPlayerAnswer && isNumericCorrectAnswer) {
+      // Begge er tall - kun eksakt match godtas (allerede sjekket ovenfor)
+      continue;
+    }
+
     // Sjekk om det er en substring match (f.eks. "hund" matcher "en hund")
-    if (normalizedPlayerAnswer.includes(normalizedCorrect) ||
-        normalizedCorrect.includes(normalizedPlayerAnswer)) {
-      const substringDistance = Math.abs(normalizedPlayerAnswer.length - normalizedCorrect.length);
-      if (substringDistance < bestDistance) {
-        bestDistance = substringDistance;
-        bestMatch = correctAnswer;
-      }
-      // Godkjenn substring match hvis lengdeforskjellen er liten
-      if (substringDistance <= threshold) {
-        return { isCorrect: true, matchedAnswer: correctAnswer, distance: substringDistance };
+    // Men ikke for tall-til-tall sammenligning
+    if (!isNumericPlayerAnswer && !isNumericCorrectAnswer) {
+      if (normalizedPlayerAnswer.includes(normalizedCorrect) ||
+          normalizedCorrect.includes(normalizedPlayerAnswer)) {
+        const substringDistance = Math.abs(normalizedPlayerAnswer.length - normalizedCorrect.length);
+        if (substringDistance < bestDistance) {
+          bestDistance = substringDistance;
+          bestMatch = correctAnswer;
+        }
+        // Godkjenn substring match hvis lengdeforskjellen er liten
+        if (substringDistance <= threshold) {
+          return { isCorrect: true, matchedAnswer: correctAnswer, distance: substringDistance };
+        }
       }
     }
 
-    // Beregn Levenshtein-distanse
-    if (!exactMatch) {
+    // Beregn Levenshtein-distanse (kun for tekst, ikke tall)
+    if (!exactMatch && !isNumericPlayerAnswer && !isNumericCorrectAnswer) {
       const distance = levenshteinDistance(normalizedPlayerAnswer, normalizedCorrect);
 
       // Juster threshold basert på ordlengde (lengre ord tillater flere feil)

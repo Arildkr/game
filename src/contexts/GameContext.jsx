@@ -216,14 +216,15 @@ export const GameProvider = ({ children }) => {
       if (updatedPlayers) setPlayers(updatedPlayers);
     });
 
-    newSocket.on('game:ended', () => {
-      // Avslutt tar alle tilbake til startsiden
-      setRoomCode(null);
-      setPlayers([]);
-      setIsHost(false);
+    newSocket.on('game:ended', ({ room } = {}) => {
+      // Avslutt tar alle tilbake til lobby (ikke ut av rommet)
+      if (room) {
+        setPlayers(room.players || []);
+      }
       setCurrentGame(null);
-      setGameState('LOBBY');
+      setGameState('LOBBY_IDLE');
       setGameData(null);
+      // Behold roomCode og isHost slik at spillere forblir i rommet
     });
 
     newSocket.on('game:state-sync', ({ room }) => {

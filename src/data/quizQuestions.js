@@ -28,23 +28,41 @@ export function checkAnswer(userAnswer, correctAnswers) {
   const normalized = userAnswer.toLowerCase().trim();
   if (!normalized) return false;
 
+  // Sjekk om svaret er et tall (kun sifre)
+  const isNumericAnswer = /^\d+$/.test(normalized);
+
   return correctAnswers.some(answer => {
     const correct = answer.toLowerCase();
+    const isNumericCorrect = /^\d+$/.test(correct);
 
-    // Exact match
+    // Exact match - alltid godta
     if (correct === normalized) return true;
 
-    // Contains each other
+    // For tall: KREVER eksakt match (ingen toleranse)
+    // Dette forhindrer at "6" matcher "8"
+    if (isNumericAnswer || isNumericCorrect) {
+      // Tillat at tallord matcher sifre (f.eks. "åtte" = "8")
+      // Men ikke at ulike sifre matcher hverandre
+      if (isNumericAnswer && isNumericCorrect) {
+        return false; // Allerede sjekket exact match ovenfor
+      }
+      // Én er tall, én er tekst - bruk normal matching
+    }
+
+    // Contains each other (for tekstsvar)
     if (correct.includes(normalized) || normalized.includes(correct)) {
       const lengthRatio = Math.min(normalized.length, correct.length) / Math.max(normalized.length, correct.length);
       if (lengthRatio >= 0.6) return true;
     }
 
-    // Allow typos based on word length
-    const maxDistance = correct.length <= 4 ? 1 : correct.length <= 8 ? 2 : 3;
-    const distance = levenshteinDistance(normalized, correct);
+    // Allow typos based on word length (kun for tekst, ikke tall)
+    if (!isNumericAnswer && !isNumericCorrect) {
+      const maxDistance = correct.length <= 4 ? 1 : correct.length <= 8 ? 2 : 3;
+      const distance = levenshteinDistance(normalized, correct);
+      return distance <= maxDistance;
+    }
 
-    return distance <= maxDistance;
+    return false;
   });
 }
 

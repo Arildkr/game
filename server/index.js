@@ -218,20 +218,16 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('host:end-game', ({ returnToLobby: goToLobby = false } = {}) => {
+  socket.on('host:end-game', ({ returnToLobby: goToLobby = true } = {}) => {
     const roomCode = socketToRoom.get(socket.id);
-    const room = endGame(roomCode, goToLobby);
+    // Alltid returner til lobby - behold spillere i rommet
+    const room = endGame(roomCode, true);
     if (room) {
-      if (goToLobby) {
-        io.to(roomCode).emit('lobby:returned', {
-          room: sanitizeRoom(room),
-          lobbyData: room.lobbyData
-        });
-        console.log(`Game ended in room ${roomCode}, returned to lobby`);
-      } else {
-        io.to(roomCode).emit('game:ended', { room: sanitizeRoom(room) });
-        console.log(`Game ended in room ${roomCode}`);
-      }
+      io.to(roomCode).emit('game:ended', {
+        room: sanitizeRoom(room),
+        lobbyData: room.lobbyData
+      });
+      console.log(`Game ended in room ${roomCode}, players returned to lobby`);
     }
   });
 

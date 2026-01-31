@@ -129,7 +129,7 @@ function HostGame() {
       setPhase('checking');
     };
 
-    const handleGuessResult = ({ playerId, isCorrect, correctAnswer, points, players: updatedPlayers }) => {
+    const handleGuessResult = ({ playerId, isCorrect, correctAnswer, points, guess, players: updatedPlayers }) => {
       setLastResult({ playerId, isCorrect, correctAnswer, points });
       setPendingGuess(null);
 
@@ -142,11 +142,11 @@ function HostGame() {
         setPhase('roundEnd');
         setWrongGuessDisplay(null);
       } else {
-        // Vis feil svar midlertidig
+        // Vis feil svar midlertidig - bruk guess fra server-response
         const playerName = updatedPlayers?.find(p => p.id === playerId)?.name || 'Ukjent';
         setWrongGuessDisplay({
           playerName,
-          guess: pendingGuess?.guess || '',
+          guess: guess || 'Ukjent svar', // Nå bruker vi guess fra serveren
           correctAnswer
         });
 
@@ -206,7 +206,8 @@ function HostGame() {
         sendGameAction('validate-guess', {
           playerId: pendingGuess.playerId,
           isCorrect,
-          correctAnswer: correctAnswers[0] || ''
+          correctAnswer: correctAnswers[0] || '',
+          guess: pendingGuess.guess // Inkluder gjetningen
         });
       }, 1500);
 

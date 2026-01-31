@@ -17,6 +17,7 @@ function PlayerGame() {
   const [myScore, setMyScore] = useState(0);
   const [myRank, setMyRank] = useState(0);
   const [leaderboard, setLeaderboard] = useState([]);
+  const [usedNumberIndices, setUsedNumberIndices] = useState([]); // Sporer hvilke tall som er brukt
   const timerRef = useRef(null);
 
   useEffect(() => {
@@ -31,6 +32,7 @@ function PlayerGame() {
       setResult(null);
       setError(null);
       setMyResult(null);
+      setUsedNumberIndices([]); // Nullstill brukte tall
 
       // Client-side timer
       timerRef.current = setInterval(() => {
@@ -143,9 +145,42 @@ function PlayerGame() {
     }
   };
 
+  // Finn hvilke tall-indekser som er brukt i uttrykket
+  const findUsedIndices = (expr, availableNumbers) => {
+    const usedNumbers = expr.match(/\d+/g)?.map(Number) || [];
+    const remaining = [...availableNumbers];
+    const indices = [];
+
+    for (const num of usedNumbers) {
+      const idx = remaining.findIndex((n, i) => n === num && !indices.includes(i));
+      if (idx !== -1) {
+        // Finn original indeks i availableNumbers
+        let originalIdx = -1;
+        let count = 0;
+        for (let i = 0; i < availableNumbers.length; i++) {
+          if (availableNumbers[i] === num && !indices.includes(i)) {
+            if (count === 0) {
+              originalIdx = i;
+              break;
+            }
+          }
+        }
+        if (originalIdx !== -1) {
+          indices.push(originalIdx);
+          remaining[originalIdx] = null; // Mark as used
+        }
+      }
+    }
+
+    return indices;
+  };
+
   const handleExpressionChange = (value) => {
     setExpression(value);
     setError(null);
+
+    // Oppdater brukte tall-indekser
+    setUsedNumberIndices(findUsedIndices(value, numbers));
 
     if (value.trim()) {
       const calc = calculateResult(value);
@@ -255,16 +290,20 @@ function PlayerGame() {
             </div>
 
             <div className="numbers-available">
-              {numbers.map((num, index) => (
-                <button
-                  key={index}
-                  className="number-btn"
-                  onClick={() => addToExpression(num.toString())}
-                  disabled={phase === 'submitted'}
-                >
-                  {num}
-                </button>
-              ))}
+              {numbers.map((num, index) => {
+                const isUsed = usedNumberIndices.includes(index);
+                return (
+                  <button
+                    key={index}
+                    className={`number-btn ${isUsed ? 'used' : ''}`}
+                    onClick={() => addToExpression(num.toString())}
+                    disabled={phase === 'submitted' || isUsed}
+                  >
+                    {num}
+                    {isUsed && <span className="used-checkmark">✓</span>}
+                  </button>
+                );
+              })}
             </div>
 
             <div className="expression-display">

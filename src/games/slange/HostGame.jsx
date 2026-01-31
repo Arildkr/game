@@ -21,9 +21,13 @@ function HostGame() {
   const [pendingWord, setPendingWord] = useState(null);
   const [config, setConfig] = useState({ category: 'blanding', mode: 'samarbeid' });
   const [timeLeft, setTimeLeft] = useState(20);
+  const [localPlayers, setLocalPlayers] = useState([]); // Lokal spiller-state for poeng-oppdatering
 
   const category = categories.find(c => c.id === config?.category) || categories[0];
-  const connectedPlayers = players.filter(p => p.isConnected);
+
+  // Synkroniser localPlayers med context players
+  const displayPlayers = localPlayers.length > 0 ? localPlayers : players;
+  const connectedPlayers = displayPlayers.filter(p => p.isConnected);
 
   // Initialize from gameData
   useEffect(() => {
@@ -62,16 +66,20 @@ function HostGame() {
       setCurrentLetter(newLetter);
       setCurrentPlayer(null);
       setPendingWord(null);
+      // Oppdater lokal spillerliste med nye poeng
+      if (updatedPlayers) {
+        setLocalPlayers(updatedPlayers);
+      }
     };
 
     const handleWordRejected = ({ playerId, reason, players: updatedPlayers }) => {
       setCurrentPlayer(null);
       setPendingWord(null);
-      // Oppdater spillerlisten med nye poeng
+      // Oppdater lokal spillerliste med nye poeng
       if (updatedPlayers) {
-        // GameContext vil oppdatere players, men vi kan vise en melding
-        console.log('Ord avslått:', reason);
+        setLocalPlayers(updatedPlayers);
       }
+      console.log('Ord avslått:', reason);
     };
 
     const handleLetterSkipped = ({ newLetter }) => {
@@ -125,7 +133,7 @@ function HostGame() {
   };
 
   const getPlayerName = (playerId) => {
-    const player = players.find(p => p.id === playerId);
+    const player = displayPlayers.find(p => p.id === playerId);
     return player?.name || 'Ukjent';
   };
 
@@ -315,7 +323,7 @@ function HostGame() {
         <h3>Spillere ({connectedPlayers.length})</h3>
         <p className="sidebar-hint">Klikk for å velge</p>
         <ul className="player-stats-list">
-          {players
+          {displayPlayers
             .filter(p => p.isConnected)
             .sort((a, b) => config?.mode === 'konkurranse'
               ? (b.score || 0) - (a.score || 0)
