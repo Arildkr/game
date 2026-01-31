@@ -525,6 +525,15 @@
   margin: 0;
 }
 
+.slange-player .reject-reason {
+  margin-top: 1rem;
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(0, 0, 0, 0.2);
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+}
+
 /* My Turn Screen */
 .slange-player.my-turn {
   padding: 2rem;

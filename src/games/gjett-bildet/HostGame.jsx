@@ -80,6 +80,8 @@ function HostGame() {
   const [config, setConfig] = useState({ category: 'blanding', mode: 'blur' });
   const [imageLoaded, setImageLoaded] = useState(false);
   const [tempAnswer, setTempAnswer] = useState(null); // For å vise fasit midlertidig
+  const [localPlayers, setLocalPlayers] = useState([]); // Lokal spiller-state for poeng-oppdatering
+  const [wrongGuessDisplay, setWrongGuessDisplay] = useState(null); // Vis feil gjetning
 
   const initDone = useRef(false);
   const currentImage = images[currentIndex];
@@ -100,6 +102,13 @@ function HostGame() {
       });
     }
   }, [gameData]);
+
+  // Synkroniser localPlayers med players fra context
+  useEffect(() => {
+    if (players && players.length > 0) {
+      setLocalPlayers(players);
+    }
+  }, [players]);
 
   // Socket listeners
   useEffect(() => {
@@ -124,9 +133,28 @@ function HostGame() {
       setLastResult({ playerId, isCorrect, correctAnswer, points });
       setPendingGuess(null);
 
+      // Oppdater lokal spillerliste med nye poeng
+      if (updatedPlayers) {
+        setLocalPlayers(updatedPlayers);
+      }
+
       if (isCorrect) {
         setPhase('roundEnd');
+        setWrongGuessDisplay(null);
       } else {
+        // Vis feil svar midlertidig
+        const playerName = updatedPlayers?.find(p => p.id === playerId)?.name || 'Ukjent';
+        setWrongGuessDisplay({
+          playerName,
+          guess: pendingGuess?.guess || '',
+          correctAnswer
+        });
+
+        // Fjern visningen etter 3 sekunder
+        setTimeout(() => {
+          setWrongGuessDisplay(null);
+        }, 3000);
+
         setCurrentPlayer(null);
         setPhase('playing');
       }
@@ -300,7 +328,7 @@ function HostGame() {
 
   // Game Over screen
   if (phase === 'gameOver') {
-    const sortedPlayers = [...players].sort((a, b) => (b.score || 0) - (a.score || 0));
+    const sortedPlayers = [...(localPlayers.length > 0 ? localPlayers : players)].sort((a, b) => (b.score || 0) - (a.score || 0));
     return (
       <div className="gjett-bildet-host game-over-screen">
         <div className="game-over-content">
@@ -439,13 +467,23 @@ function HostGame() {
               <p>Venter på at noen buzzer inn...</p>
             </div>
           )}
+
+          {/* Vis feil svar */}
+          {wrongGuessDisplay && (
+            <div className="wrong-guess-display">
+              <div className="wrong-icon">❌</div>
+              <p><strong>{wrongGuessDisplay.playerName}</strong> svarte:</p>
+              <p className="wrong-guess">"{wrongGuessDisplay.guess}"</p>
+              <p className="wrong-text">Feil svar!</p>
+            </div>
+          )}
         </div>
       </main>
 
       <aside className="leaderboard-sidebar">
         <h3>Poengtavle</h3>
         <ul className="leaderboard-list">
-          {[...players]
+          {[...(localPlayers.length > 0 ? localPlayers : players)]
             .sort((a, b) => (b.score || 0) - (a.score || 0))
             .map((player, index) => (
               <li key={player.id} className={`leaderboard-item ${index < 3 ? `top-${index + 1}` : ''}`}>

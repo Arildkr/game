@@ -234,9 +234,13 @@ function initializeGameData(game, players, config) {
         timeLeft: 60
       };
 
-    case 'slange':
+    case 'slange': {
+      // Velg tilfeldig startbokstav (unngå vanskelige bokstaver)
+      const NORWEGIAN_LETTERS = 'ABDEFGHIKLMNOPRSTUVWY';
+      const randomLetter = NORWEGIAN_LETTERS.charAt(Math.floor(Math.random() * NORWEGIAN_LETTERS.length));
+
       return {
-        currentLetter: 'S',
+        currentLetter: randomLetter,
         wordChain: [],
         usedWords: new Set(), // Brukes internt, konverteres til array ved serialisering
         usedWordsArray: [],   // For serialisering over socket
@@ -246,6 +250,7 @@ function initializeGameData(game, players, config) {
         mode: config.mode || 'samarbeid',
         category: config.category || 'blanding'
       };
+    }
 
     default:
       return {};
@@ -1302,12 +1307,70 @@ function handleSlangePlayerAction(room, playerId, action, data) {
       const word = data.word?.trim();
       if (!word) return null;
 
+      const player = room.players.find(p => p.id === playerId);
+
+      // Konverter usedWords fra array til Set hvis nødvendig
+      if (Array.isArray(gd.usedWords)) {
+        gd.usedWords = new Set(gd.usedWords);
+      }
+      if (!gd.usedWords) {
+        gd.usedWords = new Set();
+      }
+
+      // AUTO-VALIDERING: Sjekk startbokstav
+      if (!startsWithLetter(word, gd.currentLetter)) {
+        // Trekk poeng i konkurransemodus
+        if (gd.mode === 'konkurranse' && player) {
+          player.score = (player.score || 0) - 5;
+        }
+
+        gd.currentPlayer = null;
+        gd.pendingWord = null;
+
+        return {
+          broadcast: true,
+          event: 'game:word-rejected',
+          data: {
+            playerId,
+            word,
+            reason: `Ordet må starte med ${gd.currentLetter}`,
+            autoRejected: true,
+            players: room.players
+          }
+        };
+      }
+
+      // AUTO-VALIDERING: Sjekk om ordet allerede er brukt
+      const normalizedWord = word.toLowerCase().trim();
+      if (gd.usedWords.has(normalizedWord)) {
+        // Trekk poeng i konkurransemodus
+        if (gd.mode === 'konkurranse' && player) {
+          player.score = (player.score || 0) - 5;
+        }
+
+        gd.currentPlayer = null;
+        gd.pendingWord = null;
+
+        return {
+          broadcast: true,
+          event: 'game:word-rejected',
+          data: {
+            playerId,
+            word,
+            reason: 'Dette ordet er allerede brukt',
+            autoRejected: true,
+            players: room.players
+          }
+        };
+      }
+
+      // Ordet passerer auto-validering, send til host for godkjenning
       gd.pendingWord = word;
 
       return {
         broadcast: true,
         event: 'game:word-submitted',
-        data: { playerId, word }
+        data: { playerId, word, validationPassed: true }
       };
     }
 

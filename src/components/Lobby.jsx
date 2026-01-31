@@ -1,4 +1,5 @@
 // game/src/components/Lobby.jsx
+import { useState } from 'react';
 import { useGame } from '../contexts/GameContext';
 
 const GAME_NAMES = {
@@ -9,6 +10,19 @@ const GAME_NAMES = {
   'tidslinje': { name: 'Tidslinje', icon: '📅' },
   'ja-eller-nei': { name: 'Ja eller Nei', icon: '✅' }
 };
+
+const SLANGE_CATEGORIES = [
+  { id: 'dyr', name: 'Dyr', icon: '🐾' },
+  { id: 'land', name: 'Land', icon: '🌍' },
+  { id: 'mat', name: 'Mat og drikke', icon: '🍕' },
+  { id: 'navn', name: 'Personnavn', icon: '👤' },
+  { id: 'ting', name: 'Ting/Gjenstander', icon: '📦' },
+  { id: 'steder', name: 'Steder i Norge', icon: '🏔️' },
+  { id: 'yrker', name: 'Yrker', icon: '👷' },
+  { id: 'natur', name: 'Natur', icon: '🌲' },
+  { id: 'sport', name: 'Sport og aktiviteter', icon: '⚽' },
+  { id: 'blanding', name: 'Alt mulig', icon: '🎲' }
+];
 
 function Lobby() {
   const {
@@ -24,7 +38,19 @@ function Lobby() {
     returnToLobby
   } = useGame();
 
+  // Slange-konfigurasjon
+  const [slangeCategory, setSlangeCategory] = useState('blanding');
+  const [slangeMode, setSlangeMode] = useState('samarbeid');
+
   const gameInfo = GAME_NAMES[currentGame] || { name: currentGame, icon: '🎮' };
+
+  const handleStartGame = () => {
+    if (currentGame === 'slange') {
+      startGame({ category: slangeCategory, mode: slangeMode });
+    } else {
+      startGame();
+    }
+  };
 
   // Host lobby view
   if (isHost) {
@@ -49,9 +75,46 @@ function Lobby() {
               <span>Gå inn på: <strong>game.ak-kreativ.no</strong></span>
             </div>
 
+            {/* Slange-konfigurasjon */}
+            {currentGame === 'slange' && (
+              <div className="slange-config">
+                <div className="config-group">
+                  <label>Kategori:</label>
+                  <select
+                    value={slangeCategory}
+                    onChange={(e) => setSlangeCategory(e.target.value)}
+                    className="config-select"
+                  >
+                    {SLANGE_CATEGORIES.map(cat => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.icon} {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="config-group">
+                  <label>Modus:</label>
+                  <div className="mode-buttons">
+                    <button
+                      className={`mode-btn ${slangeMode === 'samarbeid' ? 'active' : ''}`}
+                      onClick={() => setSlangeMode('samarbeid')}
+                    >
+                      🤝 Samarbeid
+                    </button>
+                    <button
+                      className={`mode-btn ${slangeMode === 'konkurranse' ? 'active' : ''}`}
+                      onClick={() => setSlangeMode('konkurranse')}
+                    >
+                      🏆 Konkurranse
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <button
               className="btn btn-start"
-              onClick={() => startGame()}
+              onClick={handleStartGame}
               disabled={players.length === 0}
             >
               Start spill

@@ -57,10 +57,18 @@ export const GameProvider = ({ children }) => {
     const SOCKET_SERVER_URL = 'https://game-p2u5.onrender.com';
 
     const newSocket = io(SOCKET_SERVER_URL, {
-      transports: ['websocket', 'polling'],
-      timeout: 30000,
-      reconnectionAttempts: 10,
-      reconnectionDelay: 2000
+      // Bruk polling først for bedre kompatibilitet med Render cold starts
+      transports: ['polling', 'websocket'],
+      // Øk timeout for trege cold starts
+      timeout: 45000,
+      // Reduser aggressiv reconnection
+      reconnectionAttempts: 5,
+      reconnectionDelay: 3000,
+      reconnectionDelayMax: 10000,
+      // Ikke koble fra ved feil - la socket.io håndtere det
+      forceNew: false,
+      // Unngå at gamle sockets henger igjen
+      autoConnect: true
     });
 
     setSocket(newSocket);
@@ -74,9 +82,24 @@ export const GameProvider = ({ children }) => {
       setMyPlayerId(newSocket.id);
     });
 
-    newSocket.on('disconnect', () => {
-      console.log('Disconnected from socket server');
+    newSocket.on('disconnect', (reason) => {
+      console.log('Disconnected from socket server:', reason);
       setIsConnected(false);
+      // Hvis serveren stengte forbindelsen, ikke sett isConnecting til true
+      if (reason === 'io server disconnect') {
+        // Serveren disconnected oss - prøv å koble til på nytt
+        newSocket.connect();
+      }
+    });
+
+    newSocket.on('reconnect_attempt', (attempt) => {
+      console.log(`Reconnection attempt ${attempt}`);
+      setIsConnecting(true);
+    });
+
+    newSocket.on('reconnect', () => {
+      console.log('Reconnected to socket server');
+      setIsConnecting(false);
     });
 
     newSocket.on('connect_error', (err) => {

@@ -46,16 +46,60 @@ app.get('/', (req, res) => {
   });
 });
 
-// Sanitize room data for client
+// Sanitize room data for client - avoid circular references and non-serializable objects
 function sanitizeRoom(room) {
-  // Sanitize gameData to handle Set objects (can't serialize over JSON)
+  if (!room) return null;
+
+  // Sanitize gameData to handle Set objects and Date objects
   let sanitizedGameData = null;
   if (room.gameData) {
-    sanitizedGameData = { ...room.gameData };
-    // Convert Set to array for Slange game
-    if (sanitizedGameData.usedWords instanceof Set) {
-      sanitizedGameData.usedWordsArray = Array.from(sanitizedGameData.usedWords);
-      delete sanitizedGameData.usedWords;
+    try {
+      sanitizedGameData = {};
+      for (const [key, value] of Object.entries(room.gameData)) {
+        // Skip functions and undefined values
+        if (typeof value === 'function' || value === undefined) continue;
+
+        // Convert Set to array
+        if (value instanceof Set) {
+          sanitizedGameData[key + 'Array'] = Array.from(value);
+        }
+        // Convert Date to ISO string
+        else if (value instanceof Date) {
+          sanitizedGameData[key] = value.toISOString();
+        }
+        // Handle nested objects (like currentPlayer)
+        else if (value && typeof value === 'object' && !Array.isArray(value)) {
+          // Simple shallow copy for objects
+          sanitizedGameData[key] = { ...value };
+          // Remove any nested Date objects
+          if (sanitizedGameData[key].startedAt instanceof Date) {
+            sanitizedGameData[key].startedAt = sanitizedGameData[key].startedAt.toISOString();
+          }
+          if (sanitizedGameData[key].timestamp instanceof Date) {
+            sanitizedGameData[key].timestamp = sanitizedGameData[key].timestamp.toISOString();
+          }
+        }
+        // Handle arrays (like wordChain, buzzerQueue)
+        else if (Array.isArray(value)) {
+          sanitizedGameData[key] = value.map(item => {
+            if (item && typeof item === 'object') {
+              const sanitizedItem = { ...item };
+              if (sanitizedItem.timestamp instanceof Date) {
+                sanitizedItem.timestamp = sanitizedItem.timestamp.toISOString();
+              }
+              return sanitizedItem;
+            }
+            return item;
+          });
+        }
+        // Primitive values
+        else {
+          sanitizedGameData[key] = value;
+        }
+      }
+    } catch (err) {
+      console.error('Error sanitizing gameData:', err);
+      sanitizedGameData = null;
     }
   }
 
@@ -66,10 +110,11 @@ function sanitizeRoom(room) {
     players: room.players.map(p => ({
       id: p.id,
       name: p.name,
-      score: p.score,
+      score: p.score || 0,
       isConnected: p.isConnected,
       isEliminated: p.isEliminated,
-      wordsSubmitted: p.wordsSubmitted || 0
+      wordsSubmitted: p.wordsSubmitted || 0,
+      canBuzz: p.canBuzz !== false
     })),
     gameData: sanitizedGameData
   };
@@ -175,16 +220,20 @@ io.on('connection', (socket) => {
   });
 
 
-socket.on('host:game-action', ({ action, data }) => { // Fjernet ...
-  const roomCode = socketToRoom.get(socket.id);
-  const result = handleGameAction(roomCode, action, data);
-  if (result) {
-    if (result.broadcast) {
-      io.to(roomCode).emit(result.event, result.data);
+socket.on('host:game-action', ({ action, data }) => {
+  try {
+    const roomCode = socketToRoom.get(socket.id);
+    const result = handleGameAction(roomCode, action, data);
+    if (result) {
+      if (result.broadcast) {
+        io.to(roomCode).emit(result.event, result.data);
+      }
+      if (result.toPlayer) {
+        io.to(result.toPlayer).emit(result.playerEvent, result.playerData);
+      }
     }
-    if (result.toPlayer) {
-      io.to(result.toPlayer).emit(result.playerEvent, result.playerData);
-    }
+  } catch (err) {
+    console.error('Error in host:game-action:', err);
   }
 });
 
@@ -212,22 +261,26 @@ socket.on('host:game-action', ({ action, data }) => { // Fjernet ...
     }
   });
 
-socket.on('player:game-action', ({ action, data }) => { // Fjernet ...
-  const roomCode = socketToRoom.get(socket.id);
-  const result = handlePlayerAction(roomCode, socket.id, action, data);
-  if (result) {
-    if (result.broadcast) {
-      io.to(roomCode).emit(result.event, result.data);
-    }
-    if (result.toHost) {
-      const room = rooms[roomCode];
-      if (room) {
-        io.to(room.hostId).emit(result.hostEvent, result.hostData);
+socket.on('player:game-action', ({ action, data }) => {
+  try {
+    const roomCode = socketToRoom.get(socket.id);
+    const result = handlePlayerAction(roomCode, socket.id, action, data);
+    if (result) {
+      if (result.broadcast) {
+        io.to(roomCode).emit(result.event, result.data);
+      }
+      if (result.toHost) {
+        const room = rooms[roomCode];
+        if (room) {
+          io.to(room.hostId).emit(result.hostEvent, result.hostData);
+        }
+      }
+      if (result.toPlayer) {
+        socket.emit(result.playerEvent, result.playerData);
       }
     }
-    if (result.toPlayer) {
-      socket.emit(result.playerEvent, result.playerData);
-    }
+  } catch (err) {
+    console.error('Error in player:game-action:', err);
   }
 });
 
@@ -285,6 +338,15 @@ socket.on('player:game-action', ({ action, data }) => { // Fjernet ...
 setInterval(() => {
   cleanupOldRooms();
 }, 30 * 60 * 1000);
+
+// Global error handlers to prevent server crashes
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
 
 server.listen(PORT, () => {
   console.log(`Klassespill server listening on port ${PORT}`);

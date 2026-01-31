@@ -18,6 +18,7 @@ function PlayerGame() {
   const [word, setWord] = useState('');
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [lastResult, setLastResult] = useState(null);
+  const [rejectReason, setRejectReason] = useState(null);
   const [timeLeft, setTimeLeft] = useState(20);
   const [buzzCooldown, setBuzzCooldown] = useState(0);
   const inputRef = useRef(null);
@@ -73,14 +74,20 @@ function PlayerGame() {
       }
     };
 
-    const handleWordRejected = ({ playerId, reason }) => {
+    const handleWordRejected = ({ playerId, reason, word, autoRejected }) => {
       setCurrentPlayer(null);
       setPendingWord(null);
 
       if (playerId === myPlayerId) {
         setLastResult('rejected');
-        setBuzzCooldown(10);
-        setTimeout(() => setLastResult(null), 2000);
+        setRejectReason(reason || 'Ordet ble avslått');
+        setBuzzCooldown(autoRejected ? 5 : 10);
+        setWord('');
+        setHasSubmitted(false);
+        setTimeout(() => {
+          setLastResult(null);
+          setRejectReason(null);
+        }, 3000);
       }
     };
 
@@ -164,8 +171,11 @@ function PlayerGame() {
             </>
           ) : (
             <>
-              <div className="result-icon">😕</div>
+              <div className="result-icon">❌</div>
               <h2>Ikke godkjent</h2>
+              {rejectReason && (
+                <p className="reject-reason">{rejectReason}</p>
+              )}
             </>
           )}
         </div>
