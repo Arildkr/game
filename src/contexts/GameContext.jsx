@@ -27,14 +27,14 @@ export const GameProvider = ({ children }) => {
   const [gameState, setGameState] = useState('LOBBY'); // LOBBY, PLAYING, GAME_OVER
   const [gameData, setGameData] = useState(null); // Game-specific data
 
-  // Initialize socket connection
+// Initialize socket connection
   useEffect(() => {
     // Alltid bruk Render-serveren
     const SOCKET_SERVER_URL = 'https://game-p2u5.onrender.com';
 
     const newSocket = io(SOCKET_SERVER_URL, {
       transports: ['websocket', 'polling'],
-      timeout: 20000,
+      timeout: 30000, // Økt fra 20s til 30s for Render
       reconnectionAttempts: 10,
       reconnectionDelay: 2000
     });
@@ -61,7 +61,7 @@ export const GameProvider = ({ children }) => {
       setIsConnected(false);
     });
 
-    // Room events
+     // Room events
     newSocket.on('room:created', ({ roomCode: code, game }) => {
       setRoomCode(code);
       setCurrentGame(game);
@@ -118,17 +118,17 @@ export const GameProvider = ({ children }) => {
       setGameData(null);
     });
 
-    newSocket.on('game:state-sync', ({ room }) => {
+   newSocket.on('game:state-sync', ({ room }) => {
       setGameState(room.gameState);
       setCurrentGame(room.game);
       setGameData(room.gameData);
       setPlayers(room.players);
     });
 
-    return () => {
+  return () => {
       newSocket.disconnect();
     };
-  }, []);
+  }, [socket, isHost]);
 
   // Server wake-up timer
   useEffect(() => {
@@ -140,6 +140,17 @@ export const GameProvider = ({ children }) => {
     }
     return () => clearTimeout(timer);
   }, [isConnecting, isConnected]);
+
+  // Heartbeat for å holde Render-serveren våken
+  useEffect(() => {
+    if (!socket || !isConnected) return;
+
+    const heartbeat = setInterval(() => {
+      socket.emit('ping');
+    }, 25000);
+
+    return () => clearInterval(heartbeat);
+  }, [socket, isConnected]);
 
   const resetGameState = () => {
     setRoomCode(null);
