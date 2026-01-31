@@ -6,6 +6,10 @@ import {
   rooms,
   socketToRoom,
   createRoom,
+  createLobby,
+  selectGame,
+  returnToLobby,
+  submitLobbyScore,
   joinRoom,
   removePlayer,
   kickPlayer,
@@ -72,8 +76,50 @@ io.on('connection', (socket) => {
     if (roomCode) {
       socket.join(roomCode);
       const room = rooms[roomCode];
-      socket.emit('room:created', { roomCode, game: room.game });
+      socket.emit('room:created', { roomCode, game: room.game, gameState: room.gameState });
       console.log(`Host ${socket.id} created room: ${roomCode} for game: ${game}`);
+    }
+  });
+
+  // Ny event: Opprett lobby uten spill
+  socket.on('host:create-lobby', () => {
+    const roomCode = createLobby(socket.id);
+    if (roomCode) {
+      socket.join(roomCode);
+      const room = rooms[roomCode];
+      socket.emit('lobby:created', {
+        roomCode,
+        gameState: room.gameState,
+        lobbyData: room.lobbyData
+      });
+      console.log(`Host ${socket.id} created lobby: ${roomCode}`);
+    }
+  });
+
+  // Ny event: Velg spill for lobby
+  socket.on('host:select-game', ({ game }) => {
+    const roomCode = socketToRoom.get(socket.id);
+    const room = selectGame(roomCode, game);
+    if (room) {
+      io.to(roomCode).emit('lobby:game-selected', {
+        game,
+        gameState: room.gameState,
+        room: sanitizeRoom(room)
+      });
+      console.log(`Game selected in room ${roomCode}: ${game}`);
+    }
+  });
+
+  // Ny event: Returner til lobby
+  socket.on('host:return-to-lobby', () => {
+    const roomCode = socketToRoom.get(socket.id);
+    const room = returnToLobby(roomCode);
+    if (room) {
+      io.to(roomCode).emit('lobby:returned', {
+        room: sanitizeRoom(room),
+        lobbyData: room.lobbyData
+      });
+      console.log(`Room ${roomCode} returned to lobby`);
     }
   });
 
@@ -89,12 +135,20 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('host:end-game', () => {
+  socket.on('host:end-game', ({ returnToLobby: goToLobby = false } = {}) => {
     const roomCode = socketToRoom.get(socket.id);
-    const room = endGame(roomCode);
+    const room = endGame(roomCode, goToLobby);
     if (room) {
-      io.to(roomCode).emit('game:ended', { room: sanitizeRoom(room) });
-      console.log(`Game ended in room ${roomCode}`);
+      if (goToLobby) {
+        io.to(roomCode).emit('lobby:returned', {
+          room: sanitizeRoom(room),
+          lobbyData: room.lobbyData
+        });
+        console.log(`Game ended in room ${roomCode}, returned to lobby`);
+      } else {
+        io.to(roomCode).emit('game:ended', { room: sanitizeRoom(room) });
+        console.log(`Game ended in room ${roomCode}`);
+      }
     }
   });
 
@@ -164,6 +218,33 @@ socket.on('player:game-action', ({ action, data }) => { // Fjernet ...
     }
   }
 });
+
+  // Lobby minispill score
+  socket.on('lobby:submit-score', ({ score }) => {
+    const roomCode = socketToRoom.get(socket.id);
+    const result = submitLobbyScore(roomCode, socket.id, score);
+    if (result) {
+      // Send oppdatering til alle i rommet
+      io.to(roomCode).emit('lobby:score-update', {
+        playerId: socket.id,
+        playerScore: result.playerScore,
+        totalScore: result.totalScore,
+        leaderboard: result.leaderboard
+      });
+    }
+  });
+
+  socket.on('lobby:get-scores', () => {
+    const roomCode = socketToRoom.get(socket.id);
+    const room = rooms[roomCode];
+    if (room && room.lobbyData) {
+      socket.emit('lobby:scores', {
+        totalScore: room.lobbyData.totalScore,
+        leaderboard: room.lobbyData.leaderboard,
+        playerScores: room.lobbyData.playerScores
+      });
+    }
+  });
 
   // ==================
   // DISCONNECT

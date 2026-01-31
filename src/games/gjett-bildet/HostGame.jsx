@@ -42,6 +42,13 @@ function HostGame() {
         category: category,
         mode: gameData.mode || 'blur'
       });
+
+      // Send answers for første bilde til serveren
+      if (shuffled.length > 0) {
+        const firstImage = shuffled[0];
+        const answers = firstImage?.answers || (firstImage?.answer ? [firstImage.answer] : []);
+        sendGameAction('next-image', { imageIndex: 0, answers });
+      }
     }
   }, [gameData]);
 
@@ -59,8 +66,20 @@ function HostGame() {
       setPhase('answering');
     };
 
-    const handleGuessSubmitted = ({ playerId, guess }) => {
-      setPendingGuess({ playerId, guess });
+    const handleGuessSubmitted = ({ playerId, guess, autoResult }) => {
+      setPendingGuess({ playerId, guess, autoResult });
+
+      // Auto-godkjenn hvis autoResult.isCorrect er true
+      if (autoResult?.isCorrect) {
+        // Kort forsinkelse så brukeren ser svaret
+        setTimeout(() => {
+          sendGameAction('validate-guess', {
+            playerId,
+            isCorrect: true,
+            correctAnswer: autoResult.matchedAnswer || currentImage?.answers?.[0] || currentImage?.answer
+          });
+        }, 500);
+      }
     };
 
     const handleGuessResult = ({ playerId, isCorrect, correctAnswer, points }) => {
@@ -136,7 +155,9 @@ function HostGame() {
       sendGameAction('end-gjett-bildet');
       setPhase('gameOver');
     } else {
-      sendGameAction('next-image', { imageIndex: currentIndex + 1 });
+      const nextImage = images[currentIndex + 1];
+      const answers = nextImage?.answers || (nextImage?.answer ? [nextImage.answer] : []);
+      sendGameAction('next-image', { imageIndex: currentIndex + 1, answers });
     }
   };
 

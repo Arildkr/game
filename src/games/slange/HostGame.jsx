@@ -57,16 +57,21 @@ function HostGame() {
       setPendingWord(word);
     };
 
-    const handleWordApproved = ({ word, playerName, newLetter, wordChain: chain }) => {
+    const handleWordApproved = ({ word, playerName, newLetter, wordChain: chain, players: updatedPlayers }) => {
       setWordChain(chain);
       setCurrentLetter(newLetter);
       setCurrentPlayer(null);
       setPendingWord(null);
     };
 
-    const handleWordRejected = ({ playerId, reason }) => {
+    const handleWordRejected = ({ playerId, reason, players: updatedPlayers }) => {
       setCurrentPlayer(null);
       setPendingWord(null);
+      // Oppdater spillerlisten med nye poeng
+      if (updatedPlayers) {
+        // GameContext vil oppdatere players, men vi kan vise en melding
+        console.log('Ord avslått:', reason);
+      }
     };
 
     const handleLetterSkipped = ({ newLetter }) => {

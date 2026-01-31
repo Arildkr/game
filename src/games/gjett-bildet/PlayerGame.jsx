@@ -145,6 +145,7 @@ const handleSubmitGuess = (e) => {
   e.preventDefault();
   if (!hasSubmitted) {
     // Bruk sendPlayerAction i stedet for socket.emit
+    // correctAnswers sendes ikke fra klient - serveren har dem allerede
     sendPlayerAction('submit-guess', { guess: guess.trim() || 'TIDEN UTE' });
     setHasSubmitted(true);
   }

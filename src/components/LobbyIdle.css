@@ -1,0 +1,321 @@
+/* game/src/components/LobbyIdle.css */
+
+.lobby-idle-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* === HOST LOBBY IDLE === */
+.host-lobby-idle {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  grid-template-columns: 1fr 280px;
+  gap: 0;
+  height: 100vh;
+}
+
+.lobby-idle-header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 1rem 2rem;
+  background: #1a1a2e;
+  border-bottom: 2px solid #16213e;
+}
+
+.lobby-idle-header .room-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.lobby-idle-header .room-code-label {
+  font-size: 0.9rem;
+  color: #888;
+}
+
+.lobby-idle-header .room-code-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #00d9ff;
+  letter-spacing: 0.15em;
+  font-family: monospace;
+}
+
+.lobby-idle-header .join-url {
+  font-size: 1.1rem;
+  color: #4ecdc4;
+  background: rgba(78, 205, 196, 0.1);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+}
+
+.lobby-idle-header .btn-close {
+  margin-left: auto;
+  background: #e74c3c;
+  color: white;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.lobby-idle-header .btn-close:hover {
+  transform: scale(1.1);
+  background: #c0392b;
+}
+
+.lobby-idle-main {
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.lobby-idle-main h2 {
+  margin: 0 0 1.5rem;
+  font-size: 1.8rem;
+  color: #fff;
+}
+
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.game-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.5rem 1rem;
+  background: linear-gradient(145deg, #1e3a5f, #16213e);
+  border: 2px solid transparent;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.game-card:hover {
+  transform: translateY(-4px);
+  border-color: #00d9ff;
+  box-shadow: 0 8px 25px rgba(0, 217, 255, 0.2);
+}
+
+.game-card .game-icon {
+  font-size: 3rem;
+}
+
+.game-card .game-name {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #fff;
+}
+
+.game-card .game-desc {
+  font-size: 0.85rem;
+  color: #888;
+}
+
+/* Class progress section */
+.class-progress {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: rgba(0, 217, 255, 0.05);
+  border-radius: 16px;
+  border: 1px solid rgba(0, 217, 255, 0.2);
+}
+
+.class-progress h3 {
+  margin: 0 0 1rem;
+  color: #00d9ff;
+}
+
+.progress-bar-container {
+  position: relative;
+  height: 30px;
+  background: #1a1a2e;
+  border-radius: 15px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00d9ff, #4ecdc4);
+  border-radius: 15px;
+  transition: width 0.5s ease;
+}
+
+.progress-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+.mini-leaderboard {
+  margin-top: 1rem;
+}
+
+.mini-leaderboard h4 {
+  margin: 0 0 0.5rem;
+  color: #888;
+}
+
+.mini-leaderboard ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.mini-leaderboard li {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.mini-leaderboard .rank {
+  color: #888;
+  width: 24px;
+}
+
+.mini-leaderboard .name {
+  flex: 1;
+  color: #fff;
+}
+
+.mini-leaderboard .score {
+  color: #4ecdc4;
+  font-weight: bold;
+}
+
+/* === PLAYERS SIDEBAR === */
+.host-lobby-idle .players-sidebar {
+  background: #16213e;
+  border-left: 2px solid #1a1a2e;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.players-sidebar h3 {
+  margin: 0 0 1rem;
+  color: #888;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.players-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.player-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.5rem;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.player-item:hover {
+  background: rgba(255,255,255,0.05);
+}
+
+.player-status {
+  font-size: 0.6rem;
+}
+
+.player-name {
+  flex: 1;
+  color: #fff;
+}
+
+.btn-kick {
+  background: transparent;
+  color: #e74c3c;
+  border: none;
+  padding: 4px 8px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.player-item:hover .btn-kick {
+  opacity: 1;
+}
+
+.no-players {
+  color: #666;
+  font-style: italic;
+}
+
+/* === PLAYER LOBBY IDLE === */
+.player-lobby-idle {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #1a1a2e 0%, #0f0f23 100%);
+}
+
+.player-lobby-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: rgba(0,0,0,0.3);
+}
+
+.player-badge {
+  font-size: 1.1rem;
+  color: #4ecdc4;
+}
+
+.room-badge {
+  font-size: 0.9rem;
+  color: #888;
+  background: rgba(255,255,255,0.05);
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+}
+
+.player-lobby-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+}
+
+.waiting-info {
+  text-align: center;
+  padding: 1rem;
+}
+
+.waiting-info p {
+  margin: 0;
+  color: #888;
+}
+
+.waiting-info .sub {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.minigame-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}

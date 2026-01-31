@@ -1,5 +1,7 @@
 // Klassespill Server - Game State Management
 
+import { checkAnswer, startsWithLetter, getLastLetter } from './answerChecker.js';
+
 export const rooms = {};
 export const socketToRoom = new Map();
 
@@ -23,23 +25,121 @@ function generateUniqueRoomCode() {
 }
 
 /**
- * Creates a new room
+ * Creates a new room (lobby uten spill valgt)
  */
-export function createRoom(hostSocketId, game) {
+export function createRoom(hostSocketId, game = null) {
   const roomCode = generateUniqueRoomCode();
 
   rooms[roomCode] = {
     code: roomCode,
     hostId: hostSocketId,
     game: game,
-    gameState: 'LOBBY', // LOBBY, PLAYING, GAME_OVER
+    // Nye game states: LOBBY_IDLE, LOBBY_GAME_SELECTED, PLAYING, GAME_OVER
+    gameState: game ? 'LOBBY' : 'LOBBY_IDLE',
     players: [],
     gameData: null,
+    lobbyData: {
+      totalScore: 0,
+      playerScores: {}, // playerId -> { jumperScore, jumperBest }
+      leaderboard: []
+    },
     createdAt: new Date()
   };
 
   socketToRoom.set(hostSocketId, roomCode);
   return roomCode;
+}
+
+/**
+ * Creates a lobby (uten spill valgt)
+ */
+export function createLobby(hostSocketId) {
+  return createRoom(hostSocketId, null);
+}
+
+/**
+ * Velger spill for en lobby
+ */
+export function selectGame(roomCode, game) {
+  const room = rooms[roomCode];
+  if (!room) return null;
+
+  room.game = game;
+  room.gameState = 'LOBBY_GAME_SELECTED';
+  room.gameData = null;
+
+  // Nullstill lobby-score når nytt spill velges
+  room.lobbyData.totalScore = 0;
+  room.lobbyData.playerScores = {};
+  room.lobbyData.leaderboard = [];
+
+  return room;
+}
+
+/**
+ * Returnerer til lobby etter spill
+ */
+export function returnToLobby(roomCode) {
+  const room = rooms[roomCode];
+  if (!room) return null;
+
+  room.gameState = 'LOBBY_IDLE';
+  room.game = null;
+  room.gameData = null;
+
+  // Behold spillere og deres grunnleggende data
+  room.players.forEach(p => {
+    p.score = 0;
+    p.isEliminated = false;
+    p.wordsSubmitted = 0;
+  });
+
+  return room;
+}
+
+/**
+ * Sender inn lobby-poeng (fra minispill)
+ */
+export function submitLobbyScore(roomCode, playerId, score) {
+  const room = rooms[roomCode];
+  if (!room) return null;
+
+  const player = room.players.find(p => p.id === playerId);
+  if (!player) return null;
+
+  // Oppdater spillerens lobby-score
+  if (!room.lobbyData.playerScores[playerId]) {
+    room.lobbyData.playerScores[playerId] = {
+      jumperScore: 0,
+      jumperBest: 0,
+      playerName: player.name
+    };
+  }
+
+  const playerData = room.lobbyData.playerScores[playerId];
+  playerData.jumperScore += score;
+  playerData.jumperBest = Math.max(playerData.jumperBest, score);
+
+  // Oppdater total klassescore
+  room.lobbyData.totalScore += score;
+
+  // Oppdater leaderboard
+  room.lobbyData.leaderboard = Object.entries(room.lobbyData.playerScores)
+    .map(([id, data]) => ({
+      playerId: id,
+      playerName: data.playerName,
+      totalScore: data.jumperScore,
+      bestScore: data.jumperBest
+    }))
+    .sort((a, b) => b.totalScore - a.totalScore)
+    .slice(0, 10);
+
+  return {
+    room,
+    playerScore: playerData,
+    totalScore: room.lobbyData.totalScore,
+    leaderboard: room.lobbyData.leaderboard
+  };
 }
 
 /**
@@ -138,11 +238,13 @@ function initializeGameData(game, players, config) {
       return {
         currentLetter: 'S',
         wordChain: [],
-        usedWords: new Set(),
+        usedWords: new Set(), // Brukes internt, konverteres til array ved serialisering
+        usedWordsArray: [],   // For serialisering over socket
         buzzerQueue: [],
         currentPlayer: null,
         pendingWord: null,
-        mode: config.mode || 'samarbeid'
+        mode: config.mode || 'samarbeid',
+        category: config.category || 'blanding'
       };
 
     default:
@@ -153,11 +255,26 @@ function initializeGameData(game, players, config) {
 /**
  * Ends the game
  */
-export function endGame(roomCode) {
+export function endGame(roomCode, returnToLobbyAfter = false) {
   const room = rooms[roomCode];
   if (!room) return null;
 
-  room.gameState = 'GAME_OVER';
+  if (returnToLobbyAfter) {
+    // Returner til lobby i stedet for GAME_OVER
+    room.gameState = 'LOBBY_IDLE';
+    room.game = null;
+    room.gameData = null;
+
+    // Nullstill spillerdata men behold dem i rommet
+    room.players.forEach(p => {
+      p.score = 0;
+      p.isEliminated = false;
+      p.wordsSubmitted = 0;
+    });
+  } else {
+    room.gameState = 'GAME_OVER';
+  }
+
   return room;
 }
 
@@ -382,6 +499,17 @@ function handleQuizHostAction(room, action, data) {
       gd.questionStartTime = Date.now();
       gd.timeLimit = timeLimit * 1000; // Convert to ms
 
+      // Lagre riktige svar for tekst-sammenligning
+      // Hvis question har correctAnswers array, bruk den
+      // Ellers, bruk options[correct] som riktig svar
+      if (question.correctAnswers) {
+        gd.correctAnswers = question.correctAnswers;
+      } else if (question.options && typeof question.correct === 'number') {
+        gd.correctAnswers = [question.options[question.correct]];
+      } else {
+        gd.correctAnswers = [];
+      }
+
       return {
         broadcast: true,
         event: 'game:question-shown',
@@ -398,15 +526,27 @@ function handleQuizHostAction(room, action, data) {
       // Host reveals the answer
       gd.showAnswer = true;
       const correctIndex = gd.currentQuestion.correct;
+      const correctAnswers = gd.correctAnswers || [];
+      const correctAnswerText = gd.currentQuestion.options?.[correctIndex] || '';
       const results = [];
 
       // Calculate points for each player
       for (const [playerId, answerData] of Object.entries(gd.answers)) {
         const player = room.players.find(p => p.id === playerId);
         if (player) {
-          const isCorrect = answerData.answer === correctIndex;
-          let points = 0;
+          let isCorrect = false;
 
+          // Sjekk om svaret er riktig
+          // Først sjekk om det er en indeks (gammel metode)
+          if (typeof answerData.answer === 'number') {
+            isCorrect = answerData.answer === correctIndex;
+          } else if (typeof answerData.answer === 'string') {
+            // Tekst-svar: bruk checkAnswer for fuzzy matching
+            const result = checkAnswer(answerData.answer, correctAnswers.length > 0 ? correctAnswers : [correctAnswerText]);
+            isCorrect = result.isCorrect;
+          }
+
+          let points = 0;
           if (isCorrect) {
             // Base points + time bonus (faster = more points)
             const timeTaken = answerData.time;
@@ -419,6 +559,9 @@ function handleQuizHostAction(room, action, data) {
             playerId,
             playerName: player.name,
             answer: answerData.answer,
+            answerText: typeof answerData.answer === 'number'
+              ? gd.currentQuestion.options?.[answerData.answer]
+              : answerData.answer,
             isCorrect,
             points,
             totalScore: player.score
@@ -433,6 +576,7 @@ function handleQuizHostAction(room, action, data) {
             playerId: player.id,
             playerName: player.name,
             answer: null,
+            answerText: null,
             isCorrect: false,
             points: 0,
             totalScore: player.score
@@ -452,6 +596,7 @@ function handleQuizHostAction(room, action, data) {
         event: 'game:answer-revealed',
         data: {
           correctAnswer: correctIndex,
+          correctAnswerText,
           results,
           leaderboard,
           questionIndex: gd.currentQuestionIndex - 1
@@ -510,7 +655,7 @@ function handleQuizPlayerAction(room, playerId, action, data) {
       if (gd.showAnswer) return null; // Too late
       if (gd.answers[playerId]) return null; // Already answered
 
-      const { answer } = data; // 0, 1, 2, or 3
+      const { answer } = data; // Kan være indeks (0-3) eller tekststreng
       const timeTaken = Date.now() - gd.questionStartTime;
 
       gd.answers[playerId] = {
@@ -544,7 +689,7 @@ function handleGjettBildetHostAction(room, action, data) {
   switch (action) {
     case 'reveal-step':
       // Sørg for at vi lagrer steget i server-staten også
-      gd.revealedTiles.push(data.step); 
+      gd.revealedTiles.push(data.step);
       return {
         broadcast: true,
         event: 'game:reveal-step',
@@ -561,22 +706,23 @@ function handleGjettBildetHostAction(room, action, data) {
       };
 
     case 'validate-guess': {
-      const { playerId, isCorrect } = data;
+      const { playerId, isCorrect, correctAnswer } = data;
       const player = room.players.find(p => p.id === playerId);
-      
+
       if (isCorrect && player) {
         player.score += 100;
       }
 
       gd.currentPlayer = null;
-      gd.buzzerQueue = []; 
+      gd.buzzerQueue = [];
 
       return {
         broadcast: true,
         event: 'game:guess-result',
-        data: { 
-          playerId, 
-          isCorrect, 
+        data: {
+          playerId,
+          isCorrect,
+          correctAnswer: correctAnswer || gd.currentImageAnswers?.[0] || '',
           points: isCorrect ? 100 : 0,
           players: room.players // Send oppdatert scoreliste
         }
@@ -588,11 +734,38 @@ function handleGjettBildetHostAction(room, action, data) {
       gd.revealedTiles = []; // Nullstill ruter for nytt bilde
       gd.buzzerQueue = [];
       gd.currentPlayer = null;
+      // Lagre gyldige svar for dette bildet
+      if (data.answers) {
+        gd.currentImageAnswers = Array.isArray(data.answers) ? data.answers : [data.answers];
+      } else {
+        gd.currentImageAnswers = [];
+      }
       return {
         broadcast: true,
         event: 'game:next-image',
         data: { imageIndex: data.imageIndex }
       };
+
+    case 'clear-buzzer':
+      gd.buzzerQueue = [];
+      gd.currentPlayer = null;
+      return {
+        broadcast: true,
+        event: 'game:buzzer-cleared',
+        data: {}
+      };
+
+    case 'end-gjett-bildet': {
+      const leaderboard = room.players
+        .map(p => ({ id: p.id, name: p.name, score: p.score }))
+        .sort((a, b) => b.score - a.score);
+
+      return {
+        broadcast: true,
+        event: 'game:gjett-bildet-ended',
+        data: { leaderboard, winner: leaderboard[0] || null }
+      };
+    }
 
     default:
       return null;
@@ -615,13 +788,33 @@ function handleGjettBildetPlayerAction(room, playerId, action, data) {
       }
       return null;
 
-    case 'submit-guess':
-      gd.pendingGuess = { playerId, guess: data.guess };
+    case 'submit-guess': {
+      const { guess, correctAnswers } = data;
+      gd.pendingGuess = { playerId, guess };
+
+      // Auto-sjekk svar hvis vi har gyldige svar
+      const answersToCheck = correctAnswers || gd.currentImageAnswers || [];
+      let autoResult = null;
+
+      if (answersToCheck.length > 0 && guess) {
+        const checkResult = checkAnswer(guess, answersToCheck);
+        autoResult = {
+          isCorrect: checkResult.isCorrect,
+          matchedAnswer: checkResult.matchedAnswer,
+          distance: checkResult.distance
+        };
+      }
+
       return {
         toHost: true,
         hostEvent: 'game:guess-submitted',
-        hostData: { playerId, guess: data.guess }
+        hostData: {
+          playerId,
+          guess,
+          autoResult // Host kan bruke dette for auto-godkjenning
+        }
       };
+    }
 
     default:
       return null;
@@ -912,13 +1105,20 @@ function handleTidslinjePlayerAction(room, playerId, action, data) {
 // SLANGE
 // ==================
 
-// Finn handleSlangeHostAction (linje 586) og erstatt med:
 function handleSlangeHostAction(room, action, data) {
   const gd = room.gameData;
   if (!gd) return null;
 
+  // Konverter usedWords fra array til Set hvis nødvendig (for serialisering over socket)
+  if (Array.isArray(gd.usedWords)) {
+    gd.usedWords = new Set(gd.usedWords);
+  }
+  if (!gd.usedWords) {
+    gd.usedWords = new Set();
+  }
+
   switch (action) {
-    case 'select-player':
+    case 'select-player': {
       const player = room.players.find(p => p.id === data.playerId);
       gd.currentPlayer = { id: data.playerId, name: player?.name };
       gd.buzzerQueue = [];
@@ -927,45 +1127,161 @@ function handleSlangeHostAction(room, action, data) {
         event: 'game:player-selected',
         data: { playerId: data.playerId, playerName: player?.name }
       };
-
-  case 'approve-word': {
-  const newWord = { 
-    word: gd.pendingWord, 
-    playerName: gd.currentPlayer?.name,
-    timestamp: Date.now() 
-  };
-  
-  // Oppdater serverens tilstand
-  gd.wordChain.push(newWord);
-  gd.currentLetter = newWord.word.slice(-1).toUpperCase();
-  gd.currentPlayer = null;
-  gd.pendingWord = null;
-
-  return {
-    broadcast: true,
-    event: 'game:word-approved',
-    data: { 
-      word: newWord.word,
-      playerName: newWord.playerName,
-      newLetter: gd.currentLetter,
-      wordChain: gd.wordChain // Sender hele den oppdaterte kjeden
     }
-  };
-}
 
-    case 'skip-letter':
+    case 'approve-word': {
+      const word = gd.pendingWord;
+      const playerId = gd.currentPlayer?.id;
+      const player = room.players.find(p => p.id === playerId);
+
+      // Valider at ordet starter med riktig bokstav
+      if (!startsWithLetter(word, gd.currentLetter)) {
+        // Automatisk avslag - feil startbokstav
+        gd.currentPlayer = null;
+        gd.pendingWord = null;
+
+        // Trekk poeng i konkurransemodus
+        if (gd.mode === 'konkurranse' && player) {
+          player.score = (player.score || 0) - 5;
+        }
+
+        return {
+          broadcast: true,
+          event: 'game:word-rejected',
+          data: {
+            playerId,
+            reason: `Ordet må starte med bokstaven ${gd.currentLetter}`,
+            players: room.players
+          }
+        };
+      }
+
+      // Sjekk om ordet allerede er brukt
+      const normalizedWord = word.toLowerCase().trim();
+      if (gd.usedWords.has(normalizedWord)) {
+        gd.currentPlayer = null;
+        gd.pendingWord = null;
+
+        // Trekk poeng i konkurransemodus
+        if (gd.mode === 'konkurranse' && player) {
+          player.score = (player.score || 0) - 5;
+        }
+
+        return {
+          broadcast: true,
+          event: 'game:word-rejected',
+          data: {
+            playerId,
+            reason: 'Dette ordet er allerede brukt',
+            players: room.players
+          }
+        };
+      }
+
+      // Godkjenn ordet
+      gd.usedWords.add(normalizedWord);
+
+      const newWord = {
+        word: word,
+        playerName: gd.currentPlayer?.name,
+        playerId: playerId,
+        timestamp: Date.now()
+      };
+
+      gd.wordChain.push(newWord);
+      gd.currentLetter = getLastLetter(word);
+
+      // Gi poeng i konkurransemodus
+      if (gd.mode === 'konkurranse' && player) {
+        player.score = (player.score || 0) + 10;
+      }
+
+      // Oppdater antall ord for spilleren
+      if (player) {
+        player.wordsSubmitted = (player.wordsSubmitted || 0) + 1;
+      }
+
+      gd.currentPlayer = null;
+      gd.pendingWord = null;
+
+      return {
+        broadcast: true,
+        event: 'game:word-approved',
+        data: {
+          word: newWord.word,
+          playerName: newWord.playerName,
+          newLetter: gd.currentLetter,
+          wordChain: gd.wordChain,
+          players: room.players
+        }
+      };
+    }
+
+    case 'reject-word': {
+      const playerId = gd.currentPlayer?.id;
+      const player = room.players.find(p => p.id === playerId);
+
+      // Trekk poeng i konkurransemodus
+      if (gd.mode === 'konkurranse' && player) {
+        player.score = (player.score || 0) - 5;
+      }
+
+      gd.currentPlayer = null;
+      gd.pendingWord = null;
+
+      return {
+        broadcast: true,
+        event: 'game:word-rejected',
+        data: {
+          playerId,
+          reason: data.reason || 'Ordet ble avslått av lærer',
+          players: room.players
+        }
+      };
+    }
+
+    case 'skip-letter': {
+      // Velg en ny tilfeldig bokstav (unngå vanskelige bokstaver)
+      const letters = 'ABDEFGHIKLMNOPRSTUVWY';
+      const newLetter = letters.charAt(Math.floor(Math.random() * letters.length));
+      gd.currentLetter = newLetter;
+      gd.currentPlayer = null;
+      gd.pendingWord = null;
+      gd.buzzerQueue = [];
+
       return {
         broadcast: true,
         event: 'game:letter-skipped',
-        data: { newLetter: 'A' } // Eksempel
+        data: { newLetter }
       };
+    }
+
+    case 'end-slange': {
+      const leaderboard = room.players
+        .map(p => ({
+          id: p.id,
+          name: p.name,
+          score: p.score || 0,
+          wordsSubmitted: p.wordsSubmitted || 0
+        }))
+        .sort((a, b) => b.score - a.score);
+
+      return {
+        broadcast: true,
+        event: 'game:slange-ended',
+        data: {
+          leaderboard,
+          winner: leaderboard[0] || null,
+          totalWords: gd.wordChain.length
+        }
+      };
+    }
 
     default:
       return null;
   }
 }
 
-// Finn handleSlangePlayerAction (linje 591) og erstatt med:
 function handleSlangePlayerAction(room, playerId, action, data) {
   const gd = room.gameData;
   if (!gd) return null;
@@ -983,13 +1299,18 @@ function handleSlangePlayerAction(room, playerId, action, data) {
       }
       return null;
 
-    case 'submit-word':
-      gd.pendingWord = data.word;
+    case 'submit-word': {
+      const word = data.word?.trim();
+      if (!word) return null;
+
+      gd.pendingWord = word;
+
       return {
         broadcast: true,
         event: 'game:word-submitted',
-        data: { playerId, word: data.word }
+        data: { playerId, word }
       };
+    }
 
     default:
       return null;

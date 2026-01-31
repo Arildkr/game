@@ -24,8 +24,15 @@ export const GameProvider = ({ children }) => {
 
   // Game state
   const [currentGame, setCurrentGame] = useState(null); // 'gjett-bildet', 'slange', 'tallkamp', 'quiz', 'tidslinje', 'ja-eller-nei'
-  const [gameState, setGameState] = useState('LOBBY'); // LOBBY, PLAYING, GAME_OVER
+  const [gameState, setGameState] = useState('LOBBY'); // LOBBY_IDLE, LOBBY_GAME_SELECTED, LOBBY, PLAYING, GAME_OVER
   const [gameData, setGameData] = useState(null); // Game-specific data
+
+  // Lobby state
+  const [lobbyData, setLobbyData] = useState({
+    totalScore: 0,
+    leaderboard: [],
+    playerScores: {}
+  });
 
 // Initialize socket connection
   useEffect(() => {
@@ -62,11 +69,48 @@ export const GameProvider = ({ children }) => {
     });
 
      // Room events
-    newSocket.on('room:created', ({ roomCode: code, game }) => {
+    newSocket.on('room:created', ({ roomCode: code, game, gameState: state }) => {
       setRoomCode(code);
       setCurrentGame(game);
+      setGameState(state || 'LOBBY');
       setIsHost(true);
       setError(null);
+    });
+
+    // Lobby events
+    newSocket.on('lobby:created', ({ roomCode: code, gameState: state, lobbyData: lData }) => {
+      setRoomCode(code);
+      setCurrentGame(null);
+      setGameState(state || 'LOBBY_IDLE');
+      setIsHost(true);
+      setLobbyData(lData || { totalScore: 0, leaderboard: [], playerScores: {} });
+      setError(null);
+    });
+
+    newSocket.on('lobby:game-selected', ({ game, gameState: state, room }) => {
+      setCurrentGame(game);
+      setGameState(state || 'LOBBY_GAME_SELECTED');
+      setPlayers(room.players);
+    });
+
+    newSocket.on('lobby:returned', ({ room, lobbyData: lData }) => {
+      setGameState('LOBBY_IDLE');
+      setCurrentGame(null);
+      setGameData(null);
+      setPlayers(room.players);
+      setLobbyData(lData || { totalScore: 0, leaderboard: [], playerScores: {} });
+    });
+
+    newSocket.on('lobby:score-update', ({ totalScore, leaderboard, playerScore }) => {
+      setLobbyData(prev => ({
+        ...prev,
+        totalScore,
+        leaderboard
+      }));
+    });
+
+    newSocket.on('lobby:scores', ({ totalScore, leaderboard, playerScores }) => {
+      setLobbyData({ totalScore, leaderboard, playerScores });
     });
 
     newSocket.on('room:player-joined', ({ room, playerId, playerName: name }) => {
@@ -159,6 +203,7 @@ export const GameProvider = ({ children }) => {
     setCurrentGame(null);
     setGameState('LOBBY');
     setGameData(null);
+    setLobbyData({ totalScore: 0, leaderboard: [], playerScores: {} });
   };
 
   // Host actions
@@ -168,15 +213,36 @@ export const GameProvider = ({ children }) => {
     }
   }, [socket]);
 
+  // Ny: Opprett lobby uten spill
+  const createLobby = useCallback(() => {
+    if (socket) {
+      socket.emit('host:create-lobby');
+    }
+  }, [socket]);
+
+  // Ny: Velg spill for lobby
+  const selectGame = useCallback((game) => {
+    if (socket && isHost) {
+      socket.emit('host:select-game', { game });
+    }
+  }, [socket, isHost]);
+
+  // Ny: Returner til lobby
+  const returnToLobby = useCallback(() => {
+    if (socket && isHost) {
+      socket.emit('host:return-to-lobby');
+    }
+  }, [socket, isHost]);
+
   const startGame = useCallback((config = {}) => {
     if (socket && isHost) {
       socket.emit('host:start-game', config);
     }
   }, [socket, isHost]);
 
-  const endGame = useCallback(() => {
+  const endGame = useCallback((returnToLobbyAfter = false) => {
     if (socket && isHost) {
-      socket.emit('host:end-game');
+      socket.emit('host:end-game', { returnToLobby: returnToLobbyAfter });
     }
   }, [socket, isHost]);
 
@@ -208,6 +274,20 @@ const sendPlayerAction = useCallback((action, data = {}) => {
   }
 }, [socket, isHost]);
 
+  // Ny: Send lobby-score
+  const submitLobbyScore = useCallback((score) => {
+    if (socket) {
+      socket.emit('lobby:submit-score', { score });
+    }
+  }, [socket]);
+
+  // Ny: Hent lobby-scores
+  const getLobbyScores = useCallback(() => {
+    if (socket) {
+      socket.emit('lobby:get-scores');
+    }
+  }, [socket]);
+
   // Retry connection
   const retryConnection = useCallback(() => {
     if (socket) {
@@ -225,6 +305,12 @@ const sendPlayerAction = useCallback((action, data = {}) => {
     }
     if (gameState === 'GAME_OVER') {
       return 'GAME_OVER';
+    }
+    if (gameState === 'LOBBY_IDLE') {
+      return isHost ? 'HOST_LOBBY_IDLE' : 'PLAYER_LOBBY_IDLE';
+    }
+    if (gameState === 'LOBBY_GAME_SELECTED') {
+      return isHost ? 'HOST_LOBBY' : 'PLAYER_LOBBY';
     }
     if (roomCode && isHost) {
       return 'HOST_LOBBY';
@@ -259,8 +345,15 @@ const sendPlayerAction = useCallback((action, data = {}) => {
     gameData,
     setGameData,
 
+    // Lobby state
+    lobbyData,
+    setLobbyData,
+
     // Host actions
     createRoom,
+    createLobby,
+    selectGame,
+    returnToLobby,
     startGame,
     endGame,
     kickPlayer,
@@ -269,6 +362,8 @@ const sendPlayerAction = useCallback((action, data = {}) => {
     // Player actions
     joinRoom,
     sendPlayerAction,
+    submitLobbyScore,
+    getLobbyScores,
 
     // Utility
     getGamePhase,

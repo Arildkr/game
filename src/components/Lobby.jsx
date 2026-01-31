@@ -17,9 +17,11 @@ function Lobby() {
     isHost,
     playerName,
     currentGame,
+    gameState,
     startGame,
     kickPlayer,
-    resetGameState
+    resetGameState,
+    returnToLobby
   } = useGame();
 
   const gameInfo = GAME_NAMES[currentGame] || { name: currentGame, icon: '🎮' };
@@ -54,6 +56,16 @@ function Lobby() {
             >
               Start spill
             </button>
+            {/* Vis "Bytt spill" hvis vi kom fra en lobby */}
+            {gameState === 'LOBBY_GAME_SELECTED' && (
+              <button
+                className="btn btn-secondary"
+                onClick={returnToLobby}
+                style={{ marginTop: '1rem' }}
+              >
+                Bytt spill
+              </button>
+            )}
           </div>
 
           {/* Right side - Player list */}

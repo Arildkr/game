@@ -43,10 +43,14 @@ const GAMES = [
 
 function HostSetup() {
   const navigate = useNavigate();
-  const { createRoom } = useGame();
+  const { createRoom, createLobby } = useGame();
 
   const handleSelectGame = (gameId) => {
     createRoom(gameId);
+  };
+
+  const handleCreateLobby = () => {
+    createLobby();
   };
 
   return (
@@ -55,7 +59,23 @@ function HostSetup() {
         ← Tilbake
       </button>
 
-      <h2>Velg et spill</h2>
+      <h2>Velg startmodus</h2>
+
+      {/* Ny: Opprett lobby først */}
+      <div className="lobby-option">
+        <button className="lobby-card" onClick={handleCreateLobby}>
+          <span className="lobby-icon">🏠</span>
+          <span className="lobby-name">Opprett lobby først</span>
+          <span className="lobby-description">
+            La elevene logge inn før du velger spill. De kan spille minispill mens de venter.
+            Når et spill er ferdig, returnerer alle til lobbyen.
+          </span>
+        </button>
+      </div>
+
+      <div className="divider">
+        <span>eller velg spill direkte</span>
+      </div>
 
       <div className="game-grid">
         {GAMES.map((game) => (
