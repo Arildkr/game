@@ -155,7 +155,7 @@ function HostGame() {
         </div>
         <div className="room-info">
           <span className="room-code">Rom: {roomCode}</span>
-          <button className="btn btn-end" onClick={endGame}>Avslutt</button>
+          <button className="btn btn-end" onClick={() => endGame()}>Avslutt</button>
         </div>
       </header>
 

@@ -162,7 +162,7 @@ function HostGame() {
             )}
           </div>
 
-          <button className="btn btn-primary" onClick={endGame}>
+          <button className="btn btn-primary" onClick={() => endGame()}>
             Avslutt
           </button>
         </div>
@@ -180,7 +180,7 @@ function HostGame() {
           <span className="round-progress">Runde {currentRound} / {totalRounds}</span>
         </div>
         <div className="header-actions">
-          <button className="btn btn-end" onClick={endGame}>Avslutt</button>
+          <button className="btn btn-end" onClick={() => endGame()}>Avslutt</button>
         </div>
       </header>
 

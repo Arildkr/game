@@ -168,7 +168,7 @@ function HostGame() {
             )}
           </div>
 
-          <button className="btn btn-primary" onClick={endGame}>
+          <button className="btn btn-primary" onClick={() => endGame()}>
             Avslutt
           </button>
         </div>
@@ -198,7 +198,7 @@ function HostGame() {
               <option key={cat.id} value={cat.id}>{cat.name}</option>
             ))}
           </select>
-          <button className="btn btn-end" onClick={endGame}>Avslutt</button>
+          <button className="btn btn-end" onClick={() => endGame()}>Avslutt</button>
         </div>
       </header>
 

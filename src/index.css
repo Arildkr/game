@@ -470,7 +470,13 @@ body {
 
 /* Player Lobby */
 .player-lobby {
-  justify-content: center;
+  justify-content: flex-start;
+  padding-top: 1rem;
+}
+
+.player-lobby .waiting-message .sub {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
 }
 
 .player-info {
@@ -495,6 +501,19 @@ body {
 
 .players-count {
   color: var(--text-secondary);
+}
+
+/* Minigame Container for Player Lobby */
+.minigame-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 1rem 0;
 }
 
 /* Game Placeholder */

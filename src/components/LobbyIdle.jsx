@@ -36,7 +36,7 @@ function LobbyIdle() {
           <div className="join-url">
             <span>game.ak-kreativ.no</span>
           </div>
-          <button className="btn-close" onClick={resetGameState} title="Avslutt rom">✕</button>
+          <button className="btn-close" onClick={() => resetGameState()} title="Avslutt rom">✕</button>
         </header>
 
         <main className="lobby-idle-main">

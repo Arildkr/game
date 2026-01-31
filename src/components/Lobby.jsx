@@ -1,6 +1,7 @@
 // game/src/components/Lobby.jsx
 import { useState } from 'react';
 import { useGame } from '../contexts/GameContext';
+import LobbyJumper from './LobbyJumper';
 
 const GAME_NAMES = {
   'gjett-bildet': { name: 'Gjett Bildet', icon: '🖼️' },
@@ -60,7 +61,7 @@ function Lobby() {
           <span className="game-badge">
             {gameInfo.icon} {gameInfo.name}
           </span>
-          <button className="btn-close" onClick={resetGameState} title="Avslutt rom">✕</button>
+          <button className="btn-close" onClick={() => resetGameState()} title="Avslutt rom">✕</button>
         </div>
 
         <div className="lobby-main-layout">
@@ -123,7 +124,7 @@ function Lobby() {
             {gameState === 'LOBBY_GAME_SELECTED' && (
               <button
                 className="btn btn-secondary"
-                onClick={returnToLobby}
+                onClick={() => returnToLobby()}
                 style={{ marginTop: '1rem' }}
               >
                 Bytt spill
@@ -175,8 +176,12 @@ function Lobby() {
       </div>
 
       <div className="waiting-message">
-        <div className="spinner"></div>
         <p>Venter på at læreren skal starte spillet...</p>
+        <p className="sub">Spill minispillet under mens du venter!</p>
+      </div>
+
+      <div className="minigame-container">
+        <LobbyJumper />
       </div>
 
       <div className="players-count">
