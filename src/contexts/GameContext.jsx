@@ -1,5 +1,5 @@
 // game/src/contexts/GameContext.jsx
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import io from 'socket.io-client';
 
 const GameContext = createContext(null);
@@ -34,14 +34,31 @@ export const GameProvider = ({ children }) => {
     playerScores: {}
   });
 
-// Initialize socket connection
+  // Ref for å unngå stale closures i socket handlers
+  const roomCodeRef = useRef(roomCode);
+  useEffect(() => {
+    roomCodeRef.current = roomCode;
+  }, [roomCode]);
+
+  // Funksjon for å nullstille state (definert før useEffect)
+  const doResetGameState = useCallback(() => {
+    setRoomCode(null);
+    setPlayers([]);
+    setIsHost(false);
+    setCurrentGame(null);
+    setGameState('LOBBY');
+    setGameData(null);
+    setLobbyData({ totalScore: 0, leaderboard: [], playerScores: {} });
+  }, []);
+
+  // Initialize socket connection - kjører kun én gang ved mount
   useEffect(() => {
     // Alltid bruk Render-serveren
     const SOCKET_SERVER_URL = 'https://game-p2u5.onrender.com';
 
     const newSocket = io(SOCKET_SERVER_URL, {
       transports: ['websocket', 'polling'],
-      timeout: 30000, // Økt fra 20s til 30s for Render
+      timeout: 30000,
       reconnectionAttempts: 10,
       reconnectionDelay: 2000
     });
@@ -62,13 +79,13 @@ export const GameProvider = ({ children }) => {
       setIsConnected(false);
     });
 
-    newSocket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
+    newSocket.on('connect_error', (err) => {
+      console.error('Socket connection error:', err);
       setConnectionError('Prøver å koble til serveren...');
       setIsConnected(false);
     });
 
-     // Room events
+    // Room events
     newSocket.on('room:created', ({ roomCode: code, game, gameState: state }) => {
       setRoomCode(code);
       setCurrentGame(game);
@@ -101,7 +118,7 @@ export const GameProvider = ({ children }) => {
       setLobbyData(lData || { totalScore: 0, leaderboard: [], playerScores: {} });
     });
 
-    newSocket.on('lobby:score-update', ({ totalScore, leaderboard, playerScore }) => {
+    newSocket.on('lobby:score-update', ({ totalScore, leaderboard }) => {
       setLobbyData(prev => ({
         ...prev,
         totalScore,
@@ -113,12 +130,11 @@ export const GameProvider = ({ children }) => {
       setLobbyData({ totalScore, leaderboard, playerScores });
     });
 
-    newSocket.on('room:player-joined', ({ room, playerId, playerName: name }) => {
+    newSocket.on('room:player-joined', ({ room }) => {
       setPlayers(room.players);
-      if (!roomCode) {
-        setRoomCode(room.code);
-        setCurrentGame(room.game);
-      }
+      // Bruk functional update for å unngå stale closure
+      setRoomCode(prev => prev || room.code);
+      setCurrentGame(prev => prev === null ? room.game : prev);
       setError(null);
     });
 
@@ -132,12 +148,24 @@ export const GameProvider = ({ children }) => {
 
     newSocket.on('room:closed', () => {
       setError('Rommet ble stengt av verten.');
-      resetGameState();
+      setRoomCode(null);
+      setPlayers([]);
+      setIsHost(false);
+      setCurrentGame(null);
+      setGameState('LOBBY');
+      setGameData(null);
+      setLobbyData({ totalScore: 0, leaderboard: [], playerScores: {} });
     });
 
     newSocket.on('room:kicked', () => {
       setError('Du ble fjernet fra spillet av læreren.');
-      resetGameState();
+      setRoomCode(null);
+      setPlayers([]);
+      setIsHost(false);
+      setCurrentGame(null);
+      setGameState('LOBBY');
+      setGameData(null);
+      setLobbyData({ totalScore: 0, leaderboard: [], playerScores: {} });
     });
 
     // Game events
@@ -152,7 +180,7 @@ export const GameProvider = ({ children }) => {
       if (updatedPlayers) setPlayers(updatedPlayers);
     });
 
-    newSocket.on('game:ended', ({ room, results }) => {
+    newSocket.on('game:ended', () => {
       // Avslutt tar alle tilbake til startsiden
       setRoomCode(null);
       setPlayers([]);
@@ -162,17 +190,18 @@ export const GameProvider = ({ children }) => {
       setGameData(null);
     });
 
-   newSocket.on('game:state-sync', ({ room }) => {
+    newSocket.on('game:state-sync', ({ room }) => {
       setGameState(room.gameState);
       setCurrentGame(room.game);
       setGameData(room.gameData);
       setPlayers(room.players);
     });
 
-  return () => {
+    // Cleanup ved unmount
+    return () => {
       newSocket.disconnect();
     };
-  }, [socket, isHost]);
+  }, []); // Tom dependency array - kjører kun én gang
 
   // Server wake-up timer
   useEffect(() => {
@@ -196,15 +225,8 @@ export const GameProvider = ({ children }) => {
     return () => clearInterval(heartbeat);
   }, [socket, isConnected]);
 
-  const resetGameState = () => {
-    setRoomCode(null);
-    setPlayers([]);
-    setIsHost(false);
-    setCurrentGame(null);
-    setGameState('LOBBY');
-    setGameData(null);
-    setLobbyData({ totalScore: 0, leaderboard: [], playerScores: {} });
-  };
+  // resetGameState bruker den allerede definerte doResetGameState
+  const resetGameState = doResetGameState;
 
   // Host actions
   const createRoom = useCallback((game) => {
