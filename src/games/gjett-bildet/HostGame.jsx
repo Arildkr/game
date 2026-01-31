@@ -1,10 +1,63 @@
 // game/src/games/gjett-bildet/HostGame.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useGame } from '../../contexts/GameContext';
 import { getImages, shuffleArray, categories } from '../../data/gjettBildetImages';
 import './GjettBildet.css';
 
 const REVEAL_STEPS = [10, 20, 35, 50, 70, 85, 100];
+const POINTS_BY_STEP = [100, 80, 60, 50, 40, 30, 20];
+
+// --- LOKAL SVAR-VALIDERING (samme som original app) ---
+function getSimilarity(s1, s2) {
+  let longer = s1;
+  let shorter = s2;
+  if (s1.length < s2.length) {
+    longer = s2;
+    shorter = s1;
+  }
+  const longerLength = longer.length;
+  if (longerLength === 0) return 1.0;
+
+  const editDistance = ((str1, str2) => {
+    str1 = str1.toLowerCase();
+    str2 = str2.toLowerCase();
+    const costs = [];
+    for (let i = 0; i <= str1.length; i++) {
+      let lastValue = i;
+      for (let j = 0; j <= str2.length; j++) {
+        if (i === 0) costs[j] = j;
+        else {
+          if (j > 0) {
+            let newValue = costs[j - 1];
+            if (str1.charAt(i - 1) !== str2.charAt(j - 1))
+              newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
+            costs[j - 1] = lastValue;
+            lastValue = newValue;
+          }
+        }
+      }
+      if (i > 0) costs[str2.length] = lastValue;
+    }
+    return costs[str2.length];
+  })(longer, shorter);
+
+  return (longerLength - editDistance) / parseFloat(longerLength);
+}
+
+function isAnswerCorrect(studentAnswer, correctAnswersArray) {
+  if (!studentAnswer || !correctAnswersArray || correctAnswersArray.length === 0) return false;
+  const sAnswer = studentAnswer.trim().toLowerCase();
+  return correctAnswersArray.some(correct => {
+    const cAnswer = correct.trim().toLowerCase();
+    if (sAnswer === cAnswer) return true;
+    if (cAnswer.includes(sAnswer)) {
+      const lengthRatio = sAnswer.length / cAnswer.length;
+      if (lengthRatio >= 0.5) return true;
+    }
+    const similarity = getSimilarity(sAnswer, cAnswer);
+    return similarity >= 0.75;
+  });
+}
 
 function HostGame() {
   const {
@@ -22,18 +75,21 @@ function HostGame() {
   const [buzzerQueue, setBuzzerQueue] = useState([]);
   const [currentPlayer, setCurrentPlayer] = useState(null);
   const [pendingGuess, setPendingGuess] = useState(null);
-  const [phase, setPhase] = useState('playing'); // playing, answering, roundEnd, gameOver
+  const [phase, setPhase] = useState('playing'); // playing, answering, checking, roundEnd, showingAnswer, gameOver
   const [lastResult, setLastResult] = useState(null);
   const [config, setConfig] = useState({ category: 'blanding', mode: 'blur' });
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [tempAnswer, setTempAnswer] = useState(null); // For å vise fasit midlertidig
 
+  const initDone = useRef(false);
   const currentImage = images[currentIndex];
   const revealPercent = REVEAL_STEPS[revealStep];
   const isLastImage = currentIndex >= images.length - 1;
 
-  // Initialize from gameData
+  // Initialize fra gameData - kun én gang
   useEffect(() => {
-    if (gameData) {
+    if (gameData && !initDone.current) {
+      initDone.current = true;
       const category = gameData.category || 'blanding';
       const allImages = getImages(category);
       const shuffled = shuffleArray(allImages).slice(0, 15);
@@ -42,22 +98,15 @@ function HostGame() {
         category: category,
         mode: gameData.mode || 'blur'
       });
-
-      // Send answers for første bilde til serveren
-      if (shuffled.length > 0) {
-        const firstImage = shuffled[0];
-        const answers = firstImage?.answers || (firstImage?.answer ? [firstImage.answer] : []);
-        sendGameAction('next-image', { imageIndex: 0, answers });
-      }
     }
   }, [gameData]);
 
-  // Socket listeners for å koble original logikk til serveren
+  // Socket listeners
   useEffect(() => {
     if (!socket) return;
 
     const handlePlayerBuzzed = ({ buzzerQueue: queue }) => {
-      setBuzzerQueue(queue);
+      setBuzzerQueue(queue || []);
     };
 
     const handlePlayerSelected = ({ playerId, playerName }) => {
@@ -66,23 +115,12 @@ function HostGame() {
       setPhase('answering');
     };
 
-    const handleGuessSubmitted = ({ playerId, guess, autoResult }) => {
-      setPendingGuess({ playerId, guess, autoResult });
-
-      // Auto-godkjenn hvis autoResult.isCorrect er true
-      if (autoResult?.isCorrect) {
-        // Kort forsinkelse så brukeren ser svaret
-        setTimeout(() => {
-          sendGameAction('validate-guess', {
-            playerId,
-            isCorrect: true,
-            correctAnswer: autoResult.matchedAnswer || currentImage?.answers?.[0] || currentImage?.answer
-          });
-        }, 500);
-      }
+    const handleGuessSubmitted = ({ playerId, guess }) => {
+      setPendingGuess({ playerId, guess });
+      setPhase('checking');
     };
 
-    const handleGuessResult = ({ playerId, isCorrect, correctAnswer, points }) => {
+    const handleGuessResult = ({ playerId, isCorrect, correctAnswer, points, players: updatedPlayers }) => {
       setLastResult({ playerId, isCorrect, correctAnswer, points });
       setPendingGuess(null);
 
@@ -103,10 +141,13 @@ function HostGame() {
       setLastResult(null);
       setBuzzerQueue([]);
       setImageLoaded(false);
+      setTempAnswer(null);
     };
 
     const handleBuzzerCleared = () => {
-        setBuzzerQueue([]);
+      setBuzzerQueue([]);
+      setCurrentPlayer(null);
+      setPhase('playing');
     };
 
     socket.on('game:player-buzzed', handlePlayerBuzzed);
@@ -124,7 +165,26 @@ function HostGame() {
       socket.off('game:next-image', handleNextImage);
       socket.off('game:buzzer-cleared', handleBuzzerCleared);
     };
-  }, [socket, players]);
+  }, [socket]);
+
+  // AUTO-VALIDERING: Når pendingGuess kommer inn, sjekk automatisk etter 1.5s
+  useEffect(() => {
+    if (pendingGuess && currentImage && phase === 'checking') {
+      const timer = setTimeout(() => {
+        const correctAnswers = currentImage.answers || (currentImage.answer ? [currentImage.answer] : []);
+        const isCorrect = isAnswerCorrect(pendingGuess.guess, correctAnswers);
+        const points = isCorrect ? (POINTS_BY_STEP[revealStep] || 20) : 0;
+
+        sendGameAction('validate-guess', {
+          playerId: pendingGuess.playerId,
+          isCorrect,
+          correctAnswer: correctAnswers[0] || ''
+        });
+      }, 1500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [pendingGuess, currentImage, phase, revealStep, sendGameAction]);
 
   const handleReveal = () => {
     if (revealStep < REVEAL_STEPS.length - 1) {
@@ -140,29 +200,44 @@ function HostGame() {
     }
   };
 
-  const handleValidateGuess = (isCorrect) => {
-    if (pendingGuess && currentImage) {
-      sendGameAction('validate-guess', {
-        playerId: pendingGuess.playerId,
-        isCorrect,
-        correctAnswer: currentImage.answer || currentImage.answers[0]
-      });
-    }
-  };
-
+  // Gå videre til neste bilde - med fasit-visning hvis ingen vant
   const handleNextImageAction = () => {
-    if (isLastImage) {
-      sendGameAction('end-gjett-bildet');
-      setPhase('gameOver');
-    } else {
-      const nextImage = images[currentIndex + 1];
-      const answers = nextImage?.answers || (nextImage?.answer ? [nextImage.answer] : []);
-      sendGameAction('next-image', { imageIndex: currentIndex + 1, answers });
+    // Hvis noen allerede vant (roundEnd), gå direkte videre
+    if (phase === 'roundEnd') {
+      if (isLastImage) {
+        sendGameAction('end-gjett-bildet');
+        setPhase('gameOver');
+      } else {
+        sendGameAction('next-image', { imageIndex: currentIndex + 1 });
+      }
+      return;
+    }
+
+    // Ingen vant - vis fasit først
+    if (!tempAnswer && currentImage) {
+      const correctAnswer = currentImage.answers?.[0] || currentImage.answer || '';
+      setTempAnswer(correctAnswer);
+      setPhase('showingAnswer');
+
+      // Gå automatisk videre etter 3 sekunder
+      setTimeout(() => {
+        setTempAnswer(null);
+        if (isLastImage) {
+          sendGameAction('end-gjett-bildet');
+          setPhase('gameOver');
+        } else {
+          sendGameAction('next-image', { imageIndex: currentIndex + 1 });
+        }
+      }, 3000);
     }
   };
 
   const handleClearBuzzer = () => {
     sendGameAction('clear-buzzer');
+  };
+
+  const handleEndGame = () => {
+    endGame();
   };
 
   const getPlayerName = (playerId) => {
@@ -175,7 +250,7 @@ function HostGame() {
 
     let imageStyle = { width: '100%', height: '100%', objectFit: 'cover' };
 
-    if (config.mode === 'blur') {
+    if (config.mode === 'blur' || config.mode === 'pixel') {
       const blur = ((100 - revealPercent) / 100) * 30;
       imageStyle.filter = `blur(${blur}px)`;
     } else if (config.mode === 'zoom') {
@@ -187,7 +262,7 @@ function HostGame() {
     }
 
     return (
-      <div className="image-container">
+      <div className="image-container" style={{ position: 'relative' }}>
         {!imageLoaded && (
           <div className="loading-spinner">
             <div className="spinner"></div>
@@ -201,6 +276,21 @@ function HostGame() {
           onLoad={() => setImageLoaded(true)}
           draggable={false}
         />
+
+        {/* Overlay for å vise fasit */}
+        {tempAnswer && (
+          <div style={{
+            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
+            color: 'white', zIndex: 10, borderRadius: '12px', backdropFilter: 'blur(5px)'
+          }}>
+            <p style={{ fontSize: '1.2rem', margin: 0, opacity: 0.8 }}>Svaret var:</p>
+            <h1 style={{ fontSize: '2.5rem', margin: '10px 0', color: '#2ecc71', fontWeight: 'bold' }}>{tempAnswer}</h1>
+            <p style={{ fontSize: '0.9rem', marginTop: '20px' }}>Går videre om litt...</p>
+          </div>
+        )}
+
         <div className="reveal-indicator">
           <div className="reveal-bar" style={{ width: `${revealPercent}%` }}></div>
         </div>
@@ -208,6 +298,7 @@ function HostGame() {
     );
   };
 
+  // Game Over screen
   if (phase === 'gameOver') {
     const sortedPlayers = [...players].sort((a, b) => (b.score || 0) - (a.score || 0));
     return (
@@ -226,12 +317,13 @@ function HostGame() {
               ))}
             </div>
           </div>
-          <button className="btn btn-primary" onClick={endGame}>Avslutt</button>
+          <button className="btn btn-primary" onClick={handleEndGame}>Avslutt</button>
         </div>
       </div>
     );
   }
 
+  // Round End screen (noen vant)
   if (phase === 'roundEnd' && lastResult) {
     const winner = players.find(p => p.id === lastResult.playerId);
     return (
@@ -241,7 +333,7 @@ function HostGame() {
           <h2>Riktig svar!</h2>
           <p className="winner-name">{winner?.name} svarte riktig!</p>
           <p className="correct-answer">Svaret var: <strong>{lastResult.correctAnswer}</strong></p>
-          <p className="points-awarded">+{lastResult.points} poeng</p>
+          <p className="points-awarded">+{lastResult.points || POINTS_BY_STEP[revealStep] || 20} poeng</p>
           <button className="btn btn-primary" onClick={handleNextImageAction}>
             {isLastImage ? 'Se resultater' : 'Neste bilde'}
           </button>
@@ -257,12 +349,12 @@ function HostGame() {
       <header className="game-header">
         <div className="game-info">
           <span className="game-badge">🖼️ Gjett Bildet</span>
-          <span className="category-badge">{categoryInfo.icon} {categoryInfo.name}</span>
+          <span className="category-badge">{categoryInfo?.icon} {categoryInfo?.name}</span>
           <span className="progress">{currentIndex + 1} / {images.length}</span>
         </div>
         <div className="header-actions">
           <span className="room-code">Rom: {roomCode}</span>
-          <button className="btn btn-end" onClick={endGame}>Avslutt</button>
+          <button className="btn btn-end" onClick={handleEndGame}>Avslutt</button>
         </div>
       </header>
 
@@ -273,29 +365,33 @@ function HostGame() {
             <button
               className="btn btn-hint"
               onClick={handleReveal}
-              disabled={revealStep >= REVEAL_STEPS.length - 1}
+              disabled={revealStep >= REVEAL_STEPS.length - 1 || phase === 'showingAnswer'}
             >
               Neste hint ({revealStep + 1}/{REVEAL_STEPS.length})
             </button>
             <button
               className="btn btn-reveal"
               onClick={() => {
-                  setRevealStep(REVEAL_STEPS.length - 1);
-                  sendGameAction('reveal-step', { step: REVEAL_STEPS.length - 1 });
+                setRevealStep(REVEAL_STEPS.length - 1);
+                sendGameAction('reveal-step', { step: REVEAL_STEPS.length - 1 });
               }}
-              disabled={revealStep >= REVEAL_STEPS.length - 1}
+              disabled={revealStep >= REVEAL_STEPS.length - 1 || phase === 'showingAnswer'}
             >
               Vis svaret
             </button>
             {revealStep >= REVEAL_STEPS.length - 1 && (
-              <button className="btn btn-next" onClick={handleNextImageAction}>
-                {isLastImage ? 'Se resultater' : 'Neste bilde →'}
+              <button
+                className="btn btn-next"
+                onClick={handleNextImageAction}
+                disabled={phase === 'showingAnswer'}
+              >
+                {phase === 'showingAnswer' ? 'Viser fasit...' : (isLastImage ? 'Se resultater' : 'Gå videre →')}
               </button>
             )}
             <button
               className="btn btn-secondary"
               onClick={handleClearBuzzer}
-              disabled={buzzerQueue.length === 0}
+              disabled={buzzerQueue.length === 0 || phase === 'showingAnswer'}
             >
               Nullstill buzzer
             </button>
@@ -303,17 +399,16 @@ function HostGame() {
         </div>
 
         <div className="control-panel">
-          {pendingGuess && currentPlayer && (
+          {/* Viser at svar sjekkes automatisk */}
+          {pendingGuess && phase === 'checking' && (
             <div className="pending-guess-card">
-              <h3>{currentPlayer.name} svarer:</h3>
+              <h3>{currentPlayer?.name || getPlayerName(pendingGuess.playerId)} svarer:</h3>
               <p className="guess-text">"{pendingGuess.guess}"</p>
-              <div className="validation-buttons">
-                <button className="btn btn-approve" onClick={() => handleValidateGuess(true)}>✓ Riktig</button>
-                <button className="btn btn-reject" onClick={() => handleValidateGuess(false)}>✗ Feil</button>
-              </div>
+              <p className="checking-text">Sjekker svar...</p>
             </div>
           )}
 
+          {/* Venter på at spiller skal skrive svar */}
           {currentPlayer && !pendingGuess && phase === 'answering' && (
             <div className="answering-card">
               <h3>{currentPlayer.name} svarer...</h3>
@@ -321,7 +416,8 @@ function HostGame() {
             </div>
           )}
 
-          {!currentPlayer && buzzerQueue.length > 0 && (
+          {/* Buzzerkø */}
+          {!currentPlayer && buzzerQueue.length > 0 && phase === 'playing' && (
             <div className="buzzer-section">
               <h3>Buzzerkø ({buzzerQueue.length})</h3>
               <ul className="buzzer-list">
@@ -336,6 +432,7 @@ function HostGame() {
             </div>
           )}
 
+          {/* Venter på buzz */}
           {!currentPlayer && buzzerQueue.length === 0 && phase === 'playing' && (
             <div className="waiting-buzz">
               <div className="waiting-icon">🔔</div>

@@ -117,9 +117,10 @@ function PlayerGame() {
     setHasSubmitted(true);
     setPhase('answered');
 
+    // Bruk riktig format: { action, data }
     socket.emit('player:game-action', {
       action: 'answer',
-      answer: myAnswer.trim()
+      data: { answer: myAnswer.trim() }
     });
   };
 

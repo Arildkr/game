@@ -500,9 +500,10 @@ function handleQuizHostAction(room, action, data) {
       gd.timeLimit = timeLimit * 1000; // Convert to ms
 
       // Lagre riktige svar for tekst-sammenligning
-      // Hvis question har correctAnswers array, bruk den
-      // Ellers, bruk options[correct] som riktig svar
-      if (question.correctAnswers) {
+      // Prioriter: answers > correctAnswers > options[correct]
+      if (question.answers && Array.isArray(question.answers)) {
+        gd.correctAnswers = question.answers;
+      } else if (question.correctAnswers) {
         gd.correctAnswers = question.correctAnswers;
       } else if (question.options && typeof question.correct === 'number') {
         gd.correctAnswers = [question.options[question.correct]];
@@ -515,7 +516,7 @@ function handleQuizHostAction(room, action, data) {
         event: 'game:question-shown',
         data: {
           question: question.question,
-          options: question.options,
+          options: question.options, // Kan være undefined for fritekst-quiz
           questionIndex,
           timeLimit
         }
@@ -525,9 +526,11 @@ function handleQuizHostAction(room, action, data) {
     case 'reveal-answer': {
       // Host reveals the answer
       gd.showAnswer = true;
-      const correctIndex = gd.currentQuestion.correct;
       const correctAnswers = gd.correctAnswers || [];
-      const correctAnswerText = gd.currentQuestion.options?.[correctIndex] || '';
+      // Hent riktig svar-tekst for visning
+      const correctAnswerText = correctAnswers[0] ||
+        (gd.currentQuestion.options?.[gd.currentQuestion.correct]) ||
+        '';
       const results = [];
 
       // Calculate points for each player
@@ -536,13 +539,9 @@ function handleQuizHostAction(room, action, data) {
         if (player) {
           let isCorrect = false;
 
-          // Sjekk om svaret er riktig
-          // Først sjekk om det er en indeks (gammel metode)
-          if (typeof answerData.answer === 'number') {
-            isCorrect = answerData.answer === correctIndex;
-          } else if (typeof answerData.answer === 'string') {
-            // Tekst-svar: bruk checkAnswer for fuzzy matching
-            const result = checkAnswer(answerData.answer, correctAnswers.length > 0 ? correctAnswers : [correctAnswerText]);
+          // Sjekk om svaret er riktig med fuzzy matching
+          if (answerData.answer && correctAnswers.length > 0) {
+            const result = checkAnswer(answerData.answer, correctAnswers);
             isCorrect = result.isCorrect;
           }
 
@@ -595,7 +594,7 @@ function handleQuizHostAction(room, action, data) {
         broadcast: true,
         event: 'game:answer-revealed',
         data: {
-          correctAnswer: correctIndex,
+          correctAnswer: correctAnswerText,
           correctAnswerText,
           results,
           leaderboard,

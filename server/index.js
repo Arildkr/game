@@ -48,6 +48,17 @@ app.get('/', (req, res) => {
 
 // Sanitize room data for client
 function sanitizeRoom(room) {
+  // Sanitize gameData to handle Set objects (can't serialize over JSON)
+  let sanitizedGameData = null;
+  if (room.gameData) {
+    sanitizedGameData = { ...room.gameData };
+    // Convert Set to array for Slange game
+    if (sanitizedGameData.usedWords instanceof Set) {
+      sanitizedGameData.usedWordsArray = Array.from(sanitizedGameData.usedWords);
+      delete sanitizedGameData.usedWords;
+    }
+  }
+
   return {
     code: room.code,
     game: room.game,
@@ -57,9 +68,10 @@ function sanitizeRoom(room) {
       name: p.name,
       score: p.score,
       isConnected: p.isConnected,
-      isEliminated: p.isEliminated
+      isEliminated: p.isEliminated,
+      wordsSubmitted: p.wordsSubmitted || 0
     })),
-    gameData: room.gameData
+    gameData: sanitizedGameData
   };
 }
 
