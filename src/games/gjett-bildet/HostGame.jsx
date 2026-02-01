@@ -68,64 +68,67 @@ function isAnswerCorrect(studentAnswer, correctAnswersArray) {
   });
 }
 
-// Random Reveal Component - bruker CSS for å vise tilfeldige sirkler
-function RandomRevealOverlay({ revealPercent, containerSize }) {
+// Random Reveal Component - bruker SVG for å lage hull i svart overlay
+function RandomRevealOverlay({ revealPercent }) {
   const circlesRef = useRef([]);
   const lastPercentRef = useRef(0);
+  const maskIdRef = useRef(`reveal-mask-${Math.random().toString(36).substr(2, 9)}`);
 
   // Generer nye sirkler når prosenten øker
-  if (revealPercent > lastPercentRef.current || circlesRef.current.length === 0) {
-    const targetCircles = Math.floor((revealPercent / 100) * 80);
+  if (revealPercent > lastPercentRef.current) {
+    const targetCircles = Math.floor((revealPercent / 100) * 100);
 
     while (circlesRef.current.length < targetCircles) {
-      const progress = circlesRef.current.length / 80;
-      const size = 80 + Math.random() * 120 - progress * 40; // Større i starten
+      const progress = circlesRef.current.length / 100;
+      // Større sirkler i starten (15-25%), mindre mot slutten (5-12%)
+      const minR = 5 + (1 - progress) * 10;
+      const maxR = 12 + (1 - progress) * 13;
+      const r = minR + Math.random() * (maxR - minR);
 
       circlesRef.current.push({
-        id: circlesRef.current.length,
-        x: Math.random() * 100,
-        y: Math.random() * 100,
-        size: size
+        cx: Math.random() * 100,
+        cy: Math.random() * 100,
+        r: r
       });
     }
     lastPercentRef.current = revealPercent;
   }
 
-  // Lag CSS radial-gradient for alle sirklene
-  const gradients = circlesRef.current.map(c =>
-    `radial-gradient(circle at ${c.x}% ${c.y}%, transparent ${c.size / 2}px, black ${c.size / 2}px)`
-  ).join(', ');
-
-  // Hvis ingen sirkler, vis helt svart
-  if (circlesRef.current.length === 0) {
-    return (
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'black',
-          pointerEvents: 'none'
-        }}
-      />
-    );
-  }
+  const maskId = maskIdRef.current;
 
   return (
-    <div
+    <svg
       style={{
         position: 'absolute',
         top: 0,
         left: 0,
-        right: 0,
-        bottom: 0,
-        background: gradients || 'black',
-        backgroundBlendMode: 'multiply',
+        width: '100%',
+        height: '100%',
         pointerEvents: 'none'
       }}
-    />
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+    >
+      <defs>
+        <mask id={maskId}>
+          {/* Hvit bakgrunn = overlay vises (dekker bildet) */}
+          <rect x="0" y="0" width="100" height="100" fill="white" />
+          {/* Svarte sirkler = overlay skjules (bildet vises) */}
+          {circlesRef.current.map((c, i) => (
+            <circle key={i} cx={c.cx} cy={c.cy} r={c.r} fill="black" />
+          ))}
+        </mask>
+      </defs>
+      {/* Svart rektangel med maske - sirklene blir gjennomsiktige */}
+      <rect
+        x="0"
+        y="0"
+        width="100"
+        height="100"
+        fill="black"
+        mask={`url(#${maskId})`}
+      />
+    </svg>
   );
 }
 
@@ -372,21 +375,29 @@ function HostGame() {
   const renderImage = () => {
     if (!currentImage) return null;
 
-    // Random reveal mode - bruk canvas
+    // Random reveal mode - bilde med sirkel-overlay
     if (currentMode === 'random') {
       return (
-        <div className="image-container" style={{ position: 'relative' }}>
+        <div className="image-container" style={{ position: 'relative', overflow: 'hidden' }}>
           {!imageLoaded && (
             <div className="loading-spinner">
               <div className="spinner"></div>
               <p>Laster bilde...</p>
             </div>
           )}
-          <RandomRevealCanvas
-            imageUrl={currentImage.url}
-            revealPercent={revealPercent}
+          <img
+            src={currentImage.url}
+            alt="Gjett bildet"
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              opacity: imageLoaded ? 1 : 0
+            }}
             onLoad={() => setImageLoaded(true)}
+            draggable={false}
           />
+          <RandomRevealOverlay revealPercent={revealPercent} />
 
           {tempAnswer && (
             <div className="answer-overlay">
