@@ -1,0 +1,223 @@
+/* game/src/components/PlayerJoin.css */
+
+.player-join-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+  position: relative;
+}
+
+.player-join-screen .btn-back {
+  position: absolute;
+  top: 1.5rem;
+  left: 1.5rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.6);
+  padding: 0.6rem 1.25rem;
+  border-radius: 50px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.player-join-screen .btn-back:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.join-content {
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.join-header {
+  margin-bottom: 2.5rem;
+}
+
+.join-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  filter: drop-shadow(0 4px 20px rgba(0, 217, 255, 0.3));
+}
+
+.join-title {
+  font-size: 3rem;
+  font-weight: 800;
+  margin: 0 0 0.5rem 0;
+  background: linear-gradient(135deg, #00d9ff 0%, #4ecdc4 50%, #00ff88 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 0 60px rgba(0, 217, 255, 0.3);
+}
+
+.join-subtitle {
+  font-size: 1.2rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
+}
+
+.join-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.join-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  text-align: left;
+}
+
+.join-form label {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+  padding-left: 0.25rem;
+}
+
+.input-field {
+  width: 100%;
+  padding: 1.1rem 1.25rem;
+  font-size: 1.1rem;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.input-field:focus {
+  border-color: #00d9ff;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 20px rgba(0, 217, 255, 0.15);
+}
+
+.input-field::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.input-field:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.room-code-field {
+  text-align: center;
+  font-size: 1.8rem;
+  font-weight: 700;
+  letter-spacing: 0.3rem;
+  text-transform: uppercase;
+  font-family: 'Courier New', monospace;
+  padding: 1.25rem;
+}
+
+.room-code-field::placeholder {
+  letter-spacing: 0.15rem;
+  font-size: 1.4rem;
+}
+
+.error-message {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.wake-up-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(241, 196, 15, 0.15);
+  border: 1px solid rgba(241, 196, 15, 0.3);
+  padding: 1rem;
+  border-radius: 12px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.wake-up-notice .wake-icon {
+  font-size: 1.5rem;
+}
+
+.wake-up-notice p {
+  color: #f1c40f;
+  font-size: 0.9rem;
+  margin: 0;
+  text-align: left;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.btn-join {
+  width: 100%;
+  padding: 1.25rem;
+  font-size: 1.3rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1rem;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #00d9ff 0%, #00ff88 100%);
+  color: #0a0a0a;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 8px 24px rgba(0, 217, 255, 0.35);
+  margin-top: 0.5rem;
+}
+
+.btn-join:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(0, 217, 255, 0.45);
+}
+
+.btn-join:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-join:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Responsive */
+@media (max-width: 500px) {
+  .player-join-screen {
+    padding: 1.5rem;
+  }
+
+  .join-icon {
+    font-size: 3rem;
+  }
+
+  .join-title {
+    font-size: 2.5rem;
+  }
+
+  .join-subtitle {
+    font-size: 1rem;
+  }
+
+  .room-code-field {
+    font-size: 1.5rem;
+  }
+
+  .room-code-field::placeholder {
+    font-size: 1.2rem;
+  }
+}

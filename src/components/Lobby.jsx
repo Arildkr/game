@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useGame } from '../contexts/GameContext';
 import LobbyJumper from './LobbyJumper';
+import './LobbyIdle.css'; // Gjenbruk stiler for join-info
 
 const GAME_NAMES = {
   'gjett-bildet': { name: 'Gjett Bildet', icon: '🖼️' },
@@ -44,6 +45,8 @@ function Lobby() {
   const [slangeMode, setSlangeMode] = useState('samarbeid');
 
   const gameInfo = GAME_NAMES[currentGame] || { name: currentGame, icon: '🎮' };
+  const joinUrl = 'game.ak-kreativ.no';
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://${joinUrl}`;
 
   const handleStartGame = () => {
     if (currentGame === 'slange') {
@@ -57,24 +60,33 @@ function Lobby() {
   if (isHost) {
     return (
       <div className="lobby-container host-lobby">
-        <div className="lobby-header">
-          <span className="game-badge">
-            {gameInfo.icon} {gameInfo.name}
-          </span>
-          <button className="btn-close" onClick={() => resetGameState()} title="Avslutt rom">✕</button>
+        <div className="lobby-header lobby-idle-header" style={{ maxWidth: 'none', width: '100%' }}>
+          <div className="join-info-large">
+            <div className="qr-section">
+              <img src={qrCodeUrl} alt="QR-kode for å bli med" className="qr-code" />
+            </div>
+            <div className="join-details">
+              <div className="join-url-large">
+                <span className="url-label">Gå til:</span>
+                <span className="url-value">{joinUrl}</span>
+              </div>
+              <div className="room-code-large">
+                <span className="code-label">Kode:</span>
+                <span className="code-value">{roomCode}</span>
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <span className="game-badge" style={{ fontSize: '1.2rem', padding: '0.75rem 1.5rem' }}>
+              {gameInfo.icon} {gameInfo.name}
+            </span>
+            <button className="btn-close" onClick={() => resetGameState()} title="Avslutt rom">✕</button>
+          </div>
         </div>
 
         <div className="lobby-main-layout">
           {/* Left side - Room info and start action */}
           <div className="lobby-info-section">
-            <div className="room-code-display">
-              <span className="room-code-label">Romkode:</span>
-              <span className="room-code-value">{roomCode}</span>
-            </div>
-
-            <div className="join-url">
-              <span>Gå inn på: <strong>game.ak-kreativ.no</strong></span>
-            </div>
 
             {/* Slange-konfigurasjon */}
             {currentGame === 'slange' && (

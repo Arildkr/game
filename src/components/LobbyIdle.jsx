@@ -24,17 +24,28 @@ function LobbyIdle() {
     lobbyData
   } = useGame();
 
+  const joinUrl = 'game.ak-kreativ.no';
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://${joinUrl}`;
+
   // Host view - spillvelger
   if (isHost) {
     return (
       <div className="lobby-idle-container host-lobby-idle">
         <header className="lobby-idle-header">
-          <div className="room-info">
-            <span className="room-code-label">Romkode:</span>
-            <span className="room-code-value">{roomCode}</span>
-          </div>
-          <div className="join-url">
-            <span>game.ak-kreativ.no</span>
+          <div className="join-info-large">
+            <div className="qr-section">
+              <img src={qrCodeUrl} alt="QR-kode for å bli med" className="qr-code" />
+            </div>
+            <div className="join-details">
+              <div className="join-url-large">
+                <span className="url-label">Gå til:</span>
+                <span className="url-value">{joinUrl}</span>
+              </div>
+              <div className="room-code-large">
+                <span className="code-label">Kode:</span>
+                <span className="code-value">{roomCode}</span>
+              </div>
+            </div>
           </div>
           <button className="btn-close" onClick={() => resetGameState()} title="Avslutt rom">✕</button>
         </header>

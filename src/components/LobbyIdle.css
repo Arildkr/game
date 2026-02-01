@@ -19,50 +19,95 @@
   grid-column: 1 / -1;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 2rem;
-  padding: 1rem 2rem;
-  background: #1a1a2e;
-  border-bottom: 2px solid #16213e;
+  padding: 1.5rem 2rem;
+  background: linear-gradient(135deg, #1a1a2e 0%, #0f0f23 100%);
+  border-bottom: 3px solid #00d9ff;
 }
 
-.lobby-idle-header .room-info {
+/* Stor innloggingsinfo med QR */
+.join-info-large {
   display: flex;
   align-items: center;
+  gap: 2rem;
+}
+
+.qr-section {
+  flex-shrink: 0;
+}
+
+.qr-code {
+  width: 120px;
+  height: 120px;
+  background: white;
+  padding: 8px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 217, 255, 0.3);
+}
+
+.join-details {
+  display: flex;
+  flex-direction: column;
   gap: 0.5rem;
 }
 
-.lobby-idle-header .room-code-label {
-  font-size: 0.9rem;
+.join-url-large {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.join-url-large .url-label {
+  font-size: 1.2rem;
   color: #888;
+  font-weight: 500;
 }
 
-.lobby-idle-header .room-code-value {
-  font-size: 2rem;
-  font-weight: bold;
-  color: #00d9ff;
-  letter-spacing: 0.15em;
-  font-family: monospace;
-}
-
-.lobby-idle-header .join-url {
-  font-size: 1.1rem;
+.join-url-large .url-value {
+  font-size: 2.5rem;
+  font-weight: 800;
   color: #4ecdc4;
-  background: rgba(78, 205, 196, 0.1);
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
+  letter-spacing: 0.02em;
+  text-shadow: 0 2px 10px rgba(78, 205, 196, 0.4);
+}
+
+.room-code-large {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.room-code-large .code-label {
+  font-size: 1.2rem;
+  color: #888;
+  font-weight: 500;
+}
+
+.room-code-large .code-value {
+  font-size: 4rem;
+  font-weight: 900;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.2em;
+  background: linear-gradient(135deg, #00d9ff, #00ff88);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: none;
+  filter: drop-shadow(0 4px 15px rgba(0, 217, 255, 0.5));
 }
 
 .lobby-idle-header .btn-close {
-  margin-left: auto;
   background: #e74c3c;
   color: white;
   border: none;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  font-size: 1.2rem;
+  font-size: 1.4rem;
   cursor: pointer;
   transition: transform 0.2s, background 0.2s;
+  flex-shrink: 0;
 }
 
 .lobby-idle-header .btn-close:hover {
@@ -318,4 +363,50 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+
+/* Responsive for header */
+@media (max-width: 900px) {
+  .lobby-idle-header {
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .join-info-large {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .join-url-large, .room-code-large {
+    justify-content: center;
+  }
+
+  .join-url-large .url-value {
+    font-size: 1.8rem;
+  }
+
+  .room-code-large .code-value {
+    font-size: 3rem;
+  }
+
+  .qr-code {
+    width: 100px;
+    height: 100px;
+  }
+}
+
+@media (max-width: 600px) {
+  .join-url-large .url-value {
+    font-size: 1.4rem;
+  }
+
+  .room-code-large .code-value {
+    font-size: 2.5rem;
+  }
+
+  .qr-code {
+    width: 80px;
+    height: 80px;
+  }
 }
