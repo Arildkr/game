@@ -68,42 +68,43 @@ function isAnswerCorrect(studentAnswer, correctAnswersArray) {
   });
 }
 
-// Random Reveal Component - bruker SVG for å lage hull i svart overlay
-// Mengden synlig bilde skal omtrent matche revealPercent (10% reveal = ~10% synlig)
+// Random Reveal Component - grid-basert for konsistent dekning
+// Deler bildet i et rutenett og avdekker ruter i tilfeldig rekkefølge
+// Garanterer: 10% reveal = ~10% synlig, 100% reveal = helt synlig
 function RandomRevealOverlay({ revealPercent }) {
-  const circlesRef = useRef([]);
-  const lastPercentRef = useRef(0);
+  // Bruk 16x16 = 256 celler for jevn dekning
+  const GRID_SIZE = 16;
+  const TOTAL_CELLS = GRID_SIZE * GRID_SIZE;
+
+  // Generer shufflet rekkefølge én gang og behold den
+  const shuffledOrderRef = useRef(null);
   const maskIdRef = useRef(`reveal-mask-${Math.random().toString(36).substr(2, 9)}`);
 
-  // Generer nye sirkler når prosenten øker
-  // Beregn antall sirkler basert på ønsket areal-dekning
-  // Areal av sirkel = π × r². For r=2.5%, areal ≈ 19.6 enheter (av 10000 total)
-  // For ~10% dekning trenger vi ca. 50 små sirkler
-  if (revealPercent > lastPercentRef.current) {
-    // Beregn hvor mange sirkler vi trenger for å nå ønsket dekning
-    // Sirkelradius: 1.5-3.5% - mye mindre enn før!
-    const avgRadius = 2.5;
-    const avgArea = Math.PI * avgRadius * avgRadius; // ~19.6 square units
-    const totalArea = 100 * 100; // 10000
-    const targetArea = (revealPercent / 100) * totalArea;
-
-    // Med overlapping trenger vi ca. 40% flere sirkler
-    const targetCircles = Math.ceil((targetArea / avgArea) * 1.4);
-
-    while (circlesRef.current.length < targetCircles) {
-      // Små sirkler med radius 1.5-3.5%
-      const r = 1.5 + Math.random() * 2;
-
-      circlesRef.current.push({
-        cx: Math.random() * 100,
-        cy: Math.random() * 100,
-        r: r
-      });
+  // Lag shufflet rekkefølge første gang
+  if (!shuffledOrderRef.current) {
+    const order = [];
+    for (let i = 0; i < TOTAL_CELLS; i++) {
+      order.push(i);
     }
-    lastPercentRef.current = revealPercent;
+    // Fisher-Yates shuffle
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+    shuffledOrderRef.current = order;
   }
 
+  // Beregn hvor mange celler som skal være synlige
+  const cellsToReveal = Math.floor((revealPercent / 100) * TOTAL_CELLS);
+  const revealedCells = new Set(shuffledOrderRef.current.slice(0, cellsToReveal));
+
   const maskId = maskIdRef.current;
+  const cellSize = 100 / GRID_SIZE;
+
+  // Ved 100% - vis hele bildet (ingen overlay)
+  if (revealPercent >= 100) {
+    return null;
+  }
 
   return (
     <svg
@@ -122,13 +123,24 @@ function RandomRevealOverlay({ revealPercent }) {
         <mask id={maskId}>
           {/* Hvit bakgrunn = overlay vises (dekker bildet) */}
           <rect x="0" y="0" width="100" height="100" fill="white" />
-          {/* Svarte sirkler = overlay skjules (bildet vises) */}
-          {circlesRef.current.map((c, i) => (
-            <circle key={i} cx={c.cx} cy={c.cy} r={c.r} fill="black" />
-          ))}
+          {/* Svarte rektangler = overlay skjules (bildet vises) */}
+          {Array.from(revealedCells).map(cellIndex => {
+            const row = Math.floor(cellIndex / GRID_SIZE);
+            const col = cellIndex % GRID_SIZE;
+            return (
+              <rect
+                key={cellIndex}
+                x={col * cellSize}
+                y={row * cellSize}
+                width={cellSize + 0.5} // Litt overlapp for å unngå striper
+                height={cellSize + 0.5}
+                fill="black"
+              />
+            );
+          })}
         </mask>
       </defs>
-      {/* Svart rektangel med maske - sirklene blir gjennomsiktige */}
+      {/* Svart rektangel med maske - de avdekkede cellene blir gjennomsiktige */}
       <rect
         x="0"
         y="0"
@@ -427,19 +439,21 @@ function HostGame() {
     let imageStyle = {
       width: '100%',
       height: '100%',
-      objectFit: 'cover',
-      transition: 'all 0.5s ease'
+      objectFit: 'cover'
     };
 
     if (currentMode === 'blur') {
       const blur = ((100 - revealPercent) / 100) * 30;
       imageStyle.filter = `blur(${blur}px)`;
+      imageStyle.transition = 'filter 0.5s ease'; // Kun animasjon for blur
     } else if (currentMode === 'zoom') {
       const scale = 1 + ((100 - revealPercent) / 100) * 4;
       imageStyle.transform = `scale(${scale})`;
       imageStyle.transformOrigin = `${focalPoint.x}% ${focalPoint.y}%`;
+      // Ingen transition for zoom - unngår å vise mer av bildet under animasjon
     } else if (currentMode === 'mask') {
       imageStyle.clipPath = `circle(${revealPercent}% at ${focalPoint.x}% ${focalPoint.y}%)`;
+      imageStyle.transition = 'clip-path 0.3s ease'; // Rask animasjon for sirkel
     }
 
     return (
