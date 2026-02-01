@@ -68,59 +68,64 @@ function isAnswerCorrect(studentAnswer, correctAnswersArray) {
   });
 }
 
-// Random Reveal Canvas Component
+// Random Reveal Canvas Component - tegner bilde med tilfeldige sirkler som avdekker
 function RandomRevealCanvas({ imageUrl, revealPercent, onLoad }) {
   const canvasRef = useRef(null);
   const imgRef = useRef(null);
   const circlesRef = useRef([]);
+  const lastPercentRef = useRef(0);
   const [imageLoaded, setImageLoaded] = useState(false);
 
-  // Generer sirkler basert på reveal-prosent
+  // Tegn canvas når revealPercent endres
   useEffect(() => {
-    if (!imageLoaded) return;
+    if (!imageLoaded || !imgRef.current || !canvasRef.current) return;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     const img = imgRef.current;
 
-    // Beregn antall sirkler basert på prosent
-    const targetCircles = Math.floor((revealPercent / 100) * 80);
+    // Beregn hvor mange sirkler vi skal ha basert på prosent
+    // Ved 100% har vi ca 100 sirkler som dekker det meste
+    const targetCircles = Math.floor((revealPercent / 100) * 120);
 
-    // Legg til nye sirkler hvis nødvendig
+    // Legg til nye sirkler hvis vi trenger flere
     while (circlesRef.current.length < targetCircles) {
+      // Radius varierer - større sirkler i starten, mindre mot slutten
+      const progress = circlesRef.current.length / 120;
+      const baseRadius = Math.max(20, 80 - progress * 50);
+      const radius = baseRadius + Math.random() * 40;
+
       circlesRef.current.push({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        radius: 30 + Math.random() * 60 // Varierende størrelse
+        radius: radius
       });
     }
 
-    // Tegn bildet
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    // Tøm canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Lag overlay
-    ctx.save();
-    ctx.globalCompositeOperation = 'source-over';
-
-    // Tegn svart overlay først
+    // Tegn svart bakgrunn først
     ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Klipp ut sirkler for å vise bildet
-    ctx.globalCompositeOperation = 'destination-out';
+    // Tegn bildet kun der sirklene er (bruk clipping)
+    ctx.save();
 
+    // Lag clipping path med alle sirklene
+    ctx.beginPath();
     circlesRef.current.forEach(circle => {
-      ctx.beginPath();
+      ctx.moveTo(circle.x + circle.radius, circle.y);
       ctx.arc(circle.x, circle.y, circle.radius, 0, Math.PI * 2);
-      ctx.fill();
     });
+    ctx.clip();
+
+    // Tegn bildet innenfor clipping path
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
     ctx.restore();
 
-    // Tegn bildet under overlayet
-    ctx.globalCompositeOperation = 'destination-over';
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    ctx.globalCompositeOperation = 'source-over';
+    lastPercentRef.current = revealPercent;
 
   }, [imageLoaded, revealPercent]);
 
@@ -131,13 +136,29 @@ function RandomRevealCanvas({ imageUrl, revealPercent, onLoad }) {
     img.onload = () => {
       imgRef.current = img;
       const canvas = canvasRef.current;
-      canvas.width = img.width;
-      canvas.height = img.height;
-      setImageLoaded(true);
+      if (canvas) {
+        // Sett canvas størrelse til en fornuftig størrelse
+        canvas.width = Math.min(img.width, 1200);
+        canvas.height = Math.min(img.height, 800);
+        // Behold aspect ratio
+        const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+      }
       circlesRef.current = []; // Reset sirkler for nytt bilde
+      lastPercentRef.current = 0;
+      setImageLoaded(true);
       onLoad?.();
     };
+    img.onerror = () => {
+      console.error('Failed to load image:', imageUrl);
+    };
     img.src = imageUrl;
+
+    return () => {
+      img.onload = null;
+      img.onerror = null;
+    };
   }, [imageUrl, onLoad]);
 
   return (
@@ -146,8 +167,9 @@ function RandomRevealCanvas({ imageUrl, revealPercent, onLoad }) {
       style={{
         width: '100%',
         height: '100%',
-        objectFit: 'cover',
-        display: imageLoaded ? 'block' : 'none'
+        objectFit: 'contain',
+        display: imageLoaded ? 'block' : 'none',
+        background: 'black'
       }}
     />
   );
@@ -177,6 +199,7 @@ function HostGame() {
   const [localPlayers, setLocalPlayers] = useState([]);
   const [wrongGuessDisplay, setWrongGuessDisplay] = useState(null);
   const [currentMode, setCurrentMode] = useState('blur'); // Aktiv modus for dette bildet
+  const [focalPoint, setFocalPoint] = useState({ x: 50, y: 50 }); // Tilfeldig fokuspunkt for mask/zoom
 
   const initDone = useRef(false);
   const currentImage = images[currentIndex];
@@ -186,6 +209,14 @@ function HostGame() {
   // Velg tilfeldig modus
   const getRandomMode = useCallback(() => {
     return REVEAL_MODES[Math.floor(Math.random() * REVEAL_MODES.length)];
+  }, []);
+
+  // Generer tilfeldig fokuspunkt for mask/zoom (unngå kantene)
+  const getRandomFocalPoint = useCallback(() => {
+    return {
+      x: 20 + Math.random() * 60, // 20-80%
+      y: 20 + Math.random() * 60  // 20-80%
+    };
   }, []);
 
   // Initialize fra gameData - kun én gang
@@ -203,14 +234,15 @@ function HostGame() {
         mode: selectedMode
       });
 
-      // Sett initial modus
+      // Sett initial modus og fokuspunkt
       if (selectedMode === 'blanding') {
         setCurrentMode(getRandomMode());
       } else {
         setCurrentMode(selectedMode);
       }
+      setFocalPoint(getRandomFocalPoint());
     }
-  }, [gameData, getRandomMode]);
+  }, [gameData, getRandomMode, getRandomFocalPoint]);
 
   // Synkroniser localPlayers med players fra context
   useEffect(() => {
@@ -277,10 +309,11 @@ function HostGame() {
       setImageLoaded(false);
       setTempAnswer(null);
 
-      // Ny modus for neste bilde
+      // Ny modus og fokuspunkt for neste bilde
       if (config.mode === 'blanding') {
         setCurrentMode(mode || getRandomMode());
       }
+      setFocalPoint(getRandomFocalPoint());
     };
 
     const handleBuzzerCleared = () => {
@@ -304,7 +337,7 @@ function HostGame() {
       socket.off('game:next-image', handleNextImage);
       socket.off('game:buzzer-cleared', handleBuzzerCleared);
     };
-  }, [socket, config.mode, getRandomMode]);
+  }, [socket, config.mode, getRandomMode, getRandomFocalPoint]);
 
   // AUTO-VALIDERING
   useEffect(() => {
@@ -430,9 +463,9 @@ function HostGame() {
     } else if (currentMode === 'zoom') {
       const scale = 1 + ((100 - revealPercent) / 100) * 4;
       imageStyle.transform = `scale(${scale})`;
-      imageStyle.transformOrigin = 'center center';
+      imageStyle.transformOrigin = `${focalPoint.x}% ${focalPoint.y}%`;
     } else if (currentMode === 'mask') {
-      imageStyle.clipPath = `circle(${revealPercent}% at 50% 50%)`;
+      imageStyle.clipPath = `circle(${revealPercent}% at ${focalPoint.x}% ${focalPoint.y}%)`;
     }
 
     return (
