@@ -621,11 +621,17 @@ body {
   width: 100%;
   padding: 0.75rem 1rem;
   font-size: 1rem;
-  background: rgba(0, 0, 0, 0.3);
+  background: #1a1a2e;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
   color: white;
   cursor: pointer;
+}
+
+.config-select option {
+  background: #1a1a2e;
+  color: white;
+  padding: 0.5rem;
 }
 
 .config-select:focus {

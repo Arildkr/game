@@ -6,7 +6,7 @@ import './GjettBildet.css';
 function PlayerGame() {
   const { socket, playerName, players, sendPlayerAction } = useGame();
   
-  const [phase, setPhase] = useState('playing'); // playing, answering, waiting, roundEnd, gameOver
+  const [phase, setPhase] = useState('playing'); // playing, answering, waiting, roundEnd, gameOver, lockedOut
   const [buzzerQueue, setBuzzerQueue] = useState([]);
   const [currentPlayer, setCurrentPlayer] = useState(null);
   const [hasBuzzed, setHasBuzzed] = useState(false);
@@ -17,6 +17,7 @@ function PlayerGame() {
   const [timeLeft, setTimeLeft] = useState(15);
   const [penaltyActive, setPenaltyActive] = useState(false);
   const [penaltyTime, setPenaltyTime] = useState(0);
+  const [isLockedOut, setIsLockedOut] = useState(false); // Utestengt fra å buzze på dette bildet
   const inputRef = useRef(null);
 
   const myPlayerId = socket?.id;
@@ -53,32 +54,45 @@ function PlayerGame() {
       }
     };
 
-    const handleGuessResult = ({ playerId, isCorrect, correctAnswer, points }) => {
+    const handleGuessResult = ({ playerId, isCorrect, correctAnswer, points, lockedOut }) => {
       setLastResult({ playerId, isCorrect, correctAnswer, points });
 
       if (isCorrect) {
         setPhase('roundEnd');
+        setIsLockedOut(false);
       } else {
         setCurrentPlayer(null);
-        setPhase('playing');
-        setHasBuzzed(false);
 
-        // Apply penalty if it was my wrong answer
-        if (playerId === myPlayerId) {
-          setPenaltyActive(true);
-          setPenaltyTime(10);
+        // Hvis det var mitt feil svar, blir jeg utestengt på dette bildet
+        if (playerId === myPlayerId && lockedOut) {
+          setIsLockedOut(true);
+          setPhase('lockedOut');
+        } else {
+          setPhase('playing');
         }
+
+        setHasBuzzed(false);
       }
     };
 
-    const handleNextImage = () => {
-      setPhase('playing');
+    const handleNextImage = ({ penaltyPlayers, penaltySeconds }) => {
       setCurrentPlayer(null);
       setHasBuzzed(false);
       setGuess('');
       setHasSubmitted(false);
       setLastResult(null);
       setBuzzerQueue([]);
+      setIsLockedOut(false);
+
+      // Sjekk om jeg har straffetid
+      if (penaltyPlayers && penaltyPlayers.includes(myPlayerId)) {
+        setPenaltyActive(true);
+        setPenaltyTime(penaltySeconds || 3);
+        setPhase('penalty');
+      } else {
+        setPhase('playing');
+        setPenaltyActive(false);
+      }
     };
 
     const handleGameEnded = ({ leaderboard }) => {
@@ -129,13 +143,16 @@ function PlayerGame() {
     }
     if (penaltyTime === 0 && penaltyActive) {
       setPenaltyActive(false);
+      if (phase === 'penalty') {
+        setPhase('playing');
+      }
     }
-  }, [penaltyActive, penaltyTime]);
+  }, [penaltyActive, penaltyTime, phase]);
 
  const handleBuzz = () => {
-  if (!hasBuzzed && !currentPlayer && !penaltyActive && phase === 'playing') {
+  if (!hasBuzzed && !currentPlayer && !penaltyActive && !isLockedOut && phase === 'playing') {
     // Bruk sendPlayerAction i stedet for socket.emit
-    sendPlayerAction('buzz'); 
+    sendPlayerAction('buzz');
     setHasBuzzed(true);
     if (navigator.vibrate) navigator.vibrate(200);
   }
@@ -254,10 +271,47 @@ const handleSubmitGuess = (e) => {
     );
   }
 
+  // Locked out screen - gjettet feil, kan ikke buzze før neste bilde
+  if (phase === 'lockedOut' || isLockedOut) {
+    return (
+      <div className="gjett-bildet-player locked-out-screen">
+        <header className="player-header">
+          <span className="player-name">{playerName}</span>
+          <span className="player-score">{myScore} p</span>
+        </header>
+
+        <div className="locked-out-content">
+          <div className="locked-icon">🔒</div>
+          <h2>Du er utestengt!</h2>
+          <p>Du gjettet feil og kan ikke buzze på dette bildet.</p>
+          <p className="wait-message">Vent på neste bilde...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Penalty countdown screen
+  if (phase === 'penalty' && penaltyActive) {
+    return (
+      <div className="gjett-bildet-player penalty-screen">
+        <header className="player-header">
+          <span className="player-name">{playerName}</span>
+          <span className="player-score">{myScore} p</span>
+        </header>
+
+        <div className="penalty-content">
+          <div className="penalty-timer">{penaltyTime}</div>
+          <h2>Straffetid!</h2>
+          <p>Du gjettet feil på forrige bilde.</p>
+        </div>
+      </div>
+    );
+  }
+
   // Default - buzzer view
   let buttonText = 'BUZZ!';
   let buttonColor = '#e74c3c';
-  let isDisabled = hasBuzzed || !!currentPlayer || penaltyActive;
+  let isDisabled = hasBuzzed || !!currentPlayer || penaltyActive || isLockedOut;
 
   if (penaltyActive) {
     buttonText = `${penaltyTime}`;

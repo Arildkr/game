@@ -1,11 +1,20 @@
 // game/src/games/gjett-bildet/HostGame.jsx
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useGame } from '../../contexts/GameContext';
 import { getImages, shuffleArray, categories } from '../../data/gjettBildetImages';
 import './GjettBildet.css';
 
 const REVEAL_STEPS = [10, 20, 35, 50, 70, 85, 100];
 const POINTS_BY_STEP = [100, 80, 60, 50, 40, 30, 20];
+
+// Tilgjengelige avsløring-modi
+const REVEAL_MODES = ['mask', 'zoom', 'blur', 'random'];
+const MODE_NAMES = {
+  mask: { name: 'Sirkel', icon: '🎭' },
+  zoom: { name: 'Zoom', icon: '🔍' },
+  blur: { name: 'Uskarp', icon: '🟦' },
+  random: { name: 'Tilfeldig', icon: '🔮' }
+};
 
 // --- LOKAL SVAR-VALIDERING (samme som original app) ---
 function getSimilarity(s1, s2) {
@@ -59,6 +68,91 @@ function isAnswerCorrect(studentAnswer, correctAnswersArray) {
   });
 }
 
+// Random Reveal Canvas Component
+function RandomRevealCanvas({ imageUrl, revealPercent, onLoad }) {
+  const canvasRef = useRef(null);
+  const imgRef = useRef(null);
+  const circlesRef = useRef([]);
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  // Generer sirkler basert på reveal-prosent
+  useEffect(() => {
+    if (!imageLoaded) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const img = imgRef.current;
+
+    // Beregn antall sirkler basert på prosent
+    const targetCircles = Math.floor((revealPercent / 100) * 80);
+
+    // Legg til nye sirkler hvis nødvendig
+    while (circlesRef.current.length < targetCircles) {
+      circlesRef.current.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        radius: 30 + Math.random() * 60 // Varierende størrelse
+      });
+    }
+
+    // Tegn bildet
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    // Lag overlay
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-over';
+
+    // Tegn svart overlay først
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Klipp ut sirkler for å vise bildet
+    ctx.globalCompositeOperation = 'destination-out';
+
+    circlesRef.current.forEach(circle => {
+      ctx.beginPath();
+      ctx.arc(circle.x, circle.y, circle.radius, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    ctx.restore();
+
+    // Tegn bildet under overlayet
+    ctx.globalCompositeOperation = 'destination-over';
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    ctx.globalCompositeOperation = 'source-over';
+
+  }, [imageLoaded, revealPercent]);
+
+  // Last bilde
+  useEffect(() => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      imgRef.current = img;
+      const canvas = canvasRef.current;
+      canvas.width = img.width;
+      canvas.height = img.height;
+      setImageLoaded(true);
+      circlesRef.current = []; // Reset sirkler for nytt bilde
+      onLoad?.();
+    };
+    img.src = imageUrl;
+  }, [imageUrl, onLoad]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover',
+        display: imageLoaded ? 'block' : 'none'
+      }}
+    />
+  );
+}
+
 function HostGame() {
   const {
     socket,
@@ -75,18 +169,24 @@ function HostGame() {
   const [buzzerQueue, setBuzzerQueue] = useState([]);
   const [currentPlayer, setCurrentPlayer] = useState(null);
   const [pendingGuess, setPendingGuess] = useState(null);
-  const [phase, setPhase] = useState('playing'); // playing, answering, checking, roundEnd, showingAnswer, gameOver
+  const [phase, setPhase] = useState('playing');
   const [lastResult, setLastResult] = useState(null);
-  const [config, setConfig] = useState({ category: 'blanding', mode: 'blur' });
+  const [config, setConfig] = useState({ category: 'blanding', mode: 'blanding' });
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [tempAnswer, setTempAnswer] = useState(null); // For å vise fasit midlertidig
-  const [localPlayers, setLocalPlayers] = useState([]); // Lokal spiller-state for poeng-oppdatering
-  const [wrongGuessDisplay, setWrongGuessDisplay] = useState(null); // Vis feil gjetning
+  const [tempAnswer, setTempAnswer] = useState(null);
+  const [localPlayers, setLocalPlayers] = useState([]);
+  const [wrongGuessDisplay, setWrongGuessDisplay] = useState(null);
+  const [currentMode, setCurrentMode] = useState('blur'); // Aktiv modus for dette bildet
 
   const initDone = useRef(false);
   const currentImage = images[currentIndex];
   const revealPercent = REVEAL_STEPS[revealStep];
   const isLastImage = currentIndex >= images.length - 1;
+
+  // Velg tilfeldig modus
+  const getRandomMode = useCallback(() => {
+    return REVEAL_MODES[Math.floor(Math.random() * REVEAL_MODES.length)];
+  }, []);
 
   // Initialize fra gameData - kun én gang
   useEffect(() => {
@@ -96,12 +196,21 @@ function HostGame() {
       const allImages = getImages(category);
       const shuffled = shuffleArray(allImages).slice(0, 15);
       setImages(shuffled);
+
+      const selectedMode = gameData.mode || 'blanding';
       setConfig({
         category: category,
-        mode: gameData.mode || 'blur'
+        mode: selectedMode
       });
+
+      // Sett initial modus
+      if (selectedMode === 'blanding') {
+        setCurrentMode(getRandomMode());
+      } else {
+        setCurrentMode(selectedMode);
+      }
     }
-  }, [gameData]);
+  }, [gameData, getRandomMode]);
 
   // Synkroniser localPlayers med players fra context
   useEffect(() => {
@@ -133,7 +242,6 @@ function HostGame() {
       setLastResult({ playerId, isCorrect, correctAnswer, points });
       setPendingGuess(null);
 
-      // Oppdater lokal spillerliste med nye poeng
       if (updatedPlayers) {
         setLocalPlayers(updatedPlayers);
       }
@@ -142,15 +250,13 @@ function HostGame() {
         setPhase('roundEnd');
         setWrongGuessDisplay(null);
       } else {
-        // Vis feil svar midlertidig - bruk guess fra server-response
         const playerName = updatedPlayers?.find(p => p.id === playerId)?.name || 'Ukjent';
         setWrongGuessDisplay({
           playerName,
-          guess: guess || 'Ukjent svar', // Nå bruker vi guess fra serveren
+          guess: guess || 'Ukjent svar',
           correctAnswer
         });
 
-        // Fjern visningen etter 3 sekunder
         setTimeout(() => {
           setWrongGuessDisplay(null);
         }, 3000);
@@ -160,7 +266,7 @@ function HostGame() {
       }
     };
 
-    const handleNextImage = ({ imageIndex }) => {
+    const handleNextImage = ({ imageIndex, mode }) => {
       setCurrentIndex(imageIndex);
       setRevealStep(0);
       setPhase('playing');
@@ -170,6 +276,11 @@ function HostGame() {
       setBuzzerQueue([]);
       setImageLoaded(false);
       setTempAnswer(null);
+
+      // Ny modus for neste bilde
+      if (config.mode === 'blanding') {
+        setCurrentMode(mode || getRandomMode());
+      }
     };
 
     const handleBuzzerCleared = () => {
@@ -193,21 +304,20 @@ function HostGame() {
       socket.off('game:next-image', handleNextImage);
       socket.off('game:buzzer-cleared', handleBuzzerCleared);
     };
-  }, [socket]);
+  }, [socket, config.mode, getRandomMode]);
 
-  // AUTO-VALIDERING: Når pendingGuess kommer inn, sjekk automatisk etter 1.5s
+  // AUTO-VALIDERING
   useEffect(() => {
     if (pendingGuess && currentImage && phase === 'checking') {
       const timer = setTimeout(() => {
         const correctAnswers = currentImage.answers || (currentImage.answer ? [currentImage.answer] : []);
         const isCorrect = isAnswerCorrect(pendingGuess.guess, correctAnswers);
-        const points = isCorrect ? (POINTS_BY_STEP[revealStep] || 20) : 0;
 
         sendGameAction('validate-guess', {
           playerId: pendingGuess.playerId,
           isCorrect,
           correctAnswer: correctAnswers[0] || '',
-          guess: pendingGuess.guess // Inkluder gjetningen
+          guess: pendingGuess.guess
         });
       }, 1500);
 
@@ -229,33 +339,31 @@ function HostGame() {
     }
   };
 
-  // Gå videre til neste bilde - med fasit-visning hvis ingen vant
   const handleNextImageAction = () => {
-    // Hvis noen allerede vant (roundEnd), gå direkte videre
     if (phase === 'roundEnd') {
       if (isLastImage) {
         sendGameAction('end-gjett-bildet');
         setPhase('gameOver');
       } else {
-        sendGameAction('next-image', { imageIndex: currentIndex + 1 });
+        const nextMode = config.mode === 'blanding' ? getRandomMode() : config.mode;
+        sendGameAction('next-image', { imageIndex: currentIndex + 1, mode: nextMode });
       }
       return;
     }
 
-    // Ingen vant - vis fasit først
     if (!tempAnswer && currentImage) {
       const correctAnswer = currentImage.answers?.[0] || currentImage.answer || '';
       setTempAnswer(correctAnswer);
       setPhase('showingAnswer');
 
-      // Gå automatisk videre etter 3 sekunder
       setTimeout(() => {
         setTempAnswer(null);
         if (isLastImage) {
           sendGameAction('end-gjett-bildet');
           setPhase('gameOver');
         } else {
-          sendGameAction('next-image', { imageIndex: currentIndex + 1 });
+          const nextMode = config.mode === 'blanding' ? getRandomMode() : config.mode;
+          sendGameAction('next-image', { imageIndex: currentIndex + 1, mode: nextMode });
         }
       }, 3000);
     }
@@ -277,16 +385,53 @@ function HostGame() {
   const renderImage = () => {
     if (!currentImage) return null;
 
-    let imageStyle = { width: '100%', height: '100%', objectFit: 'cover' };
+    // Random reveal mode - bruk canvas
+    if (currentMode === 'random') {
+      return (
+        <div className="image-container" style={{ position: 'relative' }}>
+          {!imageLoaded && (
+            <div className="loading-spinner">
+              <div className="spinner"></div>
+              <p>Laster bilde...</p>
+            </div>
+          )}
+          <RandomRevealCanvas
+            imageUrl={currentImage.url}
+            revealPercent={revealPercent}
+            onLoad={() => setImageLoaded(true)}
+          />
 
-    if (config.mode === 'blur' || config.mode === 'pixel') {
+          {tempAnswer && (
+            <div className="answer-overlay">
+              <p className="answer-label">Svaret var:</p>
+              <h1 className="answer-text">{tempAnswer}</h1>
+              <p className="answer-wait">Går videre om litt...</p>
+            </div>
+          )}
+
+          <div className="reveal-indicator">
+            <div className="reveal-bar" style={{ width: `${revealPercent}%` }}></div>
+          </div>
+        </div>
+      );
+    }
+
+    // Andre modi
+    let imageStyle = {
+      width: '100%',
+      height: '100%',
+      objectFit: 'cover',
+      transition: 'all 0.5s ease'
+    };
+
+    if (currentMode === 'blur') {
       const blur = ((100 - revealPercent) / 100) * 30;
       imageStyle.filter = `blur(${blur}px)`;
-    } else if (config.mode === 'zoom') {
+    } else if (currentMode === 'zoom') {
       const scale = 1 + ((100 - revealPercent) / 100) * 4;
       imageStyle.transform = `scale(${scale})`;
       imageStyle.transformOrigin = 'center center';
-    } else if (config.mode === 'mask') {
+    } else if (currentMode === 'mask') {
       imageStyle.clipPath = `circle(${revealPercent}% at 50% 50%)`;
     }
 
@@ -306,17 +451,11 @@ function HostGame() {
           draggable={false}
         />
 
-        {/* Overlay for å vise fasit */}
         {tempAnswer && (
-          <div style={{
-            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.7)',
-            display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
-            color: 'white', zIndex: 10, borderRadius: '12px', backdropFilter: 'blur(5px)'
-          }}>
-            <p style={{ fontSize: '1.2rem', margin: 0, opacity: 0.8 }}>Svaret var:</p>
-            <h1 style={{ fontSize: '2.5rem', margin: '10px 0', color: '#2ecc71', fontWeight: 'bold' }}>{tempAnswer}</h1>
-            <p style={{ fontSize: '0.9rem', marginTop: '20px' }}>Går videre om litt...</p>
+          <div className="answer-overlay">
+            <p className="answer-label">Svaret var:</p>
+            <h1 className="answer-text">{tempAnswer}</h1>
+            <p className="answer-wait">Går videre om litt...</p>
           </div>
         )}
 
@@ -352,7 +491,7 @@ function HostGame() {
     );
   }
 
-  // Round End screen (noen vant)
+  // Round End screen
   if (phase === 'roundEnd' && lastResult) {
     const winner = players.find(p => p.id === lastResult.playerId);
     return (
@@ -372,6 +511,7 @@ function HostGame() {
   }
 
   const categoryInfo = categories.find(c => c.id === config.category) || categories[4];
+  const modeInfo = MODE_NAMES[currentMode] || MODE_NAMES.blur;
 
   return (
     <div className="gjett-bildet-host">
@@ -379,6 +519,7 @@ function HostGame() {
         <div className="game-info">
           <span className="game-badge">🖼️ Gjett Bildet</span>
           <span className="category-badge">{categoryInfo?.icon} {categoryInfo?.name}</span>
+          <span className="mode-badge">{modeInfo.icon} {modeInfo.name}</span>
           <span className="progress">{currentIndex + 1} / {images.length}</span>
         </div>
         <div className="header-actions">
@@ -428,7 +569,6 @@ function HostGame() {
         </div>
 
         <div className="control-panel">
-          {/* Viser at svar sjekkes automatisk */}
           {pendingGuess && phase === 'checking' && (
             <div className="pending-guess-card">
               <h3>{currentPlayer?.name || getPlayerName(pendingGuess.playerId)} svarer:</h3>
@@ -437,7 +577,6 @@ function HostGame() {
             </div>
           )}
 
-          {/* Venter på at spiller skal skrive svar */}
           {currentPlayer && !pendingGuess && phase === 'answering' && (
             <div className="answering-card">
               <h3>{currentPlayer.name} svarer...</h3>
@@ -445,7 +584,6 @@ function HostGame() {
             </div>
           )}
 
-          {/* Buzzerkø */}
           {!currentPlayer && buzzerQueue.length > 0 && phase === 'playing' && (
             <div className="buzzer-section">
               <h3>Buzzerkø ({buzzerQueue.length})</h3>
@@ -461,7 +599,6 @@ function HostGame() {
             </div>
           )}
 
-          {/* Venter på buzz */}
           {!currentPlayer && buzzerQueue.length === 0 && phase === 'playing' && (
             <div className="waiting-buzz">
               <div className="waiting-icon">🔔</div>
@@ -469,7 +606,6 @@ function HostGame() {
             </div>
           )}
 
-          {/* Vis feil svar */}
           {wrongGuessDisplay && (
             <div className="wrong-guess-display">
               <div className="wrong-icon">❌</div>

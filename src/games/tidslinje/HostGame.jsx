@@ -1,54 +1,37 @@
 // game/src/games/tidslinje/HostGame.jsx
 import { useState, useEffect, useRef } from 'react';
 import { useGame } from '../../contexts/GameContext';
-import eventSets, { shuffleEvents } from '../../data/tidslinjeEvents';
+import { getRandomEventSet, shuffleEvents, formatYear } from '../../data/tidslinjeEvents';
 import './Tidslinje.css';
 
 function HostGame() {
   const { socket, players, endGame, sendGameAction, roomCode } = useGame();
 
-  const [phase, setPhase] = useState('waiting'); // waiting, buzzer, sorting, reveal, finished
+  const [phase, setPhase] = useState('waiting'); // waiting, playing, reveal, finished
   const [currentRound, setCurrentRound] = useState(1);
   const [totalRounds, setTotalRounds] = useState(5);
   const [currentSet, setCurrentSet] = useState(null);
-  const [buzzerQueue, setBuzzerQueue] = useState([]);
-  const [currentPlayer, setCurrentPlayer] = useState(null);
-  const [timeLeft, setTimeLeft] = useState(30);
+  const [timeLeft, setTimeLeft] = useState(60);
+  const [lockedPlayers, setLockedPlayers] = useState([]);
   const [revealData, setRevealData] = useState(null);
   const [leaderboard, setLeaderboard] = useState([]);
-  const [usedSets, setUsedSets] = useState([]);
+  const [usedSetIds, setUsedSetIds] = useState([]);
   const timerRef = useRef(null);
 
   useEffect(() => {
     if (!socket) return;
 
-    const handlePlayerBuzzed = ({ playerId, buzzerQueue: queue }) => {
-      setBuzzerQueue(queue);
-    };
-
-    const handlePlayerSelected = ({ playerId, playerName }) => {
-      setCurrentPlayer({ id: playerId, name: playerName });
-      setBuzzerQueue([]);
-      setPhase('sorting');
-      setTimeLeft(30);
-
-      // Start timer display
-      timerRef.current = setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 1) {
-            clearInterval(timerRef.current);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+    const handlePlayerLocked = ({ playerId, playerName, lockCount }) => {
+      setLockedPlayers(prev => {
+        if (prev.find(p => p.id === playerId)) return prev;
+        return [...prev, { id: playerId, name: playerName }];
+      });
     };
 
     const handleSortResult = (data) => {
       setRevealData(data);
       setLeaderboard(data.leaderboard);
       setPhase('reveal');
-      setCurrentPlayer(null);
       clearInterval(timerRef.current);
     };
 
@@ -57,8 +40,8 @@ function HostGame() {
       setLeaderboard(lb);
       setPhase('waiting');
       setRevealData(null);
-      setBuzzerQueue([]);
-      setCurrentPlayer(null);
+      setLockedPlayers([]);
+      setCurrentSet(null);
     };
 
     const handleGameEnded = ({ leaderboard: lb }) => {
@@ -66,15 +49,13 @@ function HostGame() {
       setPhase('finished');
     };
 
-    socket.on('game:player-buzzed', handlePlayerBuzzed);
-    socket.on('game:player-selected', handlePlayerSelected);
+    socket.on('game:player-locked', handlePlayerLocked);
     socket.on('game:sort-result', handleSortResult);
     socket.on('game:ready-for-round', handleReadyForRound);
     socket.on('game:tidslinje-ended', handleGameEnded);
 
     return () => {
-      socket.off('game:player-buzzed', handlePlayerBuzzed);
-      socket.off('game:player-selected', handlePlayerSelected);
+      socket.off('game:player-locked', handlePlayerLocked);
       socket.off('game:sort-result', handleSortResult);
       socket.off('game:ready-for-round', handleReadyForRound);
       socket.off('game:tidslinje-ended', handleGameEnded);
@@ -85,36 +66,48 @@ function HostGame() {
   const connectedPlayers = players.filter(p => p.isConnected);
 
   const startRound = () => {
-    // Get a random event set that hasn't been used
-    let availableSets = eventSets.filter(s => !usedSets.includes(s.id));
-    if (availableSets.length === 0) {
-      availableSets = eventSets;
-      setUsedSets([]);
-    }
-
-    const set = availableSets[Math.floor(Math.random() * availableSets.length)];
+    // Get a random event set
+    const set = getRandomEventSet(usedSetIds);
     setCurrentSet(set);
-    setUsedSets(prev => [...prev, set.id]);
-    setPhase('buzzer');
-    setBuzzerQueue([]);
-    setCurrentPlayer(null);
+    setUsedSetIds(prev => [...prev, set.id]);
+    setPhase('playing');
+    setLockedPlayers([]);
+    setTimeLeft(60);
 
-    // Create shuffled version for players
+    // Shuffle events for players
     const shuffledEvents = shuffleEvents(set.events);
 
     sendGameAction('start-round', {
       setName: set.name,
       events: shuffledEvents.map(e => ({ id: e.id, text: e.text })),
       correctOrder: set.events.map(e => e.id),
-      timeLimit: 30,
+      eventsWithYears: set.events, // Include full event data for reveal
+      timeLimit: 60,
       round: currentRound
     });
+
+    // Start timer
+    clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current);
+          // Auto-reveal when time runs out
+          setTimeout(() => {
+            if (phase === 'playing') {
+              sendGameAction('reveal-round');
+            }
+          }, 500);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
   };
 
-  const selectPlayer = (playerId) => {
-    if (!currentPlayer) {
-      sendGameAction('select-player', { playerId });
-    }
+  const revealResults = () => {
+    clearInterval(timerRef.current);
+    sendGameAction('reveal-round');
   };
 
   const nextRound = () => {
@@ -123,11 +116,6 @@ function HostGame() {
     } else {
       sendGameAction('next-round');
     }
-  };
-
-  const getPlayerName = (playerId) => {
-    const player = players.find(p => p.id === playerId);
-    return player?.name || 'Ukjent';
   };
 
   // Finished screen
@@ -199,68 +187,47 @@ function HostGame() {
           </div>
         )}
 
-        {/* Buzzer phase - waiting for players to buzz */}
-        {phase === 'buzzer' && currentSet && (
-          <div className="buzzer-phase">
-            <div className="set-name-display">{currentSet.name}</div>
-
-            <div className="events-preview">
-              <h3>Hendelser:</h3>
-              <ul className="events-list">
-                {currentSet.events.map(event => (
-                  <li key={event.id}>{event.text}</li>
-                ))}
-              </ul>
-            </div>
-
-            {buzzerQueue.length > 0 ? (
-              <div className="buzzer-section">
-                <h3>Buzzerkø ({buzzerQueue.length})</h3>
-                <ul className="buzzer-list">
-                  {buzzerQueue.map((playerId, index) => (
-                    <li key={playerId} className="buzzer-item">
-                      <span className="buzzer-position">{index + 1}</span>
-                      <span className="buzzer-name">{getPlayerName(playerId)}</span>
-                      <button
-                        className="btn btn-select"
-                        onClick={() => selectPlayer(playerId)}
-                      >
-                        Velg
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : (
-              <div className="waiting-buzz">
-                <div className="waiting-icon">🔔</div>
-                <p>Venter på at noen buzzer inn...</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Sorting phase - a player is sorting */}
-        {phase === 'sorting' && currentPlayer && currentSet && (
-          <div className="sorting-phase">
+        {/* Playing phase */}
+        {phase === 'playing' && currentSet && (
+          <div className="playing-phase">
             <div className="timer-display">
               <div className={`timer-circle ${timeLeft <= 10 ? 'urgent' : ''}`}>
                 {timeLeft}s
               </div>
             </div>
 
-            <div className="player-sorting">
-              <h2>{currentPlayer.name} sorterer...</h2>
+            <div className="set-name-display">{currentSet.name}</div>
+
+            {/* Show timeline cards */}
+            <div className="timeline-preview">
+              <h3>Hendelser å sortere:</h3>
+              <div className="timeline-cards-host">
+                {currentSet.events.map((event, index) => (
+                  <div key={event.id} className="timeline-card-host">
+                    <div className="card-icon">📜</div>
+                    <div className="card-text">{event.text}</div>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <div className="events-preview faded">
-              <h3>{currentSet.name}</h3>
-              <ul className="events-list">
-                {currentSet.events.map(event => (
-                  <li key={event.id}>{event.text}</li>
-                ))}
-              </ul>
+            {/* Locked players status */}
+            <div className="lock-status">
+              <div className="lock-count">
+                🔒 {lockedPlayers.length} / {connectedPlayers.length} har låst svar
+              </div>
+              {lockedPlayers.length > 0 && (
+                <div className="locked-names">
+                  {lockedPlayers.map(p => (
+                    <span key={p.id} className="locked-player">{p.name}</span>
+                  ))}
+                </div>
+              )}
             </div>
+
+            <button className="btn btn-reveal" onClick={revealResults}>
+              Vis fasit
+            </button>
           </div>
         )}
 
@@ -268,26 +235,32 @@ function HostGame() {
         {phase === 'reveal' && revealData && currentSet && (
           <div className="reveal-phase">
             <div className="result-header">
-              <h2>{revealData.isCorrect ? '🎉 Riktig!' : '😕 Ikke helt riktig'}</h2>
-              <p className="result-summary">
-                {revealData.correctCount} av {revealData.totalCount} i riktig rekkefølge
-              </p>
+              <h2>{revealData.isCorrect ? '🎉 Riktig rekkefølge!' : '📊 Resultater'}</h2>
+              {revealData.playerName && (
+                <p className="winner-name">
+                  {revealData.playerName}: {revealData.correctCount} av {revealData.totalCount} riktig
+                  {revealData.points > 0 && <span className="points"> (+{revealData.points} poeng)</span>}
+                </p>
+              )}
             </div>
 
-            <div className="correct-order">
+            {/* Correct timeline with years */}
+            <div className="correct-timeline">
               <h3>Riktig rekkefølge:</h3>
-              <ol className="timeline">
-                {currentSet.events.map((event) => (
-                  <li key={event.id} className="timeline-item">
-                    <span className="year">{event.year}</span>
-                    <span className="text">{event.text}</span>
-                  </li>
+              <div className="timeline-vertical">
+                {currentSet.events.map((event, index) => (
+                  <div key={event.id} className="timeline-item-host">
+                    <div className="timeline-marker">
+                      <div className="marker-dot"></div>
+                      {index < currentSet.events.length - 1 && <div className="marker-line"></div>}
+                    </div>
+                    <div className="timeline-content">
+                      <span className="timeline-year">{formatYear(event.year)}</span>
+                      <span className="timeline-text">{event.text}</span>
+                    </div>
+                  </div>
                 ))}
-              </ol>
-            </div>
-
-            <div className="points-awarded">
-              <p>{revealData.playerName} fikk <strong>+{revealData.points} poeng</strong></p>
+              </div>
             </div>
 
             <button className="btn btn-next" onClick={nextRound}>

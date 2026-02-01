@@ -68,10 +68,7 @@ export function selectGame(roomCode, game) {
   room.gameState = 'LOBBY_GAME_SELECTED';
   room.gameData = null;
 
-  // Nullstill lobby-score når nytt spill velges
-  room.lobbyData.totalScore = 0;
-  room.lobbyData.playerScores = {};
-  room.lobbyData.leaderboard = [];
+  // Behold lobby-poeng gjennom hele økten - ikke nullstill
 
   return room;
 }
@@ -368,12 +365,15 @@ function handleJaEllerNeiHostAction(room, action, data) {
       const correctAnswer = gd.currentQuestion.answer;
       const eliminatedThisRound = [];
 
-      // Check answers and eliminate wrong players
+      // Check answers, give points for correct, and eliminate wrong players
       for (const [playerId, answer] of Object.entries(gd.answers)) {
         const player = room.players.find(p => p.id === playerId);
         if (player && !player.isEliminated) {
           const isCorrect = (answer === 'yes') === correctAnswer;
-          if (!isCorrect) {
+          if (isCorrect) {
+            // Gi poeng for riktig svar
+            player.score = (player.score || 0) + 10;
+          } else {
             player.isEliminated = true;
             eliminatedThisRound.push(playerId);
           }
@@ -420,9 +420,10 @@ function handleJaEllerNeiHostAction(room, action, data) {
             id: p.id,
             name: p.name,
             isEliminated: p.isEliminated,
-            isConnected: p.isConnected
+            isConnected: p.isConnected,
+            score: p.score || 0
           })),
-          winner: winner ? { id: winner.id, name: winner.name } : null,
+          winner: winner ? { id: winner.id, name: winner.name, score: winner.score || 0 } : null,
           gameOver
         }
       };
@@ -470,13 +471,18 @@ function handleJaEllerNeiPlayerAction(room, playerId, action, data) {
       const { answer } = data; // 'yes' or 'no'
       gd.answers[playerId] = answer;
 
+      const totalPlayers = room.players.filter(p => !p.isEliminated && p.isConnected).length;
+      const answerCount = Object.keys(gd.answers).length;
+      const allAnswered = answerCount >= totalPlayers;
+
       return {
         broadcast: true,
         event: 'game:player-answered',
         data: {
           playerId,
-          answerCount: Object.keys(gd.answers).length,
-          totalPlayers: room.players.filter(p => !p.isEliminated && p.isConnected).length
+          answerCount,
+          totalPlayers,
+          allAnswered
         }
       };
     }
@@ -719,9 +725,14 @@ function handleGjettBildetHostAction(room, action, data) {
           points = 100;
           player.score = (player.score || 0) + 100;
         } else {
-          // Minus-poeng for feil svar
-          points = -25;
-          player.score = (player.score || 0) - 25;
+          // Minus-poeng for feil svar (økt til -50)
+          points = -50;
+          player.score = (player.score || 0) - 50;
+          // Lock ut spilleren fra å buzze på dette bildet
+          if (!gd.lockedOutPlayers) gd.lockedOutPlayers = [];
+          if (!gd.lockedOutPlayers.includes(playerId)) {
+            gd.lockedOutPlayers.push(playerId);
+          }
         }
       }
 
@@ -738,30 +749,46 @@ function handleGjettBildetHostAction(room, action, data) {
         data: {
           playerId,
           isCorrect,
-          guess: playerGuess, // Inkluder selve gjetningen
+          guess: playerGuess,
           correctAnswer: correctAnswer || gd.currentImageAnswers?.[0] || '',
           points,
-          players: room.players // Send oppdatert scoreliste
+          lockedOut: !isCorrect, // Si til spilleren at de er utestengt
+          players: room.players
         }
       };
     }
 
-    case 'next-image':
+    case 'next-image': {
+      // Lagre hvem som var utestengt (for straffe-nedtelling)
+      const penaltyPlayers = gd.lockedOutPlayers || [];
+
       gd.currentImageIndex = data.imageIndex;
       gd.revealedTiles = []; // Nullstill ruter for nytt bilde
       gd.buzzerQueue = [];
       gd.currentPlayer = null;
+      gd.lockedOutPlayers = []; // Nullstill utestengte
+
       // Lagre gyldige svar for dette bildet
       if (data.answers) {
         gd.currentImageAnswers = Array.isArray(data.answers) ? data.answers : [data.answers];
       } else {
         gd.currentImageAnswers = [];
       }
+
+      // Lagre avsløringmodus for dette bildet
+      gd.revealMode = data.revealMode || 'tiles';
+
       return {
         broadcast: true,
         event: 'game:next-image',
-        data: { imageIndex: data.imageIndex }
+        data: {
+          imageIndex: data.imageIndex,
+          penaltyPlayers, // Spillere som får straffetid
+          penaltySeconds: 3, // Sekunder straff
+          revealMode: gd.revealMode
+        }
       };
+    }
 
     case 'clear-buzzer':
       gd.buzzerQueue = [];
@@ -793,7 +820,12 @@ function handleGjettBildetPlayerAction(room, playerId, action, data) {
   const gd = room.gameData;
 
   switch (action) {
-    case 'buzz':
+    case 'buzz': {
+      // Sjekk om spilleren er utestengt på dette bildet
+      if (gd.lockedOutPlayers && gd.lockedOutPlayers.includes(playerId)) {
+        return null; // Kan ikke buzze - allerede gjettet feil
+      }
+
       // Bare legg til i køen hvis spilleren ikke allerede er der
       if (!gd.buzzerQueue.includes(playerId) && !gd.currentPlayer) {
         gd.buzzerQueue.push(playerId);
@@ -804,6 +836,7 @@ function handleGjettBildetPlayerAction(room, playerId, action, data) {
         };
       }
       return null;
+    }
 
     case 'submit-guess': {
       const { guess, correctAnswers } = data;
@@ -994,14 +1027,13 @@ function handleTidslinjeHostAction(room, action, data) {
 
   switch (action) {
     case 'start-round': {
-      const { setName, events, correctOrder, timeLimit, round } = data;
+      const { setName, events, correctOrder, eventsWithYears, timeLimit, round } = data;
       gd.events = events;
       gd.correctOrder = correctOrder;
-      gd.submissions = {};
+      gd.eventsWithYears = eventsWithYears || [];
+      gd.lockedAnswers = {}; // Spillere som har låst svar
       gd.timeLimit = timeLimit * 1000;
       gd.currentRound = round;
-      gd.buzzerQueue = [];
-      gd.currentPlayer = null;
       gd.setName = setName;
 
       return {
@@ -1011,92 +1043,85 @@ function handleTidslinjeHostAction(room, action, data) {
       };
     }
 
-    case 'select-player': {
-      const { playerId } = data;
-      const player = room.players.find(p => p.id === playerId);
-      if (!player) return null;
-
-      gd.currentPlayer = { id: playerId, name: player.name };
-      gd.buzzerQueue = [];
-
-      return {
-        broadcast: true,
-        event: 'game:player-selected',
-        data: {
-          playerId,
-          playerName: player.name,
-          events: gd.events,
-          timeLimit: 30
-        }
-      };
-    }
-
-    case 'clear-buzzer': {
-      gd.buzzerQueue = [];
-      gd.currentPlayer = null;
-
-      return {
-        broadcast: true,
-        event: 'game:buzzer-cleared',
-        data: {}
-      };
-    }
-
     case 'reveal-round': {
-      const results = [];
       const correctOrder = gd.correctOrder;
+      const eventsWithYears = gd.eventsWithYears || [];
 
-      for (const player of room.players) {
-        const submission = gd.submissions[player.id];
+      // Find the best locked answer
+      let bestResult = null;
+      let bestCorrectCount = -1;
+      let bestLockTime = Infinity;
+
+      for (const [playerId, lockData] of Object.entries(gd.lockedAnswers || {})) {
+        const player = room.players.find(p => p.id === playerId);
+        if (!player) continue;
+
+        // Count correct positions
         let correctCount = 0;
-        let points = 0;
-
-        if (submission) {
-          // Count correct positions
-          for (let i = 0; i < submission.order.length; i++) {
-            if (submission.order[i] === correctOrder[i]) {
-              correctCount++;
-            }
+        for (let i = 0; i < lockData.order.length && i < correctOrder.length; i++) {
+          if (lockData.order[i] === correctOrder[i]) {
+            correctCount++;
           }
+        }
 
-          // Points based on correct count
-          points = correctCount * 200;
-          if (correctCount === correctOrder.length) {
+        // Better score, or same score but locked earlier
+        if (correctCount > bestCorrectCount ||
+            (correctCount === bestCorrectCount && lockData.lockTime < bestLockTime)) {
+          bestCorrectCount = correctCount;
+          bestLockTime = lockData.lockTime;
+
+          const totalCount = correctOrder.length;
+          const isCorrect = correctCount === totalCount;
+
+          // Calculate points - more for earlier lock + correctness
+          let points = correctCount * 200;
+          if (isCorrect) {
             points += 500; // Perfect bonus
           }
 
-          player.score += points;
-        }
+          player.score = (player.score || 0) + points;
 
-        results.push({
-          playerId: player.id,
-          playerName: player.name,
-          correctCount,
-          points,
-          totalScore: player.score
-        });
+          bestResult = {
+            playerId,
+            playerName: player.name,
+            isCorrect,
+            correctCount,
+            totalCount,
+            points
+          };
+        }
       }
 
-      // Sort by correct count
-      results.sort((a, b) => b.correctCount - a.correctCount);
-
+      // Create leaderboard
       const leaderboard = room.players
-        .map(p => ({ id: p.id, name: p.name, score: p.score }))
+        .map(p => ({ id: p.id, name: p.name, score: p.score || 0 }))
         .sort((a, b) => b.score - a.score);
 
       return {
         broadcast: true,
-        event: 'game:round-revealed',
-        data: { results, leaderboard, correctOrder }
+        event: 'game:sort-result',
+        data: {
+          ...(bestResult || {
+            playerId: null,
+            playerName: null,
+            isCorrect: false,
+            correctCount: 0,
+            totalCount: correctOrder.length,
+            points: 0
+          }),
+          correctOrder,
+          eventsWithYears,
+          leaderboard
+        }
       };
     }
 
     case 'next-round': {
-      gd.submissions = {};
+      gd.lockedAnswers = {};
       gd.currentRound++;
 
       const leaderboard = room.players
-        .map(p => ({ id: p.id, name: p.name, score: p.score }))
+        .map(p => ({ id: p.id, name: p.name, score: p.score || 0 }))
         .sort((a, b) => b.score - a.score);
 
       return {
@@ -1108,7 +1133,7 @@ function handleTidslinjeHostAction(room, action, data) {
 
     case 'end-tidslinje': {
       const leaderboard = room.players
-        .map(p => ({ id: p.id, name: p.name, score: p.score }))
+        .map(p => ({ id: p.id, name: p.name, score: p.score || 0 }))
         .sort((a, b) => b.score - a.score);
 
       return {
@@ -1130,89 +1155,39 @@ function handleTidslinjePlayerAction(room, playerId, action, data) {
   if (!player) return null;
 
   switch (action) {
+    case 'lock-answer': {
+      // Player locks their sorted answer
+      if (!gd.lockedAnswers) gd.lockedAnswers = {};
+      if (gd.lockedAnswers[playerId]) return null; // Already locked
+
+      const { order } = data;
+
+      gd.lockedAnswers[playerId] = {
+        order,
+        lockTime: Date.now()
+      };
+
+      const lockCount = Object.keys(gd.lockedAnswers).length;
+
+      return {
+        broadcast: true,
+        event: 'game:player-locked',
+        data: {
+          playerId,
+          playerName: player.name,
+          lockCount
+        }
+      };
+    }
+
+    // Legacy support for old buzz action
     case 'buzz': {
-      // Player buzzes in to sort
-      if (!gd.buzzerQueue) gd.buzzerQueue = [];
-      if (gd.currentPlayer) return null; // Someone is already sorting
-      if (gd.buzzerQueue.includes(playerId)) return null; // Already buzzed
-
-      gd.buzzerQueue.push(playerId);
-
-      return {
-        broadcast: true,
-        event: 'game:player-buzzed',
-        data: {
-          playerId,
-          buzzerQueue: gd.buzzerQueue
-        }
-      };
+      return null;
     }
 
+    // Legacy support for old submit-order action
     case 'submit-order': {
-      // Player submits their sorted order
-      if (!gd.currentPlayer || gd.currentPlayer.id !== playerId) return null;
-
-      const { order } = data;
-      const correctOrder = gd.correctOrder;
-
-      // Count correct positions
-      let correctCount = 0;
-      for (let i = 0; i < order.length && i < correctOrder.length; i++) {
-        if (order[i] === correctOrder[i]) {
-          correctCount++;
-        }
-      }
-
-      const totalCount = correctOrder.length;
-      const isCorrect = correctCount === totalCount;
-
-      // Calculate points
-      let points = correctCount * 200;
-      if (isCorrect) {
-        points += 500; // Perfect bonus
-      }
-
-      player.score = (player.score || 0) + points;
-
-      // Create leaderboard
-      const leaderboard = room.players
-        .map(p => ({ id: p.id, name: p.name, score: p.score || 0 }))
-        .sort((a, b) => b.score - a.score);
-
-      gd.currentPlayer = null;
-
-      return {
-        broadcast: true,
-        event: 'game:sort-result',
-        data: {
-          playerId,
-          playerName: player.name,
-          isCorrect,
-          correctCount,
-          totalCount,
-          points,
-          correctOrder,
-          leaderboard
-        }
-      };
-    }
-
-    case 'submit': {
-      // Legacy - redirect to submit-order
-      if (gd.submissions[playerId]) return null;
-
-      const { order } = data;
-      gd.submissions[playerId] = { order };
-
-      return {
-        broadcast: true,
-        event: 'game:player-submitted',
-        data: {
-          playerId,
-          playerName: player.name,
-          submissionCount: Object.keys(gd.submissions).length
-        }
-      };
+      return null;
     }
 
     default:

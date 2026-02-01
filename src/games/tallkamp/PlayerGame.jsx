@@ -215,8 +215,10 @@ function PlayerGame() {
 
     socket.emit('player:game-action', {
       action: 'submit',
-      expression,
-      result: Math.round(result)
+      data: {
+        expression,
+        result: Math.round(result)
+      }
     });
   };
 

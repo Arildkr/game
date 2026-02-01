@@ -56,10 +56,10 @@ function HostGame() {
   useEffect(() => {
     if (!socket) return;
 
-    const handlePlayerSubmitted = ({ playerId, playerName, result, difference }) => {
+    const handlePlayerSubmitted = ({ playerId, playerName, submissionCount }) => {
       setSubmissions(prev => ({
         ...prev,
-        [playerId]: { playerName, result, difference, hasSubmission: true }
+        [playerId]: { playerName, hasSubmission: true }
       }));
     };
 

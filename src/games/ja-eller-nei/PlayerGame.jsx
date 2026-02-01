@@ -85,7 +85,7 @@ function PlayerGame() {
 
     socket.emit('player:game-action', {
       action: 'answer',
-      answer
+      data: { answer }
     });
   };
 

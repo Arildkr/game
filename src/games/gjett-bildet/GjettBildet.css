@@ -30,11 +30,17 @@
 }
 
 .gjett-bildet-host .game-badge,
-.gjett-bildet-host .category-badge {
+.gjett-bildet-host .category-badge,
+.gjett-bildet-host .mode-badge {
   background: rgba(255, 255, 255, 0.1);
   padding: 0.5rem 1rem;
   border-radius: 20px;
   font-size: 0.9rem;
+}
+
+.gjett-bildet-host .mode-badge {
+  background: rgba(139, 92, 246, 0.3);
+  border: 1px solid rgba(139, 92, 246, 0.5);
 }
 
 .gjett-bildet-host .progress {
@@ -122,6 +128,55 @@
   height: 100%;
   background: linear-gradient(90deg, #4ade80, #22c55e);
   transition: width 0.3s ease;
+}
+
+/* Answer Overlay */
+.gjett-bildet-host .answer-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.gjett-bildet-host .answer-label {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 0 0.5rem 0;
+}
+
+.gjett-bildet-host .answer-text {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #4ade80;
+  margin: 0 0 1rem 0;
+  text-align: center;
+  padding: 0 1rem;
+}
+
+.gjett-bildet-host .answer-wait {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0;
+}
+
+/* Checking text */
+.gjett-bildet-host .checking-text {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 0.5rem;
 }
 
 .gjett-bildet-host .controls {
@@ -732,4 +787,67 @@
     height: 160px;
     font-size: 1.5rem;
   }
+}
+
+/* Locked Out Screen */
+.gjett-bildet-player.locked-out-screen {
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #2c3e50 0%, #1a252f 100%);
+}
+
+.gjett-bildet-player .locked-out-content {
+  text-align: center;
+  padding: 2rem;
+}
+
+.gjett-bildet-player .locked-icon {
+  font-size: 5rem;
+  margin-bottom: 1rem;
+}
+
+.gjett-bildet-player .locked-out-content h2 {
+  color: #e74c3c;
+  margin-bottom: 0.5rem;
+}
+
+.gjett-bildet-player .locked-out-content p {
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0.5rem 0;
+}
+
+.gjett-bildet-player .wait-message {
+  margin-top: 1.5rem;
+  font-size: 0.9rem;
+  opacity: 0.6;
+}
+
+/* Penalty Screen */
+.gjett-bildet-player.penalty-screen {
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #7f1d1d 0%, #450a0a 100%);
+}
+
+.gjett-bildet-player .penalty-content {
+  text-align: center;
+  padding: 2rem;
+}
+
+.gjett-bildet-player .penalty-timer {
+  font-size: 8rem;
+  font-weight: bold;
+  color: #ef4444;
+  line-height: 1;
+  margin-bottom: 1rem;
+  animation: pulse 1s infinite;
+}
+
+.gjett-bildet-player .penalty-content h2 {
+  color: #fca5a5;
+  margin-bottom: 0.5rem;
+}
+
+.gjett-bildet-player .penalty-content p {
+  color: rgba(255, 255, 255, 0.6);
 }
