@@ -68,108 +68,62 @@ function isAnswerCorrect(studentAnswer, correctAnswersArray) {
   });
 }
 
-// Random Reveal Canvas Component - tegner bilde med tilfeldige sirkler som avdekker
-function RandomRevealCanvas({ imageUrl, revealPercent, onLoad }) {
-  const canvasRef = useRef(null);
-  const imgRef = useRef(null);
+// Random Reveal Component - bruker CSS for å vise tilfeldige sirkler
+function RandomRevealOverlay({ revealPercent, containerSize }) {
   const circlesRef = useRef([]);
   const lastPercentRef = useRef(0);
-  const [imageLoaded, setImageLoaded] = useState(false);
 
-  // Tegn canvas når revealPercent endres
-  useEffect(() => {
-    if (!imageLoaded || !imgRef.current || !canvasRef.current) return;
+  // Generer nye sirkler når prosenten øker
+  if (revealPercent > lastPercentRef.current || circlesRef.current.length === 0) {
+    const targetCircles = Math.floor((revealPercent / 100) * 80);
 
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    const img = imgRef.current;
-
-    // Beregn hvor mange sirkler vi skal ha basert på prosent
-    // Ved 100% har vi ca 100 sirkler som dekker det meste
-    const targetCircles = Math.floor((revealPercent / 100) * 120);
-
-    // Legg til nye sirkler hvis vi trenger flere
     while (circlesRef.current.length < targetCircles) {
-      // Radius varierer - større sirkler i starten, mindre mot slutten
-      const progress = circlesRef.current.length / 120;
-      const baseRadius = Math.max(20, 80 - progress * 50);
-      const radius = baseRadius + Math.random() * 40;
+      const progress = circlesRef.current.length / 80;
+      const size = 80 + Math.random() * 120 - progress * 40; // Større i starten
 
       circlesRef.current.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        radius: radius
+        id: circlesRef.current.length,
+        x: Math.random() * 100,
+        y: Math.random() * 100,
+        size: size
       });
     }
-
-    // Tøm canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Tegn svart bakgrunn først
-    ctx.fillStyle = 'black';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Tegn bildet kun der sirklene er (bruk clipping)
-    ctx.save();
-
-    // Lag clipping path med alle sirklene
-    ctx.beginPath();
-    circlesRef.current.forEach(circle => {
-      ctx.moveTo(circle.x + circle.radius, circle.y);
-      ctx.arc(circle.x, circle.y, circle.radius, 0, Math.PI * 2);
-    });
-    ctx.clip();
-
-    // Tegn bildet innenfor clipping path
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-    ctx.restore();
-
     lastPercentRef.current = revealPercent;
+  }
 
-  }, [imageLoaded, revealPercent]);
+  // Lag CSS radial-gradient for alle sirklene
+  const gradients = circlesRef.current.map(c =>
+    `radial-gradient(circle at ${c.x}% ${c.y}%, transparent ${c.size / 2}px, black ${c.size / 2}px)`
+  ).join(', ');
 
-  // Last bilde
-  useEffect(() => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      imgRef.current = img;
-      const canvas = canvasRef.current;
-      if (canvas) {
-        // Sett canvas størrelse til en fornuftig størrelse
-        canvas.width = Math.min(img.width, 1200);
-        canvas.height = Math.min(img.height, 800);
-        // Behold aspect ratio
-        const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
-        canvas.width = img.width * scale;
-        canvas.height = img.height * scale;
-      }
-      circlesRef.current = []; // Reset sirkler for nytt bilde
-      lastPercentRef.current = 0;
-      setImageLoaded(true);
-      onLoad?.();
-    };
-    img.onerror = () => {
-      console.error('Failed to load image:', imageUrl);
-    };
-    img.src = imageUrl;
-
-    return () => {
-      img.onload = null;
-      img.onerror = null;
-    };
-  }, [imageUrl, onLoad]);
+  // Hvis ingen sirkler, vis helt svart
+  if (circlesRef.current.length === 0) {
+    return (
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'black',
+          pointerEvents: 'none'
+        }}
+      />
+    );
+  }
 
   return (
-    <canvas
-      ref={canvasRef}
+    <div
       style={{
-        width: '100%',
-        height: '100%',
-        objectFit: 'contain',
-        display: imageLoaded ? 'block' : 'none',
-        background: 'black'
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: gradients || 'black',
+        backgroundBlendMode: 'multiply',
+        pointerEvents: 'none'
       }}
     />
   );

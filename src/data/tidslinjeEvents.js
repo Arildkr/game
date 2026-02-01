@@ -416,6 +416,19 @@ function createEventSets() {
   return sets;
 }
 
+// Eksporter kategorier for UI
+export const TIDSLINJE_CATEGORIES = [
+  { id: 'blanding', name: 'Blanding', icon: '🎲', description: 'Tilfeldige hendelser' },
+  { id: 'ALLMENN_HISTORIE', name: 'Allmenn historie', icon: '📜', description: 'Historiske hendelser' },
+  { id: 'WW2', name: '2. verdenskrig', icon: '⚔️', description: 'Hendelser fra WW2' },
+  { id: 'COLD_WAR', name: 'Den kalde krigen', icon: '🧊', description: 'Etter 1945' },
+  { id: 'POST_2000', name: 'Etter 2000', icon: '📱', description: 'Moderne tid' },
+  { id: 'SPORT', name: 'Sport', icon: '⚽', description: 'Sportshistorie' },
+  { id: 'MUSIKK', name: 'Musikk', icon: '🎵', description: 'Musikkhistorie' },
+  { id: 'VITENSKAP', name: 'Vitenskap', icon: '🔬', description: 'Vitenskapelige oppdagelser' },
+  { id: 'BARN', name: 'For barn', icon: '🎮', description: 'Barnevennlige hendelser' }
+];
+
 // Cache event sets
 let cachedEventSets = null;
 
@@ -424,16 +437,39 @@ export function getEventSets() {
   return createEventSets();
 }
 
-// Få et tilfeldig event set
-export function getRandomEventSet(usedSetIds = []) {
+// Få et tilfeldig event set fra en spesifikk kategori
+export function getRandomEventSet(usedSetIds = [], category = null) {
   const sets = createEventSets();
-  const availableSets = sets.filter(s => !usedSetIds.includes(s.id));
+
+  // Filtrer på kategori hvis spesifisert (og ikke 'blanding')
+  let filteredSets = sets;
+  if (category && category !== 'blanding') {
+    filteredSets = sets.filter(s => s.category === category);
+  }
+
+  // Filtrer ut brukte sett
+  const availableSets = filteredSets.filter(s => !usedSetIds.includes(s.id));
 
   if (availableSets.length === 0) {
+    // Hvis ingen tilgjengelige, velg fra alle i kategorien
+    if (filteredSets.length > 0) {
+      return filteredSets[Math.floor(Math.random() * filteredSets.length)];
+    }
     return sets[Math.floor(Math.random() * sets.length)];
   }
 
-  return availableSets[Math.floor(Math.random() * availableSets.length)];
+  const selectedSet = availableSets[Math.floor(Math.random() * availableSets.length)];
+
+  // For blanding-modus, skjul kategorinavnet
+  if (category === 'blanding') {
+    return {
+      ...selectedSet,
+      name: 'Blandet', // Vis ikke hvilken kategori
+      hiddenCategory: selectedSet.name // Behold for debugging
+    };
+  }
+
+  return selectedSet;
 }
 
 // Shuffle events (for player display)

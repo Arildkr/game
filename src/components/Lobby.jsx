@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useGame } from '../contexts/GameContext';
 import LobbyJumper from './LobbyJumper';
+import { TIDSLINJE_CATEGORIES } from '../data/tidslinjeEvents';
 import './LobbyIdle.css'; // Gjenbruk stiler for join-info
 
 const GAME_NAMES = {
@@ -44,6 +45,9 @@ function Lobby() {
   const [slangeCategory, setSlangeCategory] = useState('blanding');
   const [slangeMode, setSlangeMode] = useState('samarbeid');
 
+  // Tidslinje-konfigurasjon
+  const [tidslinjeCategory, setTidslinjeCategory] = useState('blanding');
+
   const gameInfo = GAME_NAMES[currentGame] || { name: currentGame, icon: '🎮' };
   const joinUrl = 'game.ak-kreativ.no';
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://${joinUrl}`;
@@ -51,6 +55,8 @@ function Lobby() {
   const handleStartGame = () => {
     if (currentGame === 'slange') {
       startGame({ category: slangeCategory, mode: slangeMode });
+    } else if (currentGame === 'tidslinje') {
+      startGame({ category: tidslinjeCategory });
     } else {
       startGame();
     }
@@ -121,6 +127,26 @@ function Lobby() {
                       🏆 Konkurranse
                     </button>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Tidslinje-konfigurasjon */}
+            {currentGame === 'tidslinje' && (
+              <div className="slange-config">
+                <div className="config-group">
+                  <label>Kategori:</label>
+                  <select
+                    value={tidslinjeCategory}
+                    onChange={(e) => setTidslinjeCategory(e.target.value)}
+                    className="config-select"
+                  >
+                    {TIDSLINJE_CATEGORIES.map(cat => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.icon} {cat.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             )}

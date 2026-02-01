@@ -897,6 +897,7 @@ function handleTallkampHostAction(room, action, data) {
     case 'reveal-round': {
       const results = [];
       const target = gd.targetNumber;
+      const numSubmissions = Object.keys(gd.solutions).length;
 
       // Calculate results for each player
       for (const player of room.players) {
@@ -904,28 +905,43 @@ function handleTallkampHostAction(room, action, data) {
         let result = null;
         let difference = null;
         let points = 0;
+        let accuracyPoints = 0;
+        let speedBonus = 0;
 
         if (submission) {
           result = submission.result;
           difference = result - target;
-
-          // Points: closer to target = more points
-          // Perfect = 1000, within 10 = 500+, etc.
           const absDiff = Math.abs(difference);
+
+          // NØYAKTIGHETSPOENG (80% av totalpoeng)
+          // Maks 800 poeng for nøyaktighet
           if (absDiff === 0) {
-            points = 1000;
+            accuracyPoints = 800; // Perfekt!
+          } else if (absDiff <= 3) {
+            accuracyPoints = 700;
           } else if (absDiff <= 5) {
-            points = 750;
+            accuracyPoints = 600;
           } else if (absDiff <= 10) {
-            points = 500;
-          } else if (absDiff <= 25) {
-            points = 250;
+            accuracyPoints = 500;
+          } else if (absDiff <= 20) {
+            accuracyPoints = 350;
           } else if (absDiff <= 50) {
-            points = 100;
+            accuracyPoints = 200;
+          } else if (absDiff <= 100) {
+            accuracyPoints = 100;
           } else {
-            points = 50;
+            accuracyPoints = 50;
           }
 
+          // HASTIGHETSBONUS (20% av totalpoeng)
+          // Maks 200 poeng for hastighet - avhenger av rekkefølge
+          if (numSubmissions > 0) {
+            // Første får 200, siste får ~50
+            const orderRatio = 1 - ((submission.order - 1) / Math.max(numSubmissions, 1));
+            speedBonus = Math.round(50 + orderRatio * 150);
+          }
+
+          points = accuracyPoints + speedBonus;
           player.score += points;
         }
 
@@ -935,11 +951,13 @@ function handleTallkampHostAction(room, action, data) {
           result,
           difference,
           points,
+          accuracyPoints,
+          speedBonus,
           totalScore: player.score
         });
       }
 
-      // Sort by closest to target
+      // Sort by closest to target (for display)
       results.sort((a, b) => {
         if (a.difference === null) return 1;
         if (b.difference === null) return -1;
@@ -1000,7 +1018,12 @@ function handleTallkampPlayerAction(room, playerId, action, data) {
       if (gd.solutions[playerId]) return null; // Already submitted
 
       const { expression, result } = data;
-      gd.solutions[playerId] = { expression, result };
+      gd.solutions[playerId] = {
+        expression,
+        result,
+        submitTime: Date.now(), // Lagre tidspunkt for hastighetsbonus
+        order: Object.keys(gd.solutions).length + 1 // Rekkefølge
+      };
 
       return {
         broadcast: true,

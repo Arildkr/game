@@ -1,11 +1,11 @@
 // game/src/games/tidslinje/HostGame.jsx
 import { useState, useEffect, useRef } from 'react';
 import { useGame } from '../../contexts/GameContext';
-import { getRandomEventSet, shuffleEvents, formatYear } from '../../data/tidslinjeEvents';
+import { getRandomEventSet, shuffleEvents, formatYear, TIDSLINJE_CATEGORIES } from '../../data/tidslinjeEvents';
 import './Tidslinje.css';
 
 function HostGame() {
-  const { socket, players, endGame, sendGameAction, roomCode } = useGame();
+  const { socket, players, endGame, sendGameAction, roomCode, gameData } = useGame();
 
   const [phase, setPhase] = useState('waiting'); // waiting, playing, reveal, finished
   const [currentRound, setCurrentRound] = useState(1);
@@ -16,7 +16,17 @@ function HostGame() {
   const [revealData, setRevealData] = useState(null);
   const [leaderboard, setLeaderboard] = useState([]);
   const [usedSetIds, setUsedSetIds] = useState([]);
+  const [category, setCategory] = useState('blanding');
   const timerRef = useRef(null);
+  const initDone = useRef(false);
+
+  // Hent kategori fra gameData
+  useEffect(() => {
+    if (gameData && !initDone.current) {
+      initDone.current = true;
+      setCategory(gameData.category || 'blanding');
+    }
+  }, [gameData]);
 
   useEffect(() => {
     if (!socket) return;
@@ -66,8 +76,8 @@ function HostGame() {
   const connectedPlayers = players.filter(p => p.isConnected);
 
   const startRound = () => {
-    // Get a random event set
-    const set = getRandomEventSet(usedSetIds);
+    // Get a random event set fra valgt kategori
+    const set = getRandomEventSet(usedSetIds, category);
     setCurrentSet(set);
     setUsedSetIds(prev => [...prev, set.id]);
     setPhase('playing');
@@ -78,7 +88,7 @@ function HostGame() {
     const shuffledEvents = shuffleEvents(set.events);
 
     sendGameAction('start-round', {
-      setName: set.name,
+      setName: set.name, // Ved 'blanding' vises "Blandet" i stedet for kategorinavn
       events: shuffledEvents.map(e => ({ id: e.id, text: e.text })),
       correctOrder: set.events.map(e => e.id),
       eventsWithYears: set.events, // Include full event data for reveal
@@ -164,6 +174,11 @@ function HostGame() {
       <header className="game-header">
         <div className="game-info">
           <span className="game-badge">📅 Tidslinje</span>
+          {category !== 'blanding' && (
+            <span className="category-badge">
+              {TIDSLINJE_CATEGORIES.find(c => c.id === category)?.icon} {TIDSLINJE_CATEGORIES.find(c => c.id === category)?.name}
+            </span>
+          )}
           <span className="room-code">Rom: {roomCode}</span>
           <span className="round-progress">Runde {currentRound} / {totalRounds}</span>
         </div>
