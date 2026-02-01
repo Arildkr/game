@@ -95,7 +95,10 @@ function RandomRevealOverlay({ revealPercent }) {
   }
 
   // Beregn hvor mange celler som skal være synlige
-  const cellsToReveal = Math.floor((revealPercent / 100) * TOTAL_CELLS);
+  // Bruk eksponentiell kurve for å vise færre celler i starten
+  // Ved 10%: ~8 celler, ved 50%: ~90 celler, ved 100%: alle 256
+  const adjustedPercent = Math.pow(revealPercent / 100, 1.5);
+  const cellsToReveal = Math.floor(adjustedPercent * TOTAL_CELLS);
   const revealedCells = new Set(shuffledOrderRef.current.slice(0, cellsToReveal));
 
   const maskId = maskIdRef.current;
@@ -443,17 +446,24 @@ function HostGame() {
     };
 
     if (currentMode === 'blur') {
+      // Blur: 30px ved start, 0px ved 100%
       const blur = ((100 - revealPercent) / 100) * 30;
       imageStyle.filter = `blur(${blur}px)`;
-      imageStyle.transition = 'filter 0.5s ease'; // Kun animasjon for blur
+      imageStyle.transition = 'filter 0.5s ease';
     } else if (currentMode === 'zoom') {
-      const scale = 1 + ((100 - revealPercent) / 100) * 4;
+      // Zoom: Økt fra 4x til 8x multiplier for å starte mer zoomet inn
+      // Ved 10%: scale = 1 + 0.9 * 8 = 8.2x zoom (mye nærmere)
+      // Ved 100%: scale = 1x (helt ute)
+      const scale = 1 + ((100 - revealPercent) / 100) * 8;
       imageStyle.transform = `scale(${scale})`;
       imageStyle.transformOrigin = `${focalPoint.x}% ${focalPoint.y}%`;
       // Ingen transition for zoom - unngår å vise mer av bildet under animasjon
     } else if (currentMode === 'mask') {
-      imageStyle.clipPath = `circle(${revealPercent}% at ${focalPoint.x}% ${focalPoint.y}%)`;
-      imageStyle.transition = 'clip-path 0.3s ease'; // Rask animasjon for sirkel
+      // Mask: Bruk eksponentiell kurve for mindre sirkel ved start
+      // Ved 10%: ~3% radius, ved 50%: ~35% radius, ved 100%: 100% radius
+      const maskRadius = Math.pow(revealPercent / 100, 1.5) * 100;
+      imageStyle.clipPath = `circle(${maskRadius}% at ${focalPoint.x}% ${focalPoint.y}%)`;
+      imageStyle.transition = 'clip-path 0.3s ease';
     }
 
     return (
