@@ -328,6 +328,7 @@ function HostGame() {
             .sort((a, b) => config?.mode === 'konkurranse'
               ? (b.score || 0) - (a.score || 0)
               : (b.wordsSubmitted || 0) - (a.wordsSubmitted || 0))
+            .slice(0, 5)
             .map((player, index) => (
               <li
                 key={player.id}

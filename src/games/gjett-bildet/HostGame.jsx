@@ -69,21 +69,30 @@ function isAnswerCorrect(studentAnswer, correctAnswersArray) {
 }
 
 // Random Reveal Component - bruker SVG for å lage hull i svart overlay
+// Mengden synlig bilde skal omtrent matche revealPercent (10% reveal = ~10% synlig)
 function RandomRevealOverlay({ revealPercent }) {
   const circlesRef = useRef([]);
   const lastPercentRef = useRef(0);
   const maskIdRef = useRef(`reveal-mask-${Math.random().toString(36).substr(2, 9)}`);
 
   // Generer nye sirkler når prosenten øker
+  // Beregn antall sirkler basert på ønsket areal-dekning
+  // Areal av sirkel = π × r². For r=2.5%, areal ≈ 19.6 enheter (av 10000 total)
+  // For ~10% dekning trenger vi ca. 50 små sirkler
   if (revealPercent > lastPercentRef.current) {
-    const targetCircles = Math.floor((revealPercent / 100) * 100);
+    // Beregn hvor mange sirkler vi trenger for å nå ønsket dekning
+    // Sirkelradius: 1.5-3.5% - mye mindre enn før!
+    const avgRadius = 2.5;
+    const avgArea = Math.PI * avgRadius * avgRadius; // ~19.6 square units
+    const totalArea = 100 * 100; // 10000
+    const targetArea = (revealPercent / 100) * totalArea;
+
+    // Med overlapping trenger vi ca. 40% flere sirkler
+    const targetCircles = Math.ceil((targetArea / avgArea) * 1.4);
 
     while (circlesRef.current.length < targetCircles) {
-      const progress = circlesRef.current.length / 100;
-      // Større sirkler i starten (15-25%), mindre mot slutten (5-12%)
-      const minR = 5 + (1 - progress) * 10;
-      const maxR = 12 + (1 - progress) * 13;
-      const r = minR + Math.random() * (maxR - minR);
+      // Små sirkler med radius 1.5-3.5%
+      const r = 1.5 + Math.random() * 2;
 
       circlesRef.current.push({
         cx: Math.random() * 100,
@@ -620,6 +629,7 @@ function HostGame() {
         <ul className="leaderboard-list">
           {[...(localPlayers.length > 0 ? localPlayers : players)]
             .sort((a, b) => (b.score || 0) - (a.score || 0))
+            .slice(0, 5)
             .map((player, index) => (
               <li key={player.id} className={`leaderboard-item ${index < 3 ? `top-${index + 1}` : ''}`}>
                 <span className="rank">{index + 1}</span>

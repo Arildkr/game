@@ -289,13 +289,13 @@ function HostGame() {
       <aside className="leaderboard-sidebar">
         <h3>Poengtavle</h3>
         <ul className="leaderboard-list">
-          {leaderboard.length > 0 ? leaderboard.map((player, index) => (
+          {leaderboard.length > 0 ? leaderboard.slice(0, 5).map((player, index) => (
             <li key={player.id} className={`leaderboard-item ${index < 3 ? `top-${index + 1}` : ''}`}>
               <span className="rank">{index + 1}</span>
               <span className="name">{player.name}</span>
               <span className="score">{player.score}</span>
             </li>
-          )) : connectedPlayers.map((player, index) => (
+          )) : connectedPlayers.slice(0, 5).map((player, index) => (
             <li key={player.id} className="leaderboard-item">
               <span className="rank">{index + 1}</span>
               <span className="name">{player.name}</span>
