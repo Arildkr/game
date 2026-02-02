@@ -5,12 +5,13 @@ import DrawingCanvas from './DrawingCanvas';
 import './TegnDet.css';
 
 function PlayerGame() {
-  const { socket, playerName } = useGame();
+  const { socket, playerName, leaveRoom } = useGame();
 
-  const [phase, setPhase] = useState('waiting'); // waiting, drawing, guessing, result
+  const [phase, setPhase] = useState('waiting'); // waiting, selectWord, drawing, guessing, result
   const [isDrawer, setIsDrawer] = useState(false);
   const [drawerName, setDrawerName] = useState('');
   const [word, setWord] = useState('');
+  const [wordOptions, setWordOptions] = useState([]);
   const [strokes, setStrokes] = useState([]);
   const [guess, setGuess] = useState('');
   const [lastResult, setLastResult] = useState(null);
@@ -22,6 +23,27 @@ function PlayerGame() {
 
   useEffect(() => {
     if (!socket) return;
+
+    // When drawer is selected, drawer gets word options
+    const handleDrawerSelected = ({ drawerId, drawerName: name, wordOptions: options }) => {
+      setDrawerName(name);
+      setStrokes([]);
+      setGuess('');
+      setLastResult(null);
+      setIsLockedOut(false);
+
+      if (drawerId === socket.id) {
+        // I am the drawer - show word selection
+        setIsDrawer(true);
+        setWordOptions(options);
+        setPhase('selectWord');
+      } else {
+        // I am a guesser - wait for round to start
+        setIsDrawer(false);
+        setWord('');
+        setPhase('waiting');
+      }
+    };
 
     const handleRoundStarted = ({ drawerId, drawerName: name, wordForDrawer }) => {
       setDrawerName(name);
@@ -90,6 +112,7 @@ function PlayerGame() {
       setPhase('result');
     };
 
+    socket.on('game:drawer-selected', handleDrawerSelected);
     socket.on('game:round-started', handleRoundStarted);
     socket.on('game:drawing-update', handleDrawingUpdate);
     socket.on('game:canvas-cleared', handleCanvasCleared);
@@ -98,6 +121,7 @@ function PlayerGame() {
     socket.on('game:round-ended', handleRoundEnded);
 
     return () => {
+      socket.off('game:drawer-selected', handleDrawerSelected);
       socket.off('game:round-started', handleRoundStarted);
       socket.off('game:drawing-update', handleDrawingUpdate);
       socket.off('game:canvas-cleared', handleCanvasCleared);
@@ -107,6 +131,14 @@ function PlayerGame() {
       if (lockoutTimerRef.current) clearInterval(lockoutTimerRef.current);
     };
   }, [socket]);
+
+  const selectWord = (selectedWord) => {
+    setWord(selectedWord);
+    socket.emit('player:game-action', {
+      action: 'select-word',
+      data: { word: selectedWord }
+    });
+  };
 
   const handleStroke = (stroke) => {
     socket.emit('player:game-action', {
@@ -143,6 +175,7 @@ function PlayerGame() {
     <div className="tegndet-player">
       {/* Header */}
       <header className="player-header">
+        <button className="btn-back" onClick={leaveRoom}>←</button>
         <span className="player-name">{playerName}</span>
         <span className="game-badge">Tegn det!</span>
       </header>
@@ -154,6 +187,26 @@ function PlayerGame() {
           <div className="waiting-phase">
             <div className="waiting-icon">🎨</div>
             <h2>Venter på neste runde...</h2>
+            {drawerName && <p>{drawerName} velger ord...</p>}
+          </div>
+        )}
+
+        {/* Word selection phase (for drawer only) */}
+        {phase === 'selectWord' && isDrawer && (
+          <div className="select-word-phase">
+            <h2>Du skal tegne!</h2>
+            <p>Velg et ord:</p>
+            <div className="word-options">
+              {wordOptions.map((w, i) => (
+                <button
+                  key={i}
+                  className="word-option"
+                  onClick={() => selectWord(w)}
+                >
+                  {w}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -168,8 +221,8 @@ function PlayerGame() {
               isDrawer={true}
               onStroke={handleStroke}
               strokes={strokes}
-              width={350}
-              height={280}
+              width={500}
+              height={400}
             />
 
             <button className="btn btn-clear" onClick={clearCanvas}>
@@ -188,8 +241,8 @@ function PlayerGame() {
             <DrawingCanvas
               isDrawer={false}
               strokes={strokes}
-              width={350}
-              height={220}
+              width={500}
+              height={400}
             />
 
             {isLockedOut ? (

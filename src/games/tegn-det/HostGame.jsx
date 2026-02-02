@@ -1,16 +1,15 @@
 // game/src/games/tegn-det/HostGame.jsx
 import { useState, useEffect } from 'react';
 import { useGame } from '../../contexts/GameContext';
-import { getRandomWord, getRandomWords } from '../../data/tegnDetWords';
+import { getRandomWords } from '../../data/tegnDetWords';
 import DrawingCanvas from './DrawingCanvas';
 import './TegnDet.css';
 
 function HostGame() {
   const { socket, players, endGame, sendGameAction, roomCode } = useGame();
 
-  const [phase, setPhase] = useState('setup'); // setup, selectWord, drawing, result
+  const [phase, setPhase] = useState('setup'); // setup, waitingForWord, drawing, result
   const [currentWord, setCurrentWord] = useState(null);
-  const [wordOptions, setWordOptions] = useState([]);
   const [drawer, setDrawer] = useState(null);
   const [drawerIndex, setDrawerIndex] = useState(0);
   const [strokes, setStrokes] = useState([]);
@@ -51,16 +50,25 @@ function HostGame() {
       setTimeout(() => setLastResult(null), 2000);
     };
 
+    // When drawer selects a word and round starts
+    const handleRoundStarted = ({ drawerId, drawerName, wordForDrawer }) => {
+      setStrokes([]);
+      setLastResult(null);
+      setPhase('drawing');
+    };
+
     socket.on('game:drawing-update', handleDrawingUpdate);
     socket.on('game:canvas-cleared', handleCanvasCleared);
     socket.on('game:correct-guess', handleCorrectGuess);
     socket.on('game:wrong-guess', handleWrongGuess);
+    socket.on('game:round-started', handleRoundStarted);
 
     return () => {
       socket.off('game:drawing-update', handleDrawingUpdate);
       socket.off('game:canvas-cleared', handleCanvasCleared);
       socket.off('game:correct-guess', handleCorrectGuess);
       socket.off('game:wrong-guess', handleWrongGuess);
+      socket.off('game:round-started', handleRoundStarted);
     };
   }, [socket]);
 
@@ -69,19 +77,14 @@ function HostGame() {
 
     const nextDrawer = connectedPlayers[drawerIndex % connectedPlayers.length];
     setDrawer(nextDrawer);
-    setWordOptions(getRandomWords(3, difficulty));
-    setPhase('selectWord');
-  };
+    setPhase('waitingForWord');
 
-  const selectWord = (word) => {
-    setCurrentWord(word);
-    setStrokes([]);
-    setLastResult(null);
-    setPhase('drawing');
-
-    sendGameAction('start-round', {
-      word,
-      drawerId: drawer.id
+    // Send word options to the drawer (student)
+    const wordOptions = getRandomWords(3, difficulty);
+    sendGameAction('select-drawer', {
+      drawerId: nextDrawer.id,
+      drawerName: nextDrawer.name,
+      wordOptions
     });
   };
 
@@ -143,23 +146,12 @@ function HostGame() {
           </div>
         )}
 
-        {/* Select word phase */}
-        {phase === 'selectWord' && drawer && (
-          <div className="select-word-phase">
-            <h2>{drawer.name} tegner!</h2>
-            <p>Velg et ord å tegne:</p>
-
-            <div className="word-options">
-              {wordOptions.map((word, i) => (
-                <button
-                  key={i}
-                  className="word-option"
-                  onClick={() => selectWord(word)}
-                >
-                  {word}
-                </button>
-              ))}
-            </div>
+        {/* Waiting for drawer to select word */}
+        {phase === 'waitingForWord' && drawer && (
+          <div className="waiting-word-phase">
+            <div className="setup-icon">🎨</div>
+            <h2>{drawer.name} velger ord...</h2>
+            <p className="description">Venter på at {drawer.name} skal velge et ord å tegne</p>
           </div>
         )}
 
@@ -170,15 +162,12 @@ function HostGame() {
               <div className="drawer-info">
                 <span className="drawer-name">{drawer?.name}</span> tegner
               </div>
-              <div className="word-hint">
-                (Ordet vises kun på {drawer?.name} sin skjerm)
-              </div>
             </div>
 
             <DrawingCanvas
               isDrawer={false}
               strokes={strokes}
-              width={600}
+              width={500}
               height={400}
             />
 

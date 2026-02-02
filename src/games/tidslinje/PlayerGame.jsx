@@ -5,7 +5,7 @@ import { formatYear } from '../../data/tidslinjeEvents';
 import './Tidslinje.css';
 
 function PlayerGame() {
-  const { socket, playerName, sendPlayerAction } = useGame();
+  const { socket, playerName, sendPlayerAction, leaveRoom } = useGame();
 
   const [phase, setPhase] = useState('waiting'); // waiting, sorting, locked, reveal, finished
   const [setName, setSetName] = useState('');
@@ -274,6 +274,7 @@ function PlayerGame() {
     return (
       <div className="tidslinje-player locked-screen">
         <header className="player-header">
+          <button className="btn-back" onClick={leaveRoom}>←</button>
           <span className="player-name">{playerName}</span>
           <span className="player-score">{myScore} p</span>
         </header>
@@ -302,6 +303,7 @@ function PlayerGame() {
     return (
       <div className="tidslinje-player sorting-screen">
         <header className="player-header">
+          <button className="btn-back" onClick={leaveRoom}>←</button>
           <span className="player-name">{playerName}</span>
           <span className="player-score">{myScore} p</span>
         </header>
@@ -363,6 +365,7 @@ function PlayerGame() {
   return (
     <div className="tidslinje-player waiting-screen">
       <header className="player-header">
+        <button className="btn-back" onClick={leaveRoom}>←</button>
         <span className="player-name">{playerName}</span>
         <span className="player-score">{myScore} p</span>
       </header>

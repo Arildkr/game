@@ -4,7 +4,7 @@ import { useGame } from '../../contexts/GameContext';
 import './GjettBildet.css';
 
 function PlayerGame() {
-  const { socket, playerName, players, sendPlayerAction } = useGame();
+  const { socket, playerName, players, sendPlayerAction, leaveRoom } = useGame();
   
   const [phase, setPhase] = useState('playing'); // playing, answering, waiting, roundEnd, gameOver, lockedOut
   const [buzzerQueue, setBuzzerQueue] = useState([]);
@@ -218,6 +218,7 @@ const handleSubmitGuess = (e) => {
     return (
       <div className="gjett-bildet-player answering-screen">
         <header className="player-header">
+          <button className="btn-back" onClick={leaveRoom}>←</button>
           <span className="player-name">{playerName}</span>
           <span className="player-score">{myScore} p</span>
         </header>
@@ -256,6 +257,7 @@ const handleSubmitGuess = (e) => {
     return (
       <div className="gjett-bildet-player waiting-screen">
         <header className="player-header">
+          <button className="btn-back" onClick={leaveRoom}>←</button>
           <span className="player-name">{playerName}</span>
           <span className="player-score">{myScore} p</span>
         </header>
@@ -276,6 +278,7 @@ const handleSubmitGuess = (e) => {
     return (
       <div className="gjett-bildet-player locked-out-screen">
         <header className="player-header">
+          <button className="btn-back" onClick={leaveRoom}>←</button>
           <span className="player-name">{playerName}</span>
           <span className="player-score">{myScore} p</span>
         </header>
@@ -295,6 +298,7 @@ const handleSubmitGuess = (e) => {
     return (
       <div className="gjett-bildet-player penalty-screen">
         <header className="player-header">
+          <button className="btn-back" onClick={leaveRoom}>←</button>
           <span className="player-name">{playerName}</span>
           <span className="player-score">{myScore} p</span>
         </header>
@@ -324,6 +328,7 @@ const handleSubmitGuess = (e) => {
   return (
     <div className="gjett-bildet-player buzzer-screen">
       <header className="player-header">
+        <button className="btn-back" onClick={leaveRoom}>←</button>
         <span className="player-name">{playerName}</span>
         <span className="player-score">{myScore} p</span>
       </header>

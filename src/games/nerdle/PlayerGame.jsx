@@ -10,7 +10,7 @@ const KEYBOARD_LAYOUT = [
 ];
 
 function PlayerGame() {
-  const { socket, playerName } = useGame();
+  const { socket, playerName, leaveRoom } = useGame();
 
   const [phase, setPhase] = useState('waiting'); // waiting, playing, solved, results
   const [currentGuess, setCurrentGuess] = useState('');
@@ -175,6 +175,7 @@ function PlayerGame() {
     <div className="nerdle-player">
       {/* Header */}
       <header className="player-header">
+        <button className="btn-back" onClick={leaveRoom}>←</button>
         <span className="player-name">{playerName}</span>
         <span className="game-badge">Nerdle</span>
       </header>

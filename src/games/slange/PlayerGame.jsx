@@ -5,7 +5,7 @@ import { categories } from '../../data/slangeCategories';
 import './Slange.css';
 
 function PlayerGame() {
-  const { socket, playerName, gameData, myPlayerId, sendPlayerAction } = useGame();
+  const { socket, playerName, gameData, myPlayerId, sendPlayerAction, leaveRoom } = useGame();
 
   const [wordChain, setWordChain] = useState([]);
   const [currentLetter, setCurrentLetter] = useState('S');
@@ -187,6 +187,10 @@ function PlayerGame() {
   if (isMyTurn) {
     return (
       <div className="slange-player my-turn">
+        <header className="player-header">
+          <button className="btn-back" onClick={leaveRoom}>←</button>
+          <span className="player-name">{playerName}</span>
+        </header>
         <div className="turn-content">
           <div className="turn-header">
             <span className="category-tag">{category.icon} {category.name}</span>
@@ -232,8 +236,11 @@ function PlayerGame() {
   // Default view
   return (
     <div className="slange-player waiting-view">
+      <header className="player-header">
+        <button className="btn-back" onClick={leaveRoom}>←</button>
+        <span className="player-name">{playerName}</span>
+      </header>
       <div className="waiting-content">
-        <div className="player-badge">👤 {playerName}</div>
 
         <div className="letter-display-large">
           <span className="letter-label">Neste bokstav</span>

@@ -4,7 +4,7 @@ import { useGame } from '../../contexts/GameContext';
 import './SquiggleStory.css';
 
 function PlayerGame() {
-  const { socket, playerName } = useGame();
+  const { socket, playerName, leaveRoom } = useGame();
 
   const [phase, setPhase] = useState('waiting'); // waiting, drawing, submitted, gallery
   const [squiggle, setSquiggle] = useState(null);
@@ -205,6 +205,7 @@ function PlayerGame() {
     <div className="squigglestory-player">
       {/* Header */}
       <header className="player-header">
+        <button className="btn-back" onClick={leaveRoom}>←</button>
         <span className="player-name">{playerName}</span>
         <span className="game-badge">Krusedull</span>
       </header>

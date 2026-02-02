@@ -60,18 +60,20 @@ export const GameProvider = ({ children }) => {
       // Bruk websocket først - polling kan ha CORS-problemer
       transports: ['websocket', 'polling'],
       // Øk timeout for trege cold starts
-      timeout: 60000,
-      // Reduser aggressiv reconnection
-      reconnectionAttempts: 10,
-      reconnectionDelay: 2000,
-      reconnectionDelayMax: 10000,
+      timeout: 120000,
+      // Øk reconnection-forsøk for bedre stabilitet
+      reconnectionAttempts: 20,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
       // Randomisering for å unngå thundering herd
-      randomizationFactor: 0.5,
+      randomizationFactor: 0.3,
       // Ikke lag ny socket ved hver reconnect
       forceNew: false,
       autoConnect: true,
       // Viktig: withCredentials for CORS
-      withCredentials: true
+      withCredentials: true,
+      // Øk ack timeout for bedre stabilitet
+      ackTimeout: 30000
     });
 
     setSocket(newSocket);
@@ -347,6 +349,13 @@ const sendPlayerAction = useCallback((action, data = {}) => {
     }
   }, [socket]);
 
+  // Leave room (for players to go back to start)
+  const leaveRoom = useCallback(() => {
+    doResetGameState();
+    setPlayerName('');
+    setError(null);
+  }, [doResetGameState]);
+
   // Retry connection
   const retryConnection = useCallback(() => {
     if (socket) {
@@ -420,6 +429,7 @@ const sendPlayerAction = useCallback((action, data = {}) => {
 
     // Player actions
     joinRoom,
+    leaveRoom,
     sendPlayerAction,
     submitLobbyScore,
     getLobbyScores,

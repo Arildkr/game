@@ -497,6 +497,34 @@
   flex-direction: column;
 }
 
+.slange-player .player-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  gap: 0.5rem;
+}
+
+.slange-player .btn-back {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: white;
+  font-size: 1.2rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.slange-player .btn-back:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.slange-player .player-header .player-name {
+  flex: 1;
+  font-weight: 600;
+}
+
 /* Result Screen */
 .slange-player.result-screen {
   justify-content: center;

@@ -4,7 +4,7 @@ import { useGame } from '../../contexts/GameContext';
 import './HvaMangler.css';
 
 function PlayerGame() {
-  const { socket, playerName } = useGame();
+  const { socket, playerName, leaveRoom } = useGame();
 
   const [phase, setPhase] = useState('waiting'); // waiting, memorize, black, guess, selected, result
   const [objects, setObjects] = useState([]);
@@ -139,6 +139,7 @@ function PlayerGame() {
     <div className="hvamangler-player">
       {/* Header */}
       <header className="player-header">
+        <button className="btn-back" onClick={leaveRoom}>←</button>
         <span className="player-name">{playerName}</span>
         <span className="game-badge">Hva mangler?</span>
       </header>

@@ -140,17 +140,33 @@ export function submitLobbyScore(roomCode, playerId, score) {
 }
 
 /**
- * Adds a player to a room
+ * Adds a player to a room or reconnects an existing player
  */
 export function joinRoom(roomCode, playerId, playerName) {
   const room = rooms[roomCode?.toUpperCase()];
   if (!room) return null;
 
-  // Check if already in room
+  // Check if player with same name exists and is disconnected (reconnection)
+  const existingPlayer = room.players.find(p =>
+    p.name.toLowerCase() === playerName.toLowerCase()
+  );
+
+  if (existingPlayer) {
+    // Reconnecting player - update their socket ID and mark as connected
+    const oldId = existingPlayer.id;
+    existingPlayer.id = playerId;
+    existingPlayer.isConnected = true;
+    socketToRoom.delete(oldId);
+    socketToRoom.set(playerId, roomCode.toUpperCase());
+    return room;
+  }
+
+  // Check if already in room with same socket ID
   if (room.players.some(p => p.id === playerId)) {
     return room;
   }
 
+  // New player joining
   room.players.push({
     id: playerId,
     name: playerName,
@@ -2049,6 +2065,28 @@ function handleTegnDetHostAction(room, action, data) {
   const gd = room.gameData;
 
   switch (action) {
+    case 'select-drawer': {
+      const { drawerId, drawerName, wordOptions } = data;
+
+      gd.drawerId = drawerId;
+      gd.drawerName = drawerName;
+      gd.wordOptions = wordOptions;
+      gd.drawingData = [];
+      gd.buzzerQueue = [];
+      gd.currentGuesser = null;
+      gd.lockedOutPlayers = [];
+
+      return {
+        broadcast: true,
+        event: 'game:drawer-selected',
+        data: {
+          drawerId,
+          drawerName,
+          wordOptions // Only drawer will use this
+        }
+      };
+    }
+
     case 'start-round': {
       const { word, drawerId } = data;
       const drawer = room.players.find(p => p.id === drawerId);
@@ -2170,6 +2208,26 @@ function handleTegnDetPlayerAction(room, playerId, action, data) {
   const player = room.players.find(p => p.id === playerId);
 
   switch (action) {
+    case 'select-word': {
+      // Only drawer can select word
+      if (playerId !== gd.drawerId) return null;
+
+      const { word } = data;
+      gd.currentWord = word;
+      gd.roundStartTime = Date.now();
+
+      // Broadcast to all - start the round
+      return {
+        broadcast: true,
+        event: 'game:round-started',
+        data: {
+          drawerId: gd.drawerId,
+          drawerName: gd.drawerName,
+          wordForDrawer: word
+        }
+      };
+    }
+
     case 'draw-stroke': {
       if (playerId !== gd.drawerId) return null;
 

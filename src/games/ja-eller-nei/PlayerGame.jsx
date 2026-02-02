@@ -4,7 +4,7 @@ import { useGame } from '../../contexts/GameContext';
 import './JaEllerNei.css';
 
 function PlayerGame() {
-  const { socket, playerName, roomCode } = useGame();
+  const { socket, playerName, roomCode, leaveRoom } = useGame();
 
   const [phase, setPhase] = useState('waiting'); // waiting, question, answered, reveal, eliminated, winner
   const [currentQuestion, setCurrentQuestion] = useState(null);
@@ -124,6 +124,7 @@ function PlayerGame() {
     <div className="jaellernei-player">
       {/* Header */}
       <header className="player-header">
+        <button className="btn-back" onClick={leaveRoom}>←</button>
         <span className="player-name">{playerName}</span>
         <span className="status-badge active">Inne</span>
       </header>

@@ -4,7 +4,7 @@ import { useGame } from '../../contexts/GameContext';
 import './Tallkamp.css';
 
 function PlayerGame() {
-  const { socket, playerName } = useGame();
+  const { socket, playerName, leaveRoom } = useGame();
 
   const [phase, setPhase] = useState('waiting'); // waiting, playing, submitted, reveal, finished
   const [numbers, setNumbers] = useState([]);
@@ -260,6 +260,7 @@ function PlayerGame() {
     <div className="tallkamp-player">
       {/* Header */}
       <header className="player-header">
+        <button className="btn-back" onClick={leaveRoom}>←</button>
         <span className="player-name">{playerName}</span>
         <span className="player-score">{myScore} poeng</span>
       </header>

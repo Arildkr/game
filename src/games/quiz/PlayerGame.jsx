@@ -4,7 +4,7 @@ import { useGame } from '../../contexts/GameContext';
 import './Quiz.css';
 
 function PlayerGame() {
-  const { socket, playerName } = useGame();
+  const { socket, playerName, leaveRoom } = useGame();
 
   const [phase, setPhase] = useState('waiting'); // waiting, question, answered, reveal, finished
   const [currentQuestion, setCurrentQuestion] = useState(null);
@@ -162,6 +162,7 @@ function PlayerGame() {
     <div className="quiz-player">
       {/* Header */}
       <header className="player-header">
+        <button className="btn-back" onClick={leaveRoom}>←</button>
         <span className="player-name">{playerName}</span>
         <span className="player-score">{myScore} poeng</span>
       </header>

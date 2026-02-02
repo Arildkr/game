@@ -308,8 +308,8 @@ function HostGame() {
 
             {lastResult && (
               <div className={`last-result ${lastResult.isCorrect ? 'correct' : 'wrong'}`}>
-                <span className="result-name">{lastResult.playerName}</span>
-                <span className="result-guess">gjettet "{lastResult.guess}"</span>
+                <span className="result-name">{lastResult.playerName}</span>{' '}
+                <span className="result-guess">gjettet "{lastResult.guess}"</span>{' '}
                 <span className="result-status">{lastResult.isCorrect ? '✓ Riktig!' : '✗ Feil!'}</span>
               </div>
             )}

@@ -47,12 +47,14 @@ const io = new Server(server, {
     methods: ['GET', 'POST'],
     credentials: true
   },
-  // Stabilitet for Render cold starts
-  pingTimeout: 60000,
+  // Stabilitet for Render cold starts - økt for bedre stabilitet
+  pingTimeout: 120000,
   pingInterval: 25000,
   // Bruk websocket primært, med polling som fallback
   transports: ['websocket', 'polling'],
-  allowUpgrades: true
+  allowUpgrades: true,
+  // Øk max buffer size for større payloads (tegninger etc)
+  maxHttpBufferSize: 1e7
 });
 
 const PORT = process.env.PORT || 3003;
