@@ -9,7 +9,12 @@ const AVAILABLE_GAMES = [
   { id: 'slange', name: 'Ordslangen', icon: '🐍', description: 'Lag ordkjede' },
   { id: 'tallkamp', name: 'Tallkamp', icon: '🔢', description: 'Regn ut måltallet' },
   { id: 'tidslinje', name: 'Tidslinje', icon: '📅', description: 'Sorter hendelser kronologisk' },
-  { id: 'ja-eller-nei', name: 'Ja eller Nei', icon: '✅', description: 'Svar riktig for å overleve' }
+  { id: 'ja-eller-nei', name: 'Ja eller Nei', icon: '✅', description: 'Svar riktig for å overleve' },
+  { id: 'vil-du-heller', name: 'Vil du heller?', icon: '🤔', description: 'Stem på dilemmaer' },
+  { id: 'nerdle', name: 'Nerdle', icon: '🧮', description: 'Matematisk Wordle' },
+  { id: 'hva-mangler', name: 'Hva mangler?', icon: '👁️', description: 'Husk og finn det som forsvant' },
+  { id: 'tegn-det', name: 'Tegn det!', icon: '🎨', description: 'Tegn og gjett' },
+  { id: 'squiggle-story', name: 'Krusedull', icon: '〰️', description: 'Lag kunst fra en krusedull' }
 ];
 
 function LobbyIdle() {

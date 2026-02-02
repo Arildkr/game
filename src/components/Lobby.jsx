@@ -11,7 +11,12 @@ const GAME_NAMES = {
   'tallkamp': { name: 'Tallkamp', icon: '🔢' },
   'quiz': { name: 'Quiz', icon: '❓' },
   'tidslinje': { name: 'Tidslinje', icon: '📅' },
-  'ja-eller-nei': { name: 'Ja eller Nei', icon: '✅' }
+  'ja-eller-nei': { name: 'Ja eller Nei', icon: '✅' },
+  'vil-du-heller': { name: 'Vil du heller?', icon: '🤔' },
+  'nerdle': { name: 'Nerdle', icon: '🧮' },
+  'hva-mangler': { name: 'Hva mangler?', icon: '👁️' },
+  'tegn-det': { name: 'Tegn det!', icon: '🎨' },
+  'squiggle-story': { name: 'Krusedull', icon: '〰️' }
 };
 
 const SLANGE_CATEGORIES = [
