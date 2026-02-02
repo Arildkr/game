@@ -7,13 +7,11 @@ import './TegnDet.css';
 function PlayerGame() {
   const { socket, playerName } = useGame();
 
-  const [phase, setPhase] = useState('waiting'); // waiting, drawing, guessing, selected, result, spectating
+  const [phase, setPhase] = useState('waiting'); // waiting, drawing, guessing, result
   const [isDrawer, setIsDrawer] = useState(false);
   const [drawerName, setDrawerName] = useState('');
   const [word, setWord] = useState('');
   const [strokes, setStrokes] = useState([]);
-  const [hasBuzzed, setHasBuzzed] = useState(false);
-  const [isSelected, setIsSelected] = useState(false);
   const [guess, setGuess] = useState('');
   const [lastResult, setLastResult] = useState(null);
   const [isLockedOut, setIsLockedOut] = useState(false);
@@ -28,8 +26,6 @@ function PlayerGame() {
     const handleRoundStarted = ({ drawerId, drawerName: name, wordForDrawer }) => {
       setDrawerName(name);
       setStrokes([]);
-      setHasBuzzed(false);
-      setIsSelected(false);
       setGuess('');
       setLastResult(null);
       setIsLockedOut(false);
@@ -42,6 +38,8 @@ function PlayerGame() {
         setIsDrawer(false);
         setWord('');
         setPhase('guessing');
+        // Focus input after a short delay
+        setTimeout(() => inputRef.current?.focus(), 300);
       }
     };
 
@@ -51,14 +49,6 @@ function PlayerGame() {
 
     const handleCanvasCleared = () => {
       setStrokes([]);
-    };
-
-    const handleGuesserSelected = ({ playerId }) => {
-      if (playerId === socket.id) {
-        setIsSelected(true);
-        setPhase('selected');
-        setTimeout(() => inputRef.current?.focus(), 100);
-      }
     };
 
     const handleCorrectGuess = ({ playerId, playerName: winner, word: correctWord, guesserPoints }) => {
@@ -74,10 +64,9 @@ function PlayerGame() {
 
     const handleWrongGuess = ({ playerId, lockoutDuration }) => {
       if (playerId === socket.id) {
-        setIsSelected(false);
         setIsLockedOut(true);
         setLockoutTime(lockoutDuration);
-        setPhase('guessing');
+        setGuess('');
 
         // Countdown lockout
         let remaining = lockoutDuration;
@@ -87,6 +76,7 @@ function PlayerGame() {
           if (remaining <= 0) {
             clearInterval(lockoutTimerRef.current);
             setIsLockedOut(false);
+            inputRef.current?.focus();
           }
         }, 1000);
       }
@@ -103,7 +93,6 @@ function PlayerGame() {
     socket.on('game:round-started', handleRoundStarted);
     socket.on('game:drawing-update', handleDrawingUpdate);
     socket.on('game:canvas-cleared', handleCanvasCleared);
-    socket.on('game:guesser-selected', handleGuesserSelected);
     socket.on('game:correct-guess', handleCorrectGuess);
     socket.on('game:wrong-guess', handleWrongGuess);
     socket.on('game:round-ended', handleRoundEnded);
@@ -112,7 +101,6 @@ function PlayerGame() {
       socket.off('game:round-started', handleRoundStarted);
       socket.off('game:drawing-update', handleDrawingUpdate);
       socket.off('game:canvas-cleared', handleCanvasCleared);
-      socket.off('game:guesser-selected', handleGuesserSelected);
       socket.off('game:correct-guess', handleCorrectGuess);
       socket.off('game:wrong-guess', handleWrongGuess);
       socket.off('game:round-ended', handleRoundEnded);
@@ -134,18 +122,8 @@ function PlayerGame() {
     });
   };
 
-  const buzz = () => {
-    if (hasBuzzed || isLockedOut) return;
-
-    setHasBuzzed(true);
-    socket.emit('player:game-action', {
-      action: 'buzz',
-      data: {}
-    });
-  };
-
   const submitGuess = () => {
-    if (!guess.trim() || !isSelected) return;
+    if (!guess.trim() || isLockedOut) return;
 
     socket.emit('player:game-action', {
       action: 'submit-guess',
@@ -211,59 +189,31 @@ function PlayerGame() {
               isDrawer={false}
               strokes={strokes}
               width={350}
-              height={250}
+              height={220}
             />
 
             {isLockedOut ? (
               <div className="lockout-status">
-                <p>Du gjettet feil!</p>
+                <p>Feil svar!</p>
                 <p className="lockout-timer">Vent {lockoutTime} sekunder...</p>
               </div>
-            ) : !hasBuzzed ? (
-              <button className="btn-buzzer" onClick={buzz}>
-                <span className="buzzer-icon">🔔</span>
-                <span className="buzzer-text">BUZZ!</span>
-              </button>
             ) : (
-              <div className="buzzed-status">
-                <span className="check">✓</span>
-                <p>Venter på tur...</p>
+              <div className="guess-input-group">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  className="guess-input"
+                  value={guess}
+                  onChange={(e) => setGuess(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Hva tegnes?"
+                  autoComplete="off"
+                />
+                <button className="btn-submit" onClick={submitGuess}>
+                  Gjett
+                </button>
               </div>
             )}
-          </div>
-        )}
-
-        {/* Selected phase - can guess */}
-        {phase === 'selected' && (
-          <div className="selected-phase">
-            <div className="drawer-info">
-              <span className="drawer-name">{drawerName}</span> tegner
-            </div>
-
-            <DrawingCanvas
-              isDrawer={false}
-              strokes={strokes}
-              width={350}
-              height={220}
-            />
-
-            <div className="your-turn">Din tur å gjette!</div>
-
-            <div className="guess-input-group">
-              <input
-                ref={inputRef}
-                type="text"
-                className="guess-input"
-                value={guess}
-                onChange={(e) => setGuess(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Hva tegnes?"
-                autoComplete="off"
-              />
-              <button className="btn-submit" onClick={submitGuess}>
-                Send
-              </button>
-            </div>
           </div>
         )}
 

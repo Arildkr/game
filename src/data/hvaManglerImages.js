@@ -6,22 +6,29 @@ const imageSets = [
   {
     id: 'skolesaker',
     name: 'Skolesaker',
-    objects: ['blyant', 'viskelær', 'linjal', 'saks', 'limstift', 'penn', 'blyantspiser', 'markeringstusj'],
+    objects: ['blyant', 'viskelær', 'linjal', 'saks', 'limstift', 'penn', 'blyantspiser', 'markeringstusj', 'bok', 'kalkulator', 'passer', 'gradskive', 'mappe', 'stiftemaskin', 'klips'],
     emojis: {
       'blyant': '✏️',
       'viskelær': '🧽',
       'linjal': '📏',
       'saks': '✂️',
-      'limstift': '🪬',
+      'limstift': '🧴',
       'penn': '🖊️',
-      'blyantspiser': '🔧',
-      'markeringstusj': '🖍️'
+      'blyantspiser': '✏️',
+      'markeringstusj': '🖍️',
+      'bok': '📚',
+      'kalkulator': '🧮',
+      'passer': '📐',
+      'gradskive': '📐',
+      'mappe': '📁',
+      'stiftemaskin': '🗜️',
+      'klips': '📎'
     }
   },
   {
     id: 'frukt',
     name: 'Frukt',
-    objects: ['eple', 'banan', 'appelsin', 'druer', 'jordbær', 'kirsebær', 'vannmelon', 'sitron'],
+    objects: ['eple', 'banan', 'appelsin', 'druer', 'jordbær', 'kirsebær', 'vannmelon', 'sitron', 'pære', 'ananas', 'mango', 'kiwi', 'fersken', 'plomme', 'blåbær'],
     emojis: {
       'eple': '🍎',
       'banan': '🍌',
@@ -30,13 +37,20 @@ const imageSets = [
       'jordbær': '🍓',
       'kirsebær': '🍒',
       'vannmelon': '🍉',
-      'sitron': '🍋'
+      'sitron': '🍋',
+      'pære': '🍐',
+      'ananas': '🍍',
+      'mango': '🥭',
+      'kiwi': '🥝',
+      'fersken': '🍑',
+      'plomme': '🫐',
+      'blåbær': '🫐'
     }
   },
   {
     id: 'dyr',
     name: 'Dyr',
-    objects: ['hund', 'katt', 'kanin', 'fugl', 'fisk', 'hamster', 'skilpadde', 'frosk'],
+    objects: ['hund', 'katt', 'kanin', 'fugl', 'fisk', 'hamster', 'skilpadde', 'frosk', 'elefant', 'løve', 'bjørn', 'mus', 'gris', 'ku', 'hest'],
     emojis: {
       'hund': '🐕',
       'katt': '🐱',
@@ -45,13 +59,20 @@ const imageSets = [
       'fisk': '🐟',
       'hamster': '🐹',
       'skilpadde': '🐢',
-      'frosk': '🐸'
+      'frosk': '🐸',
+      'elefant': '🐘',
+      'løve': '🦁',
+      'bjørn': '🐻',
+      'mus': '🐭',
+      'gris': '🐷',
+      'ku': '🐄',
+      'hest': '🐴'
     }
   },
   {
     id: 'transport',
     name: 'Transport',
-    objects: ['bil', 'buss', 'tog', 'fly', 'sykkel', 'båt', 'helikopter', 'motorsykkel'],
+    objects: ['bil', 'buss', 'tog', 'fly', 'sykkel', 'båt', 'helikopter', 'motorsykkel', 'lastebil', 'taxi', 'ambulanse', 'brannbil', 'sparkesykkel', 'trikk', 'ferge'],
     emojis: {
       'bil': '🚗',
       'buss': '🚌',
@@ -60,13 +81,20 @@ const imageSets = [
       'sykkel': '🚲',
       'båt': '⛵',
       'helikopter': '🚁',
-      'motorsykkel': '🏍️'
+      'motorsykkel': '🏍️',
+      'lastebil': '🚚',
+      'taxi': '🚕',
+      'ambulanse': '🚑',
+      'brannbil': '🚒',
+      'sparkesykkel': '🛴',
+      'trikk': '🚃',
+      'ferge': '⛴️'
     }
   },
   {
     id: 'sport',
     name: 'Sport',
-    objects: ['fotball', 'basketball', 'tennis', 'ishockey', 'ski', 'svømming', 'golf', 'volleyball'],
+    objects: ['fotball', 'basketball', 'tennis', 'ishockey', 'ski', 'svømming', 'golf', 'volleyball', 'rugby', 'baseball', 'boksing', 'skateboard', 'bowling', 'dart', 'badminton'],
     emojis: {
       'fotball': '⚽',
       'basketball': '🏀',
@@ -75,13 +103,20 @@ const imageSets = [
       'ski': '⛷️',
       'svømming': '🏊',
       'golf': '⛳',
-      'volleyball': '🏐'
+      'volleyball': '🏐',
+      'rugby': '🏉',
+      'baseball': '⚾',
+      'boksing': '🥊',
+      'skateboard': '🛹',
+      'bowling': '🎳',
+      'dart': '🎯',
+      'badminton': '🏸'
     }
   },
   {
     id: 'mat',
     name: 'Mat',
-    objects: ['pizza', 'hamburger', 'is', 'kake', 'brød', 'ost', 'pølse', 'popcorn'],
+    objects: ['pizza', 'hamburger', 'is', 'kake', 'brød', 'ost', 'pølse', 'popcorn', 'taco', 'sushi', 'salat', 'suppe', 'pasta', 'egg', 'bacon'],
     emojis: {
       'pizza': '🍕',
       'hamburger': '🍔',
@@ -90,13 +125,20 @@ const imageSets = [
       'brød': '🍞',
       'ost': '🧀',
       'pølse': '🌭',
-      'popcorn': '🍿'
+      'popcorn': '🍿',
+      'taco': '🌮',
+      'sushi': '🍣',
+      'salat': '🥗',
+      'suppe': '🍲',
+      'pasta': '🍝',
+      'egg': '🥚',
+      'bacon': '🥓'
     }
   },
   {
     id: 'vaer',
     name: 'Vær',
-    objects: ['sol', 'sky', 'regn', 'snø', 'lyn', 'regnbue', 'vind', 'tåke'],
+    objects: ['sol', 'sky', 'regn', 'snø', 'lyn', 'regnbue', 'vind', 'tåke', 'storm', 'måne', 'stjerne', 'paraply', 'termometer', 'solbriller', 'snømann'],
     emojis: {
       'sol': '☀️',
       'sky': '☁️',
@@ -105,13 +147,20 @@ const imageSets = [
       'lyn': '⚡',
       'regnbue': '🌈',
       'vind': '💨',
-      'tåke': '🌫️'
+      'tåke': '🌫️',
+      'storm': '🌪️',
+      'måne': '🌙',
+      'stjerne': '⭐',
+      'paraply': '☂️',
+      'termometer': '🌡️',
+      'solbriller': '🕶️',
+      'snømann': '⛄'
     }
   },
   {
     id: 'musikk',
     name: 'Musikk',
-    objects: ['gitar', 'piano', 'trommer', 'fiolin', 'trompet', 'mikrofon', 'note', 'hodetelefoner'],
+    objects: ['gitar', 'piano', 'trommer', 'fiolin', 'trompet', 'mikrofon', 'note', 'hodetelefoner', 'saxofon', 'radio', 'høyttaler', 'banjo', 'harpe', 'fløyte', 'maracas'],
     emojis: {
       'gitar': '🎸',
       'piano': '🎹',
@@ -120,7 +169,58 @@ const imageSets = [
       'trompet': '🎺',
       'mikrofon': '🎤',
       'note': '🎵',
-      'hodetelefoner': '🎧'
+      'hodetelefoner': '🎧',
+      'saxofon': '🎷',
+      'radio': '📻',
+      'høyttaler': '🔊',
+      'banjo': '🪕',
+      'harpe': '🎵',
+      'fløyte': '🎶',
+      'maracas': '🎶'
+    }
+  },
+  {
+    id: 'hjem',
+    name: 'I hjemmet',
+    objects: ['sofa', 'bord', 'stol', 'lampe', 'tv', 'seng', 'skap', 'klokke', 'speil', 'vaskemaskin', 'kjøleskap', 'ovn', 'støvsuger', 'dusj', 'toalett'],
+    emojis: {
+      'sofa': '🛋️',
+      'bord': '🪑',
+      'stol': '🪑',
+      'lampe': '💡',
+      'tv': '📺',
+      'seng': '🛏️',
+      'skap': '🗄️',
+      'klokke': '🕐',
+      'speil': '🪞',
+      'vaskemaskin': '🧺',
+      'kjøleskap': '🧊',
+      'ovn': '🔥',
+      'støvsuger': '🧹',
+      'dusj': '🚿',
+      'toalett': '🚽'
+    }
+  },
+  {
+    id: 'klær',
+    name: 'Klær',
+    objects: ['t-skjorte', 'bukse', 'kjole', 'jakke', 'sko', 'lue', 'hansker', 'sokker', 'skjerf', 'dress', 'bikini', 'shorts', 'genser', 'støvler', 'caps'],
+    emojis: {
+      't-skjorte': '👕',
+      'bukse': '👖',
+      'kjole': '👗',
+      'jakke': '🧥',
+      'sko': '👟',
+      'lue': '🧢',
+      'hansker': '🧤',
+      'sokker': '🧦',
+      'skjerf': '🧣',
+      'dress': '🤵',
+      'bikini': '👙',
+      'shorts': '🩳',
+      'genser': '🧥',
+      'støvler': '🥾',
+      'caps': '🧢'
     }
   }
 ];

@@ -2167,6 +2167,7 @@ function handleTegnDetHostAction(room, action, data) {
 
 function handleTegnDetPlayerAction(room, playerId, action, data) {
   const gd = room.gameData;
+  const player = room.players.find(p => p.id === playerId);
 
   switch (action) {
     case 'draw-stroke': {
@@ -2194,32 +2195,69 @@ function handleTegnDetPlayerAction(room, playerId, action, data) {
       };
     }
 
-    case 'buzz': {
-      if (playerId === gd.drawerId) return null;
-      if (gd.currentGuesser) return null;
-      if (gd.buzzerQueue.includes(playerId)) return null;
-      if (gd.lockedOutPlayers.includes(playerId)) return null;
-
-      gd.buzzerQueue.push(playerId);
-
-      return {
-        broadcast: true,
-        event: 'game:player-buzzed',
-        data: { playerId, buzzerQueue: gd.buzzerQueue }
-      };
-    }
-
+    // Direct guess - no buzzer needed, auto-check answer
     case 'submit-guess': {
-      if (gd.currentGuesser?.id !== playerId) return null;
+      // Drawer can't guess
+      if (playerId === gd.drawerId) return null;
+
+      // Check if locked out
+      if (gd.lockedOutPlayers.includes(playerId)) {
+        return {
+          toPlayer: true,
+          playerEvent: 'game:still-locked-out',
+          playerData: {}
+        };
+      }
 
       const { guess } = data;
-      gd.pendingGuess = { playerId, guess };
+      const normalizedGuess = guess.toLowerCase().trim();
+      const normalizedWord = gd.currentWord.toLowerCase().trim();
 
-      return {
-        toHost: true,
-        hostEvent: 'game:guess-submitted',
-        hostData: { playerId, guess }
-      };
+      // Fuzzy match - allow some flexibility
+      const isCorrect = normalizedGuess === normalizedWord ||
+        (normalizedGuess.length >= 3 && normalizedWord.startsWith(normalizedGuess)) ||
+        (normalizedWord.length >= 3 && normalizedGuess.startsWith(normalizedWord));
+
+      if (isCorrect) {
+        // Correct guess!
+        const drawer = room.players.find(p => p.id === gd.drawerId);
+        const timeBonus = Math.max(0, 60000 - (Date.now() - gd.roundStartTime));
+        const guesserPoints = 100 + Math.floor(timeBonus / 1000);
+        const drawerPoints = 50;
+
+        if (player) player.score = (player.score || 0) + guesserPoints;
+        if (drawer) drawer.score = (drawer.score || 0) + drawerPoints;
+
+        return {
+          broadcast: true,
+          event: 'game:correct-guess',
+          data: {
+            playerId,
+            playerName: player?.name,
+            word: gd.currentWord,
+            guesserPoints,
+            drawerPoints,
+            players: room.players
+          }
+        };
+      } else {
+        // Wrong guess - lock out for 10 seconds
+        gd.lockedOutPlayers.push(playerId);
+        setTimeout(() => {
+          const idx = gd.lockedOutPlayers.indexOf(playerId);
+          if (idx > -1) gd.lockedOutPlayers.splice(idx, 1);
+        }, 10000);
+
+        return {
+          broadcast: true,
+          event: 'game:wrong-guess',
+          data: {
+            playerId,
+            playerName: player?.name,
+            lockoutDuration: 10
+          }
+        };
+      }
     }
 
     default:

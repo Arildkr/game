@@ -104,6 +104,42 @@ function HostGame() {
     sendGameAction('select-player', { playerId });
   };
 
+  // Auto-check guess when it comes in
+  useEffect(() => {
+    if (pendingGuess && currentRound) {
+      const guess = pendingGuess.guess.toLowerCase().trim();
+      const answer = currentRound.removedObject.toLowerCase().trim();
+
+      // Simple fuzzy match: exact match or starts with same characters
+      const isCorrect = guess === answer ||
+        (guess.length >= 3 && answer.startsWith(guess)) ||
+        (answer.length >= 3 && guess.startsWith(answer));
+
+      // Auto-validate
+      sendGameAction('validate-guess', {
+        playerId: pendingGuess.playerId,
+        isCorrect
+      });
+
+      const player = players.find(p => p.id === pendingGuess.playerId);
+      setLastResult({
+        playerId: pendingGuess.playerId,
+        playerName: player?.name,
+        isCorrect,
+        guess: pendingGuess.guess,
+        answer: currentRound.removedObject
+      });
+
+      setCurrentPlayer(null);
+      setPendingGuess(null);
+
+      if (isCorrect) {
+        // Short delay before showing reveal phase
+        setTimeout(() => setPhase('reveal'), 1500);
+      }
+    }
+  }, [pendingGuess, currentRound, players, sendGameAction]);
+
   const validateGuess = (isCorrect) => {
     const playerId = currentPlayer?.id || pendingGuess?.playerId;
 
@@ -205,6 +241,10 @@ function HostGame() {
                   <option value={6}>6</option>
                   <option value={7}>7</option>
                   <option value={8}>8</option>
+                  <option value={9}>9</option>
+                  <option value={10}>10</option>
+                  <option value={11}>11</option>
+                  <option value={12}>12</option>
                 </select>
               </div>
 
@@ -268,25 +308,9 @@ function HostGame() {
 
             {lastResult && (
               <div className={`last-result ${lastResult.isCorrect ? 'correct' : 'wrong'}`}>
-                {lastResult.playerName}: {lastResult.isCorrect ? 'Riktig!' : 'Feil!'}
-              </div>
-            )}
-
-            {/* Pending guess */}
-            {pendingGuess && (
-              <div className="pending-guess">
-                <p>
-                  <strong>{players.find(p => p.id === pendingGuess.playerId)?.name}</strong> gjetter:
-                </p>
-                <div className="guess-text">{pendingGuess.guess}</div>
-                <div className="guess-buttons">
-                  <button className="btn btn-correct" onClick={() => validateGuess(true)}>
-                    Riktig ✓
-                  </button>
-                  <button className="btn btn-wrong" onClick={() => validateGuess(false)}>
-                    Feil ✗
-                  </button>
-                </div>
+                <span className="result-name">{lastResult.playerName}</span>
+                <span className="result-guess">gjettet "{lastResult.guess}"</span>
+                <span className="result-status">{lastResult.isCorrect ? '✓ Riktig!' : '✗ Feil!'}</span>
               </div>
             )}
 

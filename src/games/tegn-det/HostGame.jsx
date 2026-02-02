@@ -14,9 +14,6 @@ function HostGame() {
   const [drawer, setDrawer] = useState(null);
   const [drawerIndex, setDrawerIndex] = useState(0);
   const [strokes, setStrokes] = useState([]);
-  const [buzzerQueue, setBuzzerQueue] = useState([]);
-  const [currentGuesser, setCurrentGuesser] = useState(null);
-  const [pendingGuess, setPendingGuess] = useState(null);
   const [lastResult, setLastResult] = useState(null);
   const [difficulty, setDifficulty] = useState('all');
   const [roundNumber, setRoundNumber] = useState(1);
@@ -34,15 +31,7 @@ function HostGame() {
       setStrokes([]);
     };
 
-    const handlePlayerBuzzed = ({ playerId, buzzerQueue: queue }) => {
-      setBuzzerQueue(queue);
-    };
-
-    const handleGuessSubmitted = ({ playerId, guess }) => {
-      setPendingGuess({ playerId, guess });
-    };
-
-    const handleCorrectGuess = ({ playerId, playerName, word, guesserPoints, drawerPoints }) => {
+    const handleCorrectGuess = ({ playerId, playerName, word, guesserPoints, drawerPoints, players: updatedPlayers }) => {
       setLastResult({
         type: 'correct',
         playerName,
@@ -54,26 +43,22 @@ function HostGame() {
     };
 
     const handleWrongGuess = ({ playerId, playerName }) => {
-      setCurrentGuesser(null);
-      setPendingGuess(null);
       setLastResult({
         type: 'wrong',
         playerName
       });
+      // Clear wrong result after 2 seconds
+      setTimeout(() => setLastResult(null), 2000);
     };
 
     socket.on('game:drawing-update', handleDrawingUpdate);
     socket.on('game:canvas-cleared', handleCanvasCleared);
-    socket.on('game:player-buzzed', handlePlayerBuzzed);
-    socket.on('game:guess-submitted', handleGuessSubmitted);
     socket.on('game:correct-guess', handleCorrectGuess);
     socket.on('game:wrong-guess', handleWrongGuess);
 
     return () => {
       socket.off('game:drawing-update', handleDrawingUpdate);
       socket.off('game:canvas-cleared', handleCanvasCleared);
-      socket.off('game:player-buzzed', handlePlayerBuzzed);
-      socket.off('game:guess-submitted', handleGuessSubmitted);
       socket.off('game:correct-guess', handleCorrectGuess);
       socket.off('game:wrong-guess', handleWrongGuess);
     };
@@ -91,9 +76,6 @@ function HostGame() {
   const selectWord = (word) => {
     setCurrentWord(word);
     setStrokes([]);
-    setBuzzerQueue([]);
-    setCurrentGuesser(null);
-    setPendingGuess(null);
     setLastResult(null);
     setPhase('drawing');
 
@@ -103,30 +85,12 @@ function HostGame() {
     });
   };
 
-  const selectGuesser = (playerId) => {
-    const player = players.find(p => p.id === playerId);
-    setCurrentGuesser({ id: playerId, name: player?.name });
-    setBuzzerQueue(prev => prev.filter(id => id !== playerId));
-
-    sendGameAction('select-guesser', { playerId });
-  };
-
-  const validateGuess = (isCorrect) => {
-    const playerId = currentGuesser?.id || pendingGuess?.playerId;
-
-    sendGameAction('validate-guess', {
-      playerId,
-      isCorrect
-    });
-  };
-
   const nextRound = () => {
     setDrawerIndex(prev => prev + 1);
     setRoundNumber(prev => prev + 1);
     setPhase('setup');
     setStrokes([]);
     setCurrentWord(null);
-    setBuzzerQueue([]);
     setLastResult(null);
   };
 
@@ -206,8 +170,8 @@ function HostGame() {
               <div className="drawer-info">
                 <span className="drawer-name">{drawer?.name}</span> tegner
               </div>
-              <div className="word-display">
-                Ordet: <strong>{currentWord}</strong>
+              <div className="word-hint">
+                (Ordet vises kun på {drawer?.name} sin skjerm)
               </div>
             </div>
 
@@ -220,52 +184,18 @@ function HostGame() {
 
             {lastResult && lastResult.type === 'wrong' && (
               <div className="wrong-result">
-                {lastResult.playerName} gjettet feil!
+                {lastResult.playerName} gjettet feil! (10 sek karantene)
               </div>
             )}
 
-            {/* Pending guess */}
-            {pendingGuess && (
-              <div className="pending-guess">
-                <p>
-                  <strong>{players.find(p => p.id === pendingGuess.playerId)?.name}</strong> gjetter:
-                </p>
-                <div className="guess-text">{pendingGuess.guess}</div>
-                <div className="guess-buttons">
-                  <button className="btn btn-correct" onClick={() => validateGuess(true)}>
-                    Riktig ✓
-                  </button>
-                  <button className="btn btn-wrong" onClick={() => validateGuess(false)}>
-                    Feil ✗
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Buzzer queue */}
-            {!pendingGuess && buzzerQueue.length > 0 && (
-              <div className="buzzer-queue">
-                <h3>Buzzerkø:</h3>
-                <div className="queue-list">
-                  {buzzerQueue.map((playerId, i) => {
-                    const player = players.find(p => p.id === playerId);
-                    return (
-                      <button
-                        key={playerId}
-                        className="queue-item"
-                        onClick={() => selectGuesser(playerId)}
-                      >
-                        <span className="position">#{i + 1}</span>
-                        <span className="name">{player?.name}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+            {lastResult && lastResult.type === 'correct' && (
+              <div className="correct-result">
+                {lastResult.playerName} gjettet riktig!
               </div>
             )}
 
             <button className="btn btn-skip" onClick={skipRound}>
-              Hopp over
+              Hopp over (vis fasit)
             </button>
           </div>
         )}
