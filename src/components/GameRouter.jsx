@@ -14,6 +14,17 @@ import TidslinjeHost from '../games/tidslinje/HostGame';
 import TidslinjePlayer from '../games/tidslinje/PlayerGame';
 import JaEllerNeiHost from '../games/ja-eller-nei/HostGame';
 import JaEllerNeiPlayer from '../games/ja-eller-nei/PlayerGame';
+// New games
+import VilDuHellerHost from '../games/vil-du-heller/HostGame';
+import VilDuHellerPlayer from '../games/vil-du-heller/PlayerGame';
+import NerdleHost from '../games/nerdle/HostGame';
+import NerdlePlayer from '../games/nerdle/PlayerGame';
+import HvaManglerHost from '../games/hva-mangler/HostGame';
+import HvaManglerPlayer from '../games/hva-mangler/PlayerGame';
+import TegnDetHost from '../games/tegn-det/HostGame';
+import TegnDetPlayer from '../games/tegn-det/PlayerGame';
+import SquiggleStoryHost from '../games/squiggle-story/HostGame';
+import SquiggleStoryPlayer from '../games/squiggle-story/PlayerGame';
 
 const GAME_COMPONENTS = {
   'gjett-bildet': { host: GjettBildetHost, player: GjettBildetPlayer },
@@ -21,7 +32,12 @@ const GAME_COMPONENTS = {
   'tallkamp': { host: TallkampHost, player: TallkampPlayer },
   'quiz': { host: QuizHost, player: QuizPlayer },
   'tidslinje': { host: TidslinjeHost, player: TidslinjePlayer },
-  'ja-eller-nei': { host: JaEllerNeiHost, player: JaEllerNeiPlayer }
+  'ja-eller-nei': { host: JaEllerNeiHost, player: JaEllerNeiPlayer },
+  'vil-du-heller': { host: VilDuHellerHost, player: VilDuHellerPlayer },
+  'nerdle': { host: NerdleHost, player: NerdlePlayer },
+  'hva-mangler': { host: HvaManglerHost, player: HvaManglerPlayer },
+  'tegn-det': { host: TegnDetHost, player: TegnDetPlayer },
+  'squiggle-story': { host: SquiggleStoryHost, player: SquiggleStoryPlayer }
 };
 
 function GameRouter() {

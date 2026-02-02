@@ -1,0 +1,657 @@
+/* game/src/games/hva-mangler/HvaMangler.css */
+
+/* ==================
+   HOST STYLES
+   ================== */
+
+.hvamangler-host {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+  background: linear-gradient(135deg, #065f46 0%, #022c22 100%);
+  color: white;
+}
+
+.hvamangler-host .game-header {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.hvamangler-host .game-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.hvamangler-host .game-badge {
+  background: #10b981;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+.hvamangler-host .room-code,
+.hvamangler-host .round-info {
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.hvamangler-host .btn-end {
+  background: #ef4444;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* Main content */
+.hvamangler-host .game-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+/* Setup phase */
+.hvamangler-host .setup-phase {
+  text-align: center;
+}
+
+.hvamangler-host .setup-icon {
+  font-size: 5rem;
+  margin-bottom: 1rem;
+}
+
+.hvamangler-host .setup-options {
+  display: flex;
+  gap: 1.5rem;
+  margin: 2rem 0;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.hvamangler-host .option-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.hvamangler-host .option-group label {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.hvamangler-host .option-group select {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 1rem;
+  min-width: 150px;
+}
+
+.hvamangler-host .btn-start {
+  background: #10b981;
+  color: white;
+  padding: 1.5rem 3rem;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.hvamangler-host .btn-start:hover {
+  transform: scale(1.05);
+}
+
+.hvamangler-host .hint {
+  margin-top: 2rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Memorize phase */
+.hvamangler-host .memorize-phase,
+.hvamangler-host .guess-phase {
+  text-align: center;
+  width: 100%;
+  max-width: 800px;
+}
+
+.hvamangler-host .phase-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.hvamangler-host .phase-header h2 {
+  font-size: 2rem;
+}
+
+.hvamangler-host .timer {
+  font-size: 3rem;
+  font-weight: bold;
+  color: #fbbf24;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.5rem 1.5rem;
+  border-radius: 12px;
+}
+
+/* Emoji grid */
+.hvamangler-host .emoji-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.hvamangler-host .emoji-item {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1.5rem;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 100px;
+  transition: opacity 0.3s;
+}
+
+.hvamangler-host .emoji-item.hidden {
+  opacity: 0;
+}
+
+.hvamangler-host .emoji-item .emoji {
+  font-size: 3.5rem;
+}
+
+.hvamangler-host .emoji-item .label {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.hvamangler-host .btn-skip {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* Black phase */
+.hvamangler-host .black-phase {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.hvamangler-host .black-screen {
+  background: #000;
+  padding: 4rem;
+  border-radius: 20px;
+  text-align: center;
+}
+
+/* Guess phase */
+.hvamangler-host .last-result {
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-size: 1.2rem;
+}
+
+.hvamangler-host .last-result.correct {
+  background: rgba(16, 185, 129, 0.3);
+  color: #6ee7b7;
+}
+
+.hvamangler-host .last-result.wrong {
+  background: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+.hvamangler-host .pending-guess {
+  background: rgba(251, 191, 36, 0.2);
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+}
+
+.hvamangler-host .guess-text {
+  font-size: 2rem;
+  font-weight: bold;
+  margin: 1rem 0;
+  color: #fbbf24;
+}
+
+.hvamangler-host .guess-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.hvamangler-host .btn-correct {
+  background: #10b981;
+  color: white;
+  padding: 1rem 2rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.hvamangler-host .btn-wrong {
+  background: #ef4444;
+  color: white;
+  padding: 1rem 2rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+/* Buzzer queue */
+.hvamangler-host .buzzer-queue {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+}
+
+.hvamangler-host .buzzer-queue h3 {
+  margin-bottom: 1rem;
+  color: #fbbf24;
+}
+
+.hvamangler-host .queue-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.hvamangler-host .queue-item {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.2s;
+}
+
+.hvamangler-host .queue-item:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.hvamangler-host .queue-item .position {
+  color: #fbbf24;
+  font-weight: bold;
+}
+
+.hvamangler-host .btn-reveal-answer {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 1rem;
+}
+
+/* Reveal phase */
+.hvamangler-host .reveal-phase {
+  text-align: center;
+}
+
+.hvamangler-host .answer-reveal {
+  background: rgba(16, 185, 129, 0.2);
+  padding: 2rem;
+  border-radius: 16px;
+  margin: 2rem 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.hvamangler-host .answer-emoji {
+  font-size: 5rem;
+}
+
+.hvamangler-host .answer-text {
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+.hvamangler-host .winner-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 1.3rem;
+  margin-bottom: 2rem;
+}
+
+.hvamangler-host .winner-icon {
+  font-size: 2rem;
+}
+
+.hvamangler-host .btn-next {
+  background: #10b981;
+  color: white;
+  padding: 1rem 2.5rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.3rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Players sidebar */
+.hvamangler-host .players-sidebar {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.hvamangler-host .players-sidebar h3 {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.hvamangler-host .players-list {
+  list-style: none;
+  padding: 0;
+}
+
+.hvamangler-host .player-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.hvamangler-host .player-score {
+  color: #10b981;
+  font-weight: 600;
+}
+
+/* ==================
+   PLAYER STYLES
+   ================== */
+
+.hvamangler-player {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #065f46 0%, #022c22 100%);
+  color: white;
+  display: flex;
+  flex-direction: column;
+}
+
+.hvamangler-player .player-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.hvamangler-player .player-name {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.hvamangler-player .game-badge {
+  background: #10b981;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+}
+
+.hvamangler-player .player-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+/* Waiting phase */
+.hvamangler-player .waiting-phase {
+  text-align: center;
+}
+
+.hvamangler-player .waiting-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+/* Memorize phase */
+.hvamangler-player .memorize-phase {
+  text-align: center;
+  width: 100%;
+}
+
+.hvamangler-player .phase-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding: 0 1rem;
+}
+
+.hvamangler-player .phase-info .timer {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #fbbf24;
+}
+
+/* Emoji grid player */
+.hvamangler-player .emoji-grid-player {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.hvamangler-player .emoji-item-player {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1rem;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 70px;
+}
+
+.hvamangler-player .emoji-item-player .emoji {
+  font-size: 2rem;
+}
+
+.hvamangler-player .emoji-item-player .label {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Black phase */
+.hvamangler-player .black-phase {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: #000;
+}
+
+.hvamangler-player .black-content {
+  text-align: center;
+}
+
+.hvamangler-player .black-content .timer {
+  font-size: 4rem;
+  font-weight: bold;
+  color: #fbbf24;
+}
+
+/* Guess phase */
+.hvamangler-player .guess-phase {
+  text-align: center;
+}
+
+.hvamangler-player .btn-buzzer {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(145deg, #ef4444, #dc2626);
+  box-shadow: 0 10px 0 #991b1b, 0 15px 30px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.hvamangler-player .btn-buzzer:active {
+  transform: translateY(5px);
+  box-shadow: 0 5px 0 #991b1b, 0 10px 20px rgba(0, 0, 0, 0.3);
+}
+
+.hvamangler-player .buzzer-icon {
+  font-size: 3rem;
+}
+
+.hvamangler-player .buzzer-text {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.hvamangler-player .buzzed-status {
+  text-align: center;
+}
+
+.hvamangler-player .buzzed-status .check {
+  font-size: 4rem;
+  color: #10b981;
+}
+
+.hvamangler-player .buzzed-status .hint {
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 0.5rem;
+}
+
+/* Selected phase */
+.hvamangler-player .selected-phase {
+  text-align: center;
+  width: 100%;
+  max-width: 350px;
+}
+
+.hvamangler-player .guess-input-group {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+.hvamangler-player .guess-input {
+  flex: 1;
+  padding: 1rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.2rem;
+  background: rgba(255, 255, 255, 0.9);
+  color: #1f2937;
+}
+
+.hvamangler-player .btn-submit {
+  background: #10b981;
+  color: white;
+  padding: 1rem 1.5rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Result phase */
+.hvamangler-player .result-phase {
+  text-align: center;
+}
+
+.hvamangler-player .result-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  margin: 0 auto 1rem;
+}
+
+.hvamangler-player .result-icon.correct {
+  background: #10b981;
+}
+
+.hvamangler-player .result-icon.wrong {
+  background: #ef4444;
+}
+
+.hvamangler-player .waiting-text {
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
+  margin-top: 1.5rem;
+}
+
+/* ==================
+   RESPONSIVE
+   ================== */
+
+@media (max-width: 768px) {
+  .hvamangler-host {
+    grid-template-columns: 1fr;
+  }
+
+  .hvamangler-host .players-sidebar {
+    display: none;
+  }
+
+  .hvamangler-host .emoji-item .emoji {
+    font-size: 2.5rem;
+  }
+
+  .hvamangler-host .emoji-item {
+    min-width: 80px;
+    padding: 1rem;
+  }
+}

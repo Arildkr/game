@@ -38,6 +38,36 @@ const GAMES = [
     name: 'Ja eller Nei',
     icon: '✅',
     description: 'Svar riktig eller bli eliminert - siste elev igjen vinner!'
+  },
+  {
+    id: 'vil-du-heller',
+    name: 'Vil du heller?',
+    icon: '🤔',
+    description: 'Stem på dilemmaer og se resultatene i sanntid'
+  },
+  {
+    id: 'nerdle',
+    name: 'Nerdle',
+    icon: '🧮',
+    description: 'Gjett regnestykket - matematisk Wordle!'
+  },
+  {
+    id: 'hva-mangler',
+    name: 'Hva mangler?',
+    icon: '👁️',
+    description: 'Husk gjenstandene og finn ut hva som forsvant'
+  },
+  {
+    id: 'tegn-det',
+    name: 'Tegn det!',
+    icon: '🎨',
+    description: 'Tegn og gjett - hvem er raskest?'
+  },
+  {
+    id: 'squiggle-story',
+    name: 'Krusedull',
+    icon: '〰️',
+    description: 'Lag kunst fra en tilfeldig krusedull'
   }
 ];
 

@@ -1,0 +1,303 @@
+// game/src/games/tegn-det/PlayerGame.jsx
+import { useState, useEffect, useRef } from 'react';
+import { useGame } from '../../contexts/GameContext';
+import DrawingCanvas from './DrawingCanvas';
+import './TegnDet.css';
+
+function PlayerGame() {
+  const { socket, playerName } = useGame();
+
+  const [phase, setPhase] = useState('waiting'); // waiting, drawing, guessing, selected, result, spectating
+  const [isDrawer, setIsDrawer] = useState(false);
+  const [drawerName, setDrawerName] = useState('');
+  const [word, setWord] = useState('');
+  const [strokes, setStrokes] = useState([]);
+  const [hasBuzzed, setHasBuzzed] = useState(false);
+  const [isSelected, setIsSelected] = useState(false);
+  const [guess, setGuess] = useState('');
+  const [lastResult, setLastResult] = useState(null);
+  const [isLockedOut, setIsLockedOut] = useState(false);
+  const [lockoutTime, setLockoutTime] = useState(0);
+
+  const inputRef = useRef(null);
+  const lockoutTimerRef = useRef(null);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleRoundStarted = ({ drawerId, drawerName: name, wordForDrawer }) => {
+      setDrawerName(name);
+      setStrokes([]);
+      setHasBuzzed(false);
+      setIsSelected(false);
+      setGuess('');
+      setLastResult(null);
+      setIsLockedOut(false);
+
+      if (drawerId === socket.id) {
+        setIsDrawer(true);
+        setWord(wordForDrawer);
+        setPhase('drawing');
+      } else {
+        setIsDrawer(false);
+        setWord('');
+        setPhase('guessing');
+      }
+    };
+
+    const handleDrawingUpdate = ({ stroke }) => {
+      setStrokes(prev => [...prev, stroke]);
+    };
+
+    const handleCanvasCleared = () => {
+      setStrokes([]);
+    };
+
+    const handleGuesserSelected = ({ playerId }) => {
+      if (playerId === socket.id) {
+        setIsSelected(true);
+        setPhase('selected');
+        setTimeout(() => inputRef.current?.focus(), 100);
+      }
+    };
+
+    const handleCorrectGuess = ({ playerId, playerName: winner, word: correctWord, guesserPoints }) => {
+      setLastResult({
+        type: 'correct',
+        isMe: playerId === socket.id,
+        playerName: winner,
+        word: correctWord,
+        points: guesserPoints
+      });
+      setPhase('result');
+    };
+
+    const handleWrongGuess = ({ playerId, lockoutDuration }) => {
+      if (playerId === socket.id) {
+        setIsSelected(false);
+        setIsLockedOut(true);
+        setLockoutTime(lockoutDuration);
+        setPhase('guessing');
+
+        // Countdown lockout
+        let remaining = lockoutDuration;
+        lockoutTimerRef.current = setInterval(() => {
+          remaining--;
+          setLockoutTime(remaining);
+          if (remaining <= 0) {
+            clearInterval(lockoutTimerRef.current);
+            setIsLockedOut(false);
+          }
+        }, 1000);
+      }
+    };
+
+    const handleRoundEnded = ({ word: correctWord }) => {
+      setLastResult({
+        type: 'skipped',
+        word: correctWord
+      });
+      setPhase('result');
+    };
+
+    socket.on('game:round-started', handleRoundStarted);
+    socket.on('game:drawing-update', handleDrawingUpdate);
+    socket.on('game:canvas-cleared', handleCanvasCleared);
+    socket.on('game:guesser-selected', handleGuesserSelected);
+    socket.on('game:correct-guess', handleCorrectGuess);
+    socket.on('game:wrong-guess', handleWrongGuess);
+    socket.on('game:round-ended', handleRoundEnded);
+
+    return () => {
+      socket.off('game:round-started', handleRoundStarted);
+      socket.off('game:drawing-update', handleDrawingUpdate);
+      socket.off('game:canvas-cleared', handleCanvasCleared);
+      socket.off('game:guesser-selected', handleGuesserSelected);
+      socket.off('game:correct-guess', handleCorrectGuess);
+      socket.off('game:wrong-guess', handleWrongGuess);
+      socket.off('game:round-ended', handleRoundEnded);
+      if (lockoutTimerRef.current) clearInterval(lockoutTimerRef.current);
+    };
+  }, [socket]);
+
+  const handleStroke = (stroke) => {
+    socket.emit('player:game-action', {
+      action: 'draw-stroke',
+      data: { stroke }
+    });
+  };
+
+  const clearCanvas = () => {
+    socket.emit('player:game-action', {
+      action: 'clear-canvas',
+      data: {}
+    });
+  };
+
+  const buzz = () => {
+    if (hasBuzzed || isLockedOut) return;
+
+    setHasBuzzed(true);
+    socket.emit('player:game-action', {
+      action: 'buzz',
+      data: {}
+    });
+  };
+
+  const submitGuess = () => {
+    if (!guess.trim() || !isSelected) return;
+
+    socket.emit('player:game-action', {
+      action: 'submit-guess',
+      data: { guess: guess.trim() }
+    });
+
+    setGuess('');
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      submitGuess();
+    }
+  };
+
+  return (
+    <div className="tegndet-player">
+      {/* Header */}
+      <header className="player-header">
+        <span className="player-name">{playerName}</span>
+        <span className="game-badge">Tegn det!</span>
+      </header>
+
+      {/* Main content */}
+      <main className="player-main">
+        {/* Waiting phase */}
+        {phase === 'waiting' && (
+          <div className="waiting-phase">
+            <div className="waiting-icon">🎨</div>
+            <h2>Venter på neste runde...</h2>
+          </div>
+        )}
+
+        {/* Drawing phase (for drawer) */}
+        {phase === 'drawing' && isDrawer && (
+          <div className="drawing-phase">
+            <div className="word-to-draw">
+              Tegn: <strong>{word}</strong>
+            </div>
+
+            <DrawingCanvas
+              isDrawer={true}
+              onStroke={handleStroke}
+              strokes={strokes}
+              width={350}
+              height={280}
+            />
+
+            <button className="btn btn-clear" onClick={clearCanvas}>
+              Tøm lerret
+            </button>
+          </div>
+        )}
+
+        {/* Guessing phase (for guessers) */}
+        {phase === 'guessing' && !isDrawer && (
+          <div className="guessing-phase">
+            <div className="drawer-info">
+              <span className="drawer-name">{drawerName}</span> tegner
+            </div>
+
+            <DrawingCanvas
+              isDrawer={false}
+              strokes={strokes}
+              width={350}
+              height={250}
+            />
+
+            {isLockedOut ? (
+              <div className="lockout-status">
+                <p>Du gjettet feil!</p>
+                <p className="lockout-timer">Vent {lockoutTime} sekunder...</p>
+              </div>
+            ) : !hasBuzzed ? (
+              <button className="btn-buzzer" onClick={buzz}>
+                <span className="buzzer-icon">🔔</span>
+                <span className="buzzer-text">BUZZ!</span>
+              </button>
+            ) : (
+              <div className="buzzed-status">
+                <span className="check">✓</span>
+                <p>Venter på tur...</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Selected phase - can guess */}
+        {phase === 'selected' && (
+          <div className="selected-phase">
+            <div className="drawer-info">
+              <span className="drawer-name">{drawerName}</span> tegner
+            </div>
+
+            <DrawingCanvas
+              isDrawer={false}
+              strokes={strokes}
+              width={350}
+              height={220}
+            />
+
+            <div className="your-turn">Din tur å gjette!</div>
+
+            <div className="guess-input-group">
+              <input
+                ref={inputRef}
+                type="text"
+                className="guess-input"
+                value={guess}
+                onChange={(e) => setGuess(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Hva tegnes?"
+                autoComplete="off"
+              />
+              <button className="btn-submit" onClick={submitGuess}>
+                Send
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Result phase */}
+        {phase === 'result' && lastResult && (
+          <div className="result-phase">
+            {lastResult.type === 'correct' ? (
+              lastResult.isMe ? (
+                <>
+                  <div className="result-icon">🎉</div>
+                  <h2>Du gjettet riktig!</h2>
+                  <p className="result-word">Ordet var: <strong>{lastResult.word}</strong></p>
+                  <p className="points">+{lastResult.points} poeng</p>
+                </>
+              ) : (
+                <>
+                  <div className="result-icon">👏</div>
+                  <h2>{lastResult.playerName} gjettet riktig!</h2>
+                  <p className="result-word">Ordet var: <strong>{lastResult.word}</strong></p>
+                </>
+              )
+            ) : (
+              <>
+                <div className="result-icon">⏭️</div>
+                <h2>Runden ble hoppet over</h2>
+                <p className="result-word">Ordet var: <strong>{lastResult.word}</strong></p>
+              </>
+            )}
+            <p className="waiting-text">Venter på neste runde...</p>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
+export default PlayerGame;

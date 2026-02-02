@@ -1,0 +1,474 @@
+/* game/src/games/squiggle-story/SquiggleStory.css */
+
+/* ==================
+   HOST STYLES
+   ================== */
+
+.squigglestory-host {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+  background: linear-gradient(135deg, #0891b2 0%, #164e63 100%);
+  color: white;
+}
+
+.squigglestory-host .game-header {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.squigglestory-host .game-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.squigglestory-host .game-badge {
+  background: #06b6d4;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+.squigglestory-host .room-code,
+.squigglestory-host .round-info {
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.squigglestory-host .btn-end {
+  background: #ef4444;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* Main content */
+.squigglestory-host .game-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+/* Setup phase */
+.squigglestory-host .setup-phase {
+  text-align: center;
+}
+
+.squigglestory-host .setup-icon {
+  font-size: 5rem;
+  margin-bottom: 1rem;
+}
+
+.squigglestory-host .description {
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 2rem;
+}
+
+.squigglestory-host .squiggle-selector {
+  margin-bottom: 2rem;
+}
+
+.squigglestory-host .squiggle-selector label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.squigglestory-host .squiggle-selector select {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 1rem;
+  min-width: 200px;
+}
+
+.squigglestory-host .btn-start {
+  background: #06b6d4;
+  color: white;
+  padding: 1.5rem 3rem;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.squigglestory-host .btn-start:hover {
+  transform: scale(1.05);
+}
+
+.squigglestory-host .hint {
+  margin-top: 2rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Drawing phase */
+.squigglestory-host .drawing-phase {
+  text-align: center;
+  width: 100%;
+  max-width: 600px;
+}
+
+.squigglestory-host .squiggle-preview {
+  margin-bottom: 2rem;
+}
+
+.squigglestory-host .preview-canvas {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.squigglestory-host .submission-status {
+  margin-bottom: 2rem;
+}
+
+.squigglestory-host .submission-status p {
+  margin-bottom: 0.5rem;
+  font-size: 1.2rem;
+}
+
+.squigglestory-host .progress-bar {
+  height: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.squigglestory-host .progress-fill {
+  height: 100%;
+  background: #06b6d4;
+  transition: width 0.3s ease;
+}
+
+.squigglestory-host .btn-show-gallery {
+  background: #06b6d4;
+  color: white;
+  padding: 1rem 2.5rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.3rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Gallery phase */
+.squigglestory-host .gallery-phase {
+  text-align: center;
+  width: 100%;
+  max-width: 900px;
+}
+
+.squigglestory-host .gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.squigglestory-host .gallery-item {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s;
+}
+
+.squigglestory-host .gallery-item:hover {
+  transform: scale(1.05);
+}
+
+.squigglestory-host .gallery-image {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.squigglestory-host .gallery-name {
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  font-weight: 600;
+  text-align: center;
+}
+
+.squigglestory-host .no-submissions {
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
+}
+
+.squigglestory-host .btn-next {
+  background: #06b6d4;
+  color: white;
+  padding: 1rem 2.5rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.3rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Players sidebar */
+.squigglestory-host .players-sidebar {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.squigglestory-host .players-sidebar h3 {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.squigglestory-host .players-list {
+  list-style: none;
+  padding: 0;
+}
+
+.squigglestory-host .player-item {
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+/* ==================
+   PLAYER STYLES
+   ================== */
+
+.squigglestory-player {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0891b2 0%, #164e63 100%);
+  color: white;
+  display: flex;
+  flex-direction: column;
+}
+
+.squigglestory-player .player-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.squigglestory-player .player-name {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.squigglestory-player .game-badge {
+  background: #06b6d4;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+}
+
+.squigglestory-player .player-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+/* Waiting phase */
+.squigglestory-player .waiting-phase {
+  text-align: center;
+}
+
+.squigglestory-player .waiting-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+/* Drawing phase */
+.squigglestory-player .drawing-phase {
+  text-align: center;
+  width: 100%;
+}
+
+.squigglestory-player .instruction {
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.squigglestory-player .canvas-container {
+  margin-bottom: 1rem;
+}
+
+.squigglestory-player .drawing-canvas {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  cursor: crosshair;
+  max-width: 100%;
+}
+
+.squigglestory-player .drawing-tools {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.squigglestory-player .color-picker {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.squigglestory-player .color-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.squigglestory-player .color-btn:hover {
+  transform: scale(1.1);
+}
+
+.squigglestory-player .color-btn.selected {
+  border-color: white;
+  transform: scale(1.15);
+}
+
+.squigglestory-player .size-picker {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.squigglestory-player .size-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background: rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.squigglestory-player .size-btn.selected {
+  border-color: white;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.squigglestory-player .size-dot {
+  background: white;
+  border-radius: 50%;
+}
+
+.squigglestory-player .size-dot.small {
+  width: 6px;
+  height: 6px;
+}
+
+.squigglestory-player .size-dot.medium {
+  width: 10px;
+  height: 10px;
+}
+
+.squigglestory-player .size-dot.large {
+  width: 16px;
+  height: 16px;
+}
+
+.squigglestory-player .action-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.squigglestory-player .btn-clear {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.squigglestory-player .btn-submit {
+  background: #06b6d4;
+  color: white;
+  padding: 0.75rem 2rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+/* Submitted phase */
+.squigglestory-player .submitted-phase {
+  text-align: center;
+}
+
+.squigglestory-player .submitted-icon {
+  font-size: 4rem;
+  color: #06b6d4;
+  margin-bottom: 1rem;
+}
+
+.squigglestory-player .submitted-preview {
+  margin-top: 1.5rem;
+}
+
+.squigglestory-player .preview-canvas {
+  background: white;
+  border-radius: 12px;
+  max-width: 100%;
+}
+
+/* Gallery phase */
+.squigglestory-player .gallery-phase {
+  text-align: center;
+}
+
+.squigglestory-player .gallery-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+/* ==================
+   RESPONSIVE
+   ================== */
+
+@media (max-width: 768px) {
+  .squigglestory-host {
+    grid-template-columns: 1fr;
+  }
+
+  .squigglestory-host .players-sidebar {
+    display: none;
+  }
+
+  .squigglestory-host .gallery-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+  }
+}

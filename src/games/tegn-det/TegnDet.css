@@ -1,0 +1,666 @@
+/* game/src/games/tegn-det/TegnDet.css */
+
+/* ==================
+   DRAWING CANVAS COMPONENT
+   ================== */
+
+.drawing-canvas-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.drawing-canvas {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  cursor: crosshair;
+}
+
+.drawing-tools {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.color-picker {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.color-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.color-btn:hover {
+  transform: scale(1.1);
+}
+
+.color-btn.selected {
+  border-color: white;
+  transform: scale(1.15);
+}
+
+.size-picker {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.size-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background: rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.size-btn.selected {
+  border-color: white;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.size-dot {
+  background: white;
+  border-radius: 50%;
+}
+
+.size-dot.small {
+  width: 6px;
+  height: 6px;
+}
+
+.size-dot.medium {
+  width: 10px;
+  height: 10px;
+}
+
+.size-dot.large {
+  width: 16px;
+  height: 16px;
+}
+
+/* ==================
+   HOST STYLES
+   ================== */
+
+.tegndet-host {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+  background: linear-gradient(135deg, #be185d 0%, #7c2d12 100%);
+  color: white;
+}
+
+.tegndet-host .game-header {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tegndet-host .game-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.tegndet-host .game-badge {
+  background: #f472b6;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+.tegndet-host .room-code,
+.tegndet-host .round-info {
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.tegndet-host .header-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.tegndet-host .difficulty-select {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 1rem;
+}
+
+.tegndet-host .btn-end {
+  background: #ef4444;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* Main content */
+.tegndet-host .game-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+/* Setup phase */
+.tegndet-host .setup-phase {
+  text-align: center;
+}
+
+.tegndet-host .setup-icon {
+  font-size: 5rem;
+  margin-bottom: 1rem;
+}
+
+.tegndet-host .description {
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 2rem;
+}
+
+.tegndet-host .btn-start {
+  background: #f472b6;
+  color: white;
+  padding: 1.5rem 3rem;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.tegndet-host .btn-start:hover {
+  transform: scale(1.05);
+}
+
+.tegndet-host .hint {
+  margin-top: 2rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Select word phase */
+.tegndet-host .select-word-phase {
+  text-align: center;
+}
+
+.tegndet-host .word-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.tegndet-host .word-option {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  padding: 1.5rem 2.5rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  font-size: 1.3rem;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.tegndet-host .word-option:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: white;
+}
+
+/* Drawing phase */
+.tegndet-host .drawing-phase {
+  text-align: center;
+  width: 100%;
+  max-width: 700px;
+}
+
+.tegndet-host .drawing-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.tegndet-host .drawer-info {
+  font-size: 1.2rem;
+}
+
+.tegndet-host .drawer-name {
+  font-weight: bold;
+  color: #fbbf24;
+}
+
+.tegndet-host .word-display {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.5rem 1.5rem;
+  border-radius: 8px;
+}
+
+.tegndet-host .wrong-result {
+  background: rgba(239, 68, 68, 0.3);
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+  color: #fca5a5;
+}
+
+.tegndet-host .pending-guess {
+  background: rgba(251, 191, 36, 0.2);
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin-top: 1.5rem;
+}
+
+.tegndet-host .guess-text {
+  font-size: 2rem;
+  font-weight: bold;
+  margin: 1rem 0;
+  color: #fbbf24;
+}
+
+.tegndet-host .guess-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.tegndet-host .btn-correct {
+  background: #10b981;
+  color: white;
+  padding: 1rem 2rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.tegndet-host .btn-wrong {
+  background: #ef4444;
+  color: white;
+  padding: 1rem 2rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+/* Buzzer queue */
+.tegndet-host .buzzer-queue {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin-top: 1.5rem;
+}
+
+.tegndet-host .buzzer-queue h3 {
+  margin-bottom: 1rem;
+  color: #fbbf24;
+}
+
+.tegndet-host .queue-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.tegndet-host .queue-item {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tegndet-host .queue-item:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.tegndet-host .queue-item .position {
+  color: #fbbf24;
+  font-weight: bold;
+}
+
+.tegndet-host .btn-skip {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 1.5rem;
+}
+
+/* Result phase */
+.tegndet-host .result-phase {
+  text-align: center;
+}
+
+.tegndet-host .result-icon {
+  font-size: 5rem;
+  margin-bottom: 1rem;
+}
+
+.tegndet-host .result-word {
+  font-size: 1.5rem;
+  margin: 1rem 0;
+}
+
+.tegndet-host .result-winner {
+  font-size: 1.3rem;
+  margin-bottom: 1rem;
+}
+
+.tegndet-host .winner-name {
+  color: #fbbf24;
+  font-weight: bold;
+}
+
+.tegndet-host .points-info {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+}
+
+.tegndet-host .btn-next {
+  background: #f472b6;
+  color: white;
+  padding: 1rem 2.5rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.3rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Players sidebar */
+.tegndet-host .players-sidebar {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.tegndet-host .players-sidebar h3 {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.tegndet-host .players-list {
+  list-style: none;
+  padding: 0;
+}
+
+.tegndet-host .player-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.tegndet-host .player-item.is-drawer {
+  background: rgba(244, 114, 182, 0.3);
+}
+
+.tegndet-host .player-score {
+  color: #f472b6;
+  font-weight: 600;
+}
+
+/* ==================
+   PLAYER STYLES
+   ================== */
+
+.tegndet-player {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #be185d 0%, #7c2d12 100%);
+  color: white;
+  display: flex;
+  flex-direction: column;
+}
+
+.tegndet-player .player-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.tegndet-player .player-name {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.tegndet-player .game-badge {
+  background: #f472b6;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+}
+
+.tegndet-player .player-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+/* Waiting phase */
+.tegndet-player .waiting-phase {
+  text-align: center;
+}
+
+.tegndet-player .waiting-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+/* Drawing phase */
+.tegndet-player .drawing-phase {
+  text-align: center;
+  width: 100%;
+}
+
+.tegndet-player .word-to-draw {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+}
+
+.tegndet-player .btn-clear {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 1rem;
+}
+
+/* Guessing phase */
+.tegndet-player .guessing-phase,
+.tegndet-player .selected-phase {
+  text-align: center;
+  width: 100%;
+}
+
+.tegndet-player .drawer-info {
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.tegndet-player .drawer-name {
+  font-weight: bold;
+  color: #fbbf24;
+}
+
+.tegndet-player .btn-buzzer {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(145deg, #ef4444, #dc2626);
+  box-shadow: 0 8px 0 #991b1b, 0 12px 24px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  margin-top: 1rem;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.tegndet-player .btn-buzzer:active {
+  transform: translateY(4px);
+  box-shadow: 0 4px 0 #991b1b, 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+.tegndet-player .buzzer-icon {
+  font-size: 2.5rem;
+}
+
+.tegndet-player .buzzer-text {
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.tegndet-player .buzzed-status {
+  margin-top: 1rem;
+}
+
+.tegndet-player .buzzed-status .check {
+  font-size: 3rem;
+  color: #10b981;
+}
+
+.tegndet-player .lockout-status {
+  margin-top: 1rem;
+  color: #fca5a5;
+}
+
+.tegndet-player .lockout-timer {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+/* Selected phase */
+.tegndet-player .your-turn {
+  background: #fbbf24;
+  color: #1f2937;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: bold;
+  margin: 1rem 0;
+}
+
+.tegndet-player .guess-input-group {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 350px;
+  margin-top: 0.5rem;
+}
+
+.tegndet-player .guess-input {
+  flex: 1;
+  padding: 1rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  background: rgba(255, 255, 255, 0.9);
+  color: #1f2937;
+}
+
+.tegndet-player .btn-submit {
+  background: #10b981;
+  color: white;
+  padding: 1rem 1.5rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Result phase */
+.tegndet-player .result-phase {
+  text-align: center;
+}
+
+.tegndet-player .result-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.tegndet-player .result-word {
+  font-size: 1.2rem;
+  margin: 1rem 0;
+}
+
+.tegndet-player .points {
+  color: #fbbf24;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.tegndet-player .waiting-text {
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
+  margin-top: 1.5rem;
+}
+
+/* ==================
+   RESPONSIVE
+   ================== */
+
+@media (max-width: 768px) {
+  .tegndet-host {
+    grid-template-columns: 1fr;
+  }
+
+  .tegndet-host .players-sidebar {
+    display: none;
+  }
+
+  .tegndet-host .drawing-canvas {
+    max-width: 100%;
+    height: auto;
+  }
+}

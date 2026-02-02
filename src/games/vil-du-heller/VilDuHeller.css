@@ -1,0 +1,605 @@
+/* game/src/games/vil-du-heller/VilDuHeller.css */
+
+/* ==================
+   HOST STYLES
+   ================== */
+
+.vilduheller-host {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+  background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%);
+  color: white;
+}
+
+.vilduheller-host .game-header {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.vilduheller-host .game-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.vilduheller-host .game-badge {
+  background: #f59e0b;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+.vilduheller-host .room-code {
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.vilduheller-host .header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.vilduheller-host .category-select {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.vilduheller-host .category-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.vilduheller-host .btn-end {
+  background: #ef4444;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.2s;
+}
+
+.vilduheller-host .btn-end:hover {
+  background: #dc2626;
+}
+
+/* Main content area */
+.vilduheller-host .game-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+/* Waiting phase */
+.vilduheller-host .waiting-phase {
+  text-align: center;
+}
+
+.vilduheller-host .question-number {
+  font-size: 1.5rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 2rem;
+}
+
+.vilduheller-host .btn-show-question {
+  background: #f59e0b;
+  color: white;
+  padding: 1.5rem 3rem;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.vilduheller-host .btn-show-question:hover {
+  background: #d97706;
+  transform: scale(1.05);
+}
+
+.vilduheller-host .hint {
+  margin-top: 2rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Question phase */
+.vilduheller-host .question-phase,
+.vilduheller-host .results-phase {
+  text-align: center;
+  width: 100%;
+  max-width: 900px;
+}
+
+.vilduheller-host .question-title {
+  font-size: 2rem;
+  margin-bottom: 2rem;
+  color: #fbbf24;
+}
+
+.vilduheller-host .options-display {
+  display: flex;
+  align-items: stretch;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.vilduheller-host .option {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.vilduheller-host .option.winner {
+  background: rgba(251, 191, 36, 0.3);
+  border: 3px solid #fbbf24;
+}
+
+.vilduheller-host .option-letter {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+}
+
+.vilduheller-host .option-a .option-letter {
+  background: #3b82f6;
+}
+
+.vilduheller-host .option-b .option-letter {
+  background: #ef4444;
+}
+
+.vilduheller-host .option-text {
+  font-size: 1.3rem;
+  line-height: 1.4;
+  margin-bottom: 1.5rem;
+  flex: 1;
+}
+
+.vilduheller-host .vote-bar-container {
+  width: 100%;
+  height: 20px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.vilduheller-host .option-a .vote-bar {
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+}
+
+.vilduheller-host .option-b .vote-bar {
+  background: linear-gradient(90deg, #ef4444, #f87171);
+}
+
+.vilduheller-host .vote-bar {
+  height: 100%;
+  transition: width 0.5s ease;
+}
+
+.vilduheller-host .vote-count {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+}
+
+.vilduheller-host .result-percentage {
+  font-size: 3rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+}
+
+.vilduheller-host .voter-names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.vilduheller-host .voter-name {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+}
+
+.vilduheller-host .vs-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #fbbf24;
+  padding: 0 1rem;
+}
+
+.vilduheller-host .vote-status {
+  font-size: 1.2rem;
+  margin-bottom: 1.5rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.vilduheller-host .btn-reveal,
+.vilduheller-host .btn-next {
+  background: #10b981;
+  color: white;
+  padding: 1rem 2.5rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.3rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.vilduheller-host .btn-reveal:hover,
+.vilduheller-host .btn-next:hover {
+  background: #059669;
+}
+
+/* Players sidebar */
+.vilduheller-host .players-sidebar {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.vilduheller-host .players-sidebar h3 {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.vilduheller-host .players-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.vilduheller-host .player-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.vilduheller-host .player-name {
+  font-weight: 500;
+}
+
+.vilduheller-host .vote-indicator {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.vilduheller-host .vote-indicator.voted {
+  color: #10b981;
+}
+
+/* ==================
+   PLAYER STYLES
+   ================== */
+
+.vilduheller-player {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%);
+  color: white;
+  display: flex;
+  flex-direction: column;
+}
+
+.vilduheller-player .player-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.vilduheller-player .player-name {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.vilduheller-player .game-badge {
+  background: #f59e0b;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+}
+
+.vilduheller-player .player-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+/* Waiting phase */
+.vilduheller-player .waiting-phase {
+  text-align: center;
+}
+
+.vilduheller-player .waiting-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.vilduheller-player .waiting-phase h2 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Voting phase */
+.vilduheller-player .voting-phase {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.vilduheller-player .voting-title {
+  text-align: center;
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  color: #fbbf24;
+}
+
+.vilduheller-player .btn-vote {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  color: white;
+}
+
+.vilduheller-player .btn-vote:active {
+  transform: scale(0.98);
+}
+
+.vilduheller-player .btn-vote-a {
+  background: linear-gradient(145deg, #3b82f6, #2563eb);
+  box-shadow: 0 6px 0 #1d4ed8;
+}
+
+.vilduheller-player .btn-vote-a:hover {
+  box-shadow: 0 4px 0 #1d4ed8;
+  transform: translateY(2px);
+}
+
+.vilduheller-player .btn-vote-b {
+  background: linear-gradient(145deg, #ef4444, #dc2626);
+  box-shadow: 0 6px 0 #b91c1c;
+}
+
+.vilduheller-player .btn-vote-b:hover {
+  box-shadow: 0 4px 0 #b91c1c;
+  transform: translateY(2px);
+}
+
+.vilduheller-player .vote-letter {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin-bottom: 0.75rem;
+}
+
+.vilduheller-player .vote-text {
+  font-size: 1.1rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.vilduheller-player .or-divider {
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #fbbf24;
+  padding: 0.5rem 0;
+}
+
+/* Voted phase */
+.vilduheller-player .voted-phase {
+  text-align: center;
+}
+
+.vilduheller-player .your-choice p {
+  margin-bottom: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.vilduheller-player .choice-display {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+}
+
+.vilduheller-player .choice-display.optionA {
+  border-left: 4px solid #3b82f6;
+}
+
+.vilduheller-player .choice-display.optionB {
+  border-left: 4px solid #ef4444;
+}
+
+.vilduheller-player .choice-letter {
+  display: inline-block;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  line-height: 30px;
+  margin-right: 0.75rem;
+  font-weight: bold;
+}
+
+.vilduheller-player .choice-text {
+  font-size: 1.1rem;
+}
+
+.vilduheller-player .waiting-text {
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
+}
+
+/* Results phase */
+.vilduheller-player .results-phase {
+  text-align: center;
+  width: 100%;
+  max-width: 350px;
+}
+
+.vilduheller-player .results-header {
+  margin-bottom: 2rem;
+}
+
+.vilduheller-player .result-icon {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+}
+
+.vilduheller-player .results-header h2 {
+  font-size: 1.5rem;
+}
+
+.vilduheller-player .results-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.vilduheller-player .result-option {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1rem;
+  border-radius: 12px;
+}
+
+.vilduheller-player .result-option.winner {
+  background: rgba(251, 191, 36, 0.2);
+  border: 2px solid #fbbf24;
+}
+
+.vilduheller-player .result-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.vilduheller-player .result-letter {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.vilduheller-player .result-option:first-child .result-letter {
+  background: #3b82f6;
+}
+
+.vilduheller-player .result-option:last-child .result-letter {
+  background: #ef4444;
+}
+
+.vilduheller-player .result-percent {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.vilduheller-player .result-bar-container {
+  height: 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.vilduheller-player .result-bar {
+  height: 100%;
+  transition: width 0.5s ease;
+}
+
+.vilduheller-player .result-bar.bar-a {
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+}
+
+.vilduheller-player .result-bar.bar-b {
+  background: linear-gradient(90deg, #ef4444, #f87171);
+}
+
+/* ==================
+   RESPONSIVE
+   ================== */
+
+@media (max-width: 768px) {
+  .vilduheller-host {
+    grid-template-columns: 1fr;
+  }
+
+  .vilduheller-host .players-sidebar {
+    display: none;
+  }
+
+  .vilduheller-host .options-display {
+    flex-direction: column;
+  }
+
+  .vilduheller-host .vs-divider {
+    padding: 0.5rem 0;
+  }
+
+  .vilduheller-host .option-text {
+    font-size: 1.1rem;
+  }
+}

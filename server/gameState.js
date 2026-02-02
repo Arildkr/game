@@ -249,6 +249,56 @@ function initializeGameData(game, players, config) {
       };
     }
 
+    case 'vil-du-heller':
+      return {
+        currentQuestion: null,
+        votes: { optionA: [], optionB: [] },
+        questionIndex: 0,
+        showResults: false
+      };
+
+    case 'nerdle':
+      return {
+        targetEquation: null,
+        playerAttempts: {},
+        gameStartTime: null,
+        maxAttempts: 6,
+        roundActive: false
+      };
+
+    case 'hva-mangler':
+      return {
+        currentImage: null,
+        phase: 'waiting', // waiting, memorize, black, guess
+        buzzerQueue: [],
+        currentPlayer: null,
+        pendingGuess: null,
+        correctGuessers: [],
+        roundIndex: 0
+      };
+
+    case 'tegn-det':
+      return {
+        currentWord: null,
+        drawerId: null,
+        drawerName: null,
+        drawingData: [],
+        buzzerQueue: [],
+        currentGuesser: null,
+        pendingGuess: null,
+        lockedOutPlayers: [],
+        roundStartTime: null,
+        scores: {}
+      };
+
+    case 'squiggle-story':
+      return {
+        squiggle: null,
+        submissions: {},
+        displayedSubmissions: [],
+        phase: 'waiting' // waiting, drawing, gallery
+      };
+
     default:
       return {};
   }
@@ -302,6 +352,16 @@ export function handleGameAction(roomCode, action, data) {
       return handleTidslinjeHostAction(room, action, data);
     case 'slange':
       return handleSlangeHostAction(room, action, data);
+    case 'vil-du-heller':
+      return handleVilDuHellerHostAction(room, action, data);
+    case 'nerdle':
+      return handleNerdleHostAction(room, action, data);
+    case 'hva-mangler':
+      return handleHvaManglerHostAction(room, action, data);
+    case 'tegn-det':
+      return handleTegnDetHostAction(room, action, data);
+    case 'squiggle-story':
+      return handleSquiggleStoryHostAction(room, action, data);
     default:
       return null;
   }
@@ -328,6 +388,16 @@ export function handlePlayerAction(roomCode, playerId, action, data) {
       return handleTidslinjePlayerAction(room, playerId, action, data);
     case 'slange':
       return handleSlangePlayerAction(room, playerId, action, data);
+    case 'vil-du-heller':
+      return handleVilDuHellerPlayerAction(room, playerId, action, data);
+    case 'nerdle':
+      return handleNerdlePlayerAction(room, playerId, action, data);
+    case 'hva-mangler':
+      return handleHvaManglerPlayerAction(room, playerId, action, data);
+    case 'tegn-det':
+      return handleTegnDetPlayerAction(room, playerId, action, data);
+    case 'squiggle-story':
+      return handleSquiggleStoryPlayerAction(room, playerId, action, data);
     default:
       return null;
   }
@@ -1484,6 +1554,779 @@ function handleSlangePlayerAction(room, playerId, action, data) {
         broadcast: true,
         event: 'game:word-submitted',
         data: { playerId, word, validationPassed: true }
+      };
+    }
+
+    default:
+      return null;
+  }
+}
+
+// ==================
+// VIL DU HELLER?
+// ==================
+
+function handleVilDuHellerHostAction(room, action, data) {
+  const gd = room.gameData;
+
+  switch (action) {
+    case 'show-question': {
+      const { question } = data;
+      gd.currentQuestion = question;
+      gd.votes = { optionA: [], optionB: [] };
+      gd.showResults = false;
+
+      return {
+        broadcast: true,
+        event: 'game:question-shown',
+        data: {
+          question: {
+            optionA: question.optionA,
+            optionB: question.optionB
+          },
+          questionIndex: gd.questionIndex
+        }
+      };
+    }
+
+    case 'reveal-results': {
+      gd.showResults = true;
+      gd.questionIndex++;
+
+      return {
+        broadcast: true,
+        event: 'game:results-revealed',
+        data: {
+          votes: gd.votes,
+          questionIndex: gd.questionIndex - 1
+        }
+      };
+    }
+
+    case 'next-question': {
+      gd.currentQuestion = null;
+      gd.votes = { optionA: [], optionB: [] };
+      gd.showResults = false;
+
+      return {
+        broadcast: true,
+        event: 'game:ready-for-question',
+        data: { questionIndex: gd.questionIndex }
+      };
+    }
+
+    default:
+      return null;
+  }
+}
+
+function handleVilDuHellerPlayerAction(room, playerId, action, data) {
+  const gd = room.gameData;
+
+  switch (action) {
+    case 'vote': {
+      if (gd.showResults) return null;
+      // Check if already voted
+      if (gd.votes.optionA.includes(playerId) || gd.votes.optionB.includes(playerId)) {
+        return null;
+      }
+
+      const { choice } = data;
+      if (choice === 'optionA') {
+        gd.votes.optionA.push(playerId);
+      } else if (choice === 'optionB') {
+        gd.votes.optionB.push(playerId);
+      } else {
+        return null;
+      }
+
+      const totalPlayers = room.players.filter(p => p.isConnected).length;
+      const votedCount = gd.votes.optionA.length + gd.votes.optionB.length;
+
+      return {
+        broadcast: true,
+        event: 'game:vote-update',
+        data: {
+          votes: gd.votes,
+          votedCount,
+          totalPlayers
+        }
+      };
+    }
+
+    default:
+      return null;
+  }
+}
+
+// ==================
+// NERDLE
+// ==================
+
+function validateNerdleEquation(guess) {
+  // Must be 8 characters
+  if (guess.length !== 8) {
+    return { valid: false, error: 'Må være 8 tegn' };
+  }
+
+  // Must contain exactly one =
+  const equalCount = (guess.match(/=/g) || []).length;
+  if (equalCount !== 1) {
+    return { valid: false, error: 'Må inneholde nøyaktig ett =' };
+  }
+
+  // Split by =
+  const [leftSide, rightSide] = guess.split('=');
+
+  // Validate characters
+  const validChars = /^[0-9+\-*/=]+$/;
+  if (!validChars.test(guess)) {
+    return { valid: false, error: 'Ugyldige tegn' };
+  }
+
+  // Evaluate left side
+  try {
+    // Replace any dangerous patterns (security)
+    const safeLeft = leftSide.replace(/[^0-9+\-*/]/g, '');
+    const safeRight = rightSide.replace(/[^0-9]/g, '');
+
+    // Use Function constructor for safer eval
+    const leftResult = new Function('return ' + safeLeft)();
+    const rightResult = parseInt(safeRight, 10);
+
+    if (isNaN(leftResult) || isNaN(rightResult)) {
+      return { valid: false, error: 'Ugyldig matematikk' };
+    }
+
+    if (leftResult !== rightResult) {
+      return { valid: false, error: 'Regnestykket stemmer ikke' };
+    }
+
+    return { valid: true, result: leftResult };
+  } catch (e) {
+    return { valid: false, error: 'Ugyldig regnestykke' };
+  }
+}
+
+function checkNerdleGuess(guess, target) {
+  const result = [];
+  const targetChars = target.split('');
+  const guessChars = guess.split('');
+  const targetCount = {};
+  const guessChecked = new Array(8).fill(false);
+
+  // Count characters in target
+  for (const char of targetChars) {
+    targetCount[char] = (targetCount[char] || 0) + 1;
+  }
+
+  // First pass: mark correct positions
+  for (let i = 0; i < 8; i++) {
+    if (guessChars[i] === targetChars[i]) {
+      result[i] = 'correct';
+      targetCount[guessChars[i]]--;
+      guessChecked[i] = true;
+    }
+  }
+
+  // Second pass: mark present/absent
+  for (let i = 0; i < 8; i++) {
+    if (guessChecked[i]) continue;
+
+    if (targetCount[guessChars[i]] > 0) {
+      result[i] = 'present';
+      targetCount[guessChars[i]]--;
+    } else {
+      result[i] = 'absent';
+    }
+  }
+
+  return result;
+}
+
+function handleNerdleHostAction(room, action, data) {
+  const gd = room.gameData;
+
+  switch (action) {
+    case 'start-round': {
+      const { equation } = data;
+      gd.targetEquation = equation;
+      gd.playerAttempts = {};
+      gd.gameStartTime = Date.now();
+      gd.roundActive = true;
+
+      // Initialize attempts for all players
+      room.players.forEach(p => {
+        gd.playerAttempts[p.id] = {
+          guesses: [],
+          solved: false,
+          solvedAt: null
+        };
+      });
+
+      return {
+        broadcast: true,
+        event: 'game:round-started',
+        data: {
+          equationLength: 8,
+          maxAttempts: gd.maxAttempts
+        }
+      };
+    }
+
+    case 'end-round': {
+      gd.roundActive = false;
+
+      // Calculate scores
+      const results = [];
+      for (const player of room.players) {
+        const attempts = gd.playerAttempts[player.id];
+        let points = 0;
+
+        if (attempts?.solved) {
+          // Points based on attempts used and time
+          const attemptsUsed = attempts.guesses.length;
+          const timeBonus = Math.max(0, 60000 - (attempts.solvedAt - gd.gameStartTime));
+          points = (7 - attemptsUsed) * 100 + Math.floor(timeBonus / 1000);
+          player.score = (player.score || 0) + points;
+        }
+
+        results.push({
+          playerId: player.id,
+          playerName: player.name,
+          solved: attempts?.solved || false,
+          attempts: attempts?.guesses.length || 0,
+          points,
+          totalScore: player.score || 0
+        });
+      }
+
+      results.sort((a, b) => b.totalScore - a.totalScore);
+
+      return {
+        broadcast: true,
+        event: 'game:round-ended',
+        data: {
+          targetEquation: gd.targetEquation,
+          results,
+          leaderboard: results
+        }
+      };
+    }
+
+    default:
+      return null;
+  }
+}
+
+function handleNerdlePlayerAction(room, playerId, action, data) {
+  const gd = room.gameData;
+  const player = room.players.find(p => p.id === playerId);
+
+  if (!player || !gd.roundActive) return null;
+
+  switch (action) {
+    case 'submit-guess': {
+      const attempts = gd.playerAttempts[playerId];
+      if (!attempts || attempts.solved || attempts.guesses.length >= gd.maxAttempts) {
+        return null;
+      }
+
+      const { guess } = data;
+
+      // Validate equation
+      const validation = validateNerdleEquation(guess);
+      if (!validation.valid) {
+        return {
+          toPlayer: true,
+          playerId,
+          event: 'game:guess-invalid',
+          data: { error: validation.error }
+        };
+      }
+
+      // Check against target
+      const result = checkNerdleGuess(guess, gd.targetEquation);
+      attempts.guesses.push({ guess, result });
+
+      const solved = guess === gd.targetEquation;
+      if (solved) {
+        attempts.solved = true;
+        attempts.solvedAt = Date.now();
+
+        return {
+          broadcast: true,
+          event: 'game:player-solved',
+          data: {
+            playerId,
+            playerName: player.name,
+            attempts: attempts.guesses.length
+          }
+        };
+      }
+
+      return {
+        toPlayer: true,
+        playerId,
+        event: 'game:guess-result',
+        data: {
+          guess,
+          result,
+          attemptsLeft: gd.maxAttempts - attempts.guesses.length
+        }
+      };
+    }
+
+    default:
+      return null;
+  }
+}
+
+// ==================
+// HVA MANGLER?
+// ==================
+
+function handleHvaManglerHostAction(room, action, data) {
+  const gd = room.gameData;
+
+  switch (action) {
+    case 'start-memorize': {
+      const { image, objects, removedObject, removedObjectImage } = data;
+      gd.currentImage = {
+        url: image,
+        objects,
+        removedObject,
+        removedObjectImage
+      };
+      gd.phase = 'memorize';
+      gd.buzzerQueue = [];
+      gd.currentPlayer = null;
+      gd.correctGuessers = [];
+
+      return {
+        broadcast: true,
+        event: 'game:memorize-started',
+        data: {
+          imageUrl: image,
+          objects,
+          duration: data.duration || 10
+        }
+      };
+    }
+
+    case 'show-black': {
+      gd.phase = 'black';
+
+      return {
+        broadcast: true,
+        event: 'game:screen-black',
+        data: { duration: data.duration || 3 }
+      };
+    }
+
+    case 'show-changed': {
+      gd.phase = 'guess';
+
+      return {
+        broadcast: true,
+        event: 'game:changed-shown',
+        data: { imageUrl: gd.currentImage.removedObjectImage }
+      };
+    }
+
+    case 'select-player': {
+      const player = room.players.find(p => p.id === data.playerId);
+      gd.currentPlayer = { id: data.playerId, name: player?.name };
+      gd.buzzerQueue = gd.buzzerQueue.filter(id => id !== data.playerId);
+
+      return {
+        broadcast: true,
+        event: 'game:player-selected',
+        data: { playerId: data.playerId, playerName: player?.name }
+      };
+    }
+
+    case 'validate-guess': {
+      const { playerId, isCorrect } = data;
+      const player = room.players.find(p => p.id === playerId);
+
+      if (isCorrect && player) {
+        player.score = (player.score || 0) + 100;
+        gd.correctGuessers.push(playerId);
+      }
+
+      gd.currentPlayer = null;
+
+      return {
+        broadcast: true,
+        event: 'game:guess-result',
+        data: {
+          playerId,
+          playerName: player?.name,
+          isCorrect,
+          correctAnswer: gd.currentImage.removedObject,
+          players: room.players
+        }
+      };
+    }
+
+    case 'next-image': {
+      gd.phase = 'waiting';
+      gd.currentImage = null;
+      gd.buzzerQueue = [];
+      gd.currentPlayer = null;
+      gd.correctGuessers = [];
+      gd.roundIndex++;
+
+      return {
+        broadcast: true,
+        event: 'game:ready-for-next',
+        data: { roundIndex: gd.roundIndex }
+      };
+    }
+
+    case 'end-hva-mangler': {
+      const leaderboard = room.players
+        .map(p => ({ id: p.id, name: p.name, score: p.score || 0 }))
+        .sort((a, b) => b.score - a.score);
+
+      return {
+        broadcast: true,
+        event: 'game:hva-mangler-ended',
+        data: { leaderboard, winner: leaderboard[0] || null }
+      };
+    }
+
+    default:
+      return null;
+  }
+}
+
+function handleHvaManglerPlayerAction(room, playerId, action, data) {
+  const gd = room.gameData;
+
+  switch (action) {
+    case 'buzz': {
+      if (gd.phase !== 'guess') return null;
+      if (gd.currentPlayer) return null;
+      if (gd.buzzerQueue.includes(playerId)) return null;
+      if (gd.correctGuessers.includes(playerId)) return null;
+
+      gd.buzzerQueue.push(playerId);
+
+      return {
+        broadcast: true,
+        event: 'game:player-buzzed',
+        data: { playerId, buzzerQueue: gd.buzzerQueue }
+      };
+    }
+
+    case 'submit-guess': {
+      if (gd.currentPlayer?.id !== playerId) return null;
+
+      const { guess } = data;
+      gd.pendingGuess = { playerId, guess };
+
+      return {
+        toHost: true,
+        hostEvent: 'game:guess-submitted',
+        hostData: { playerId, guess }
+      };
+    }
+
+    default:
+      return null;
+  }
+}
+
+// ==================
+// TEGN DET!
+// ==================
+
+function handleTegnDetHostAction(room, action, data) {
+  const gd = room.gameData;
+
+  switch (action) {
+    case 'start-round': {
+      const { word, drawerId } = data;
+      const drawer = room.players.find(p => p.id === drawerId);
+
+      gd.currentWord = word;
+      gd.drawerId = drawerId;
+      gd.drawerName = drawer?.name;
+      gd.drawingData = [];
+      gd.buzzerQueue = [];
+      gd.currentGuesser = null;
+      gd.lockedOutPlayers = [];
+      gd.roundStartTime = Date.now();
+
+      return {
+        broadcast: true,
+        event: 'game:round-started',
+        data: {
+          drawerId,
+          drawerName: drawer?.name,
+          // Only send word to drawer
+          wordForDrawer: word
+        }
+      };
+    }
+
+    case 'select-guesser': {
+      const player = room.players.find(p => p.id === data.playerId);
+      gd.currentGuesser = { id: data.playerId, name: player?.name };
+      gd.buzzerQueue = gd.buzzerQueue.filter(id => id !== data.playerId);
+
+      return {
+        broadcast: true,
+        event: 'game:guesser-selected',
+        data: { playerId: data.playerId, playerName: player?.name }
+      };
+    }
+
+    case 'validate-guess': {
+      const { playerId, isCorrect } = data;
+      const player = room.players.find(p => p.id === playerId);
+      const drawer = room.players.find(p => p.id === gd.drawerId);
+
+      if (isCorrect) {
+        // Points for guesser
+        const timeBonus = Math.max(0, 60000 - (Date.now() - gd.roundStartTime));
+        const guesserPoints = 100 + Math.floor(timeBonus / 1000);
+        if (player) player.score = (player.score || 0) + guesserPoints;
+
+        // Points for drawer
+        const drawerPoints = 50;
+        if (drawer) drawer.score = (drawer.score || 0) + drawerPoints;
+
+        gd.currentGuesser = null;
+
+        return {
+          broadcast: true,
+          event: 'game:correct-guess',
+          data: {
+            playerId,
+            playerName: player?.name,
+            word: gd.currentWord,
+            guesserPoints,
+            drawerPoints,
+            players: room.players
+          }
+        };
+      } else {
+        // Lock out player for 5 seconds
+        gd.lockedOutPlayers.push(playerId);
+        setTimeout(() => {
+          const idx = gd.lockedOutPlayers.indexOf(playerId);
+          if (idx > -1) gd.lockedOutPlayers.splice(idx, 1);
+        }, 5000);
+
+        gd.currentGuesser = null;
+
+        return {
+          broadcast: true,
+          event: 'game:wrong-guess',
+          data: {
+            playerId,
+            playerName: player?.name,
+            lockoutDuration: 5
+          }
+        };
+      }
+    }
+
+    case 'end-round': {
+      return {
+        broadcast: true,
+        event: 'game:round-ended',
+        data: {
+          word: gd.currentWord,
+          players: room.players
+        }
+      };
+    }
+
+    case 'end-tegn-det': {
+      const leaderboard = room.players
+        .map(p => ({ id: p.id, name: p.name, score: p.score || 0 }))
+        .sort((a, b) => b.score - a.score);
+
+      return {
+        broadcast: true,
+        event: 'game:tegn-det-ended',
+        data: { leaderboard, winner: leaderboard[0] || null }
+      };
+    }
+
+    default:
+      return null;
+  }
+}
+
+function handleTegnDetPlayerAction(room, playerId, action, data) {
+  const gd = room.gameData;
+
+  switch (action) {
+    case 'draw-stroke': {
+      if (playerId !== gd.drawerId) return null;
+
+      const { stroke } = data;
+      gd.drawingData.push(stroke);
+
+      return {
+        broadcast: true,
+        event: 'game:drawing-update',
+        data: { stroke }
+      };
+    }
+
+    case 'clear-canvas': {
+      if (playerId !== gd.drawerId) return null;
+
+      gd.drawingData = [];
+
+      return {
+        broadcast: true,
+        event: 'game:canvas-cleared',
+        data: {}
+      };
+    }
+
+    case 'buzz': {
+      if (playerId === gd.drawerId) return null;
+      if (gd.currentGuesser) return null;
+      if (gd.buzzerQueue.includes(playerId)) return null;
+      if (gd.lockedOutPlayers.includes(playerId)) return null;
+
+      gd.buzzerQueue.push(playerId);
+
+      return {
+        broadcast: true,
+        event: 'game:player-buzzed',
+        data: { playerId, buzzerQueue: gd.buzzerQueue }
+      };
+    }
+
+    case 'submit-guess': {
+      if (gd.currentGuesser?.id !== playerId) return null;
+
+      const { guess } = data;
+      gd.pendingGuess = { playerId, guess };
+
+      return {
+        toHost: true,
+        hostEvent: 'game:guess-submitted',
+        hostData: { playerId, guess }
+      };
+    }
+
+    default:
+      return null;
+  }
+}
+
+// ==================
+// SQUIGGLE STORY
+// ==================
+
+function handleSquiggleStoryHostAction(room, action, data) {
+  const gd = room.gameData;
+
+  switch (action) {
+    case 'start-round': {
+      const { squiggle } = data;
+      gd.squiggle = squiggle;
+      gd.submissions = {};
+      gd.displayedSubmissions = [];
+      gd.phase = 'drawing';
+
+      return {
+        broadcast: true,
+        event: 'game:round-started',
+        data: { squiggle }
+      };
+    }
+
+    case 'show-gallery': {
+      gd.phase = 'gallery';
+      gd.displayedSubmissions = Object.keys(gd.submissions);
+
+      return {
+        broadcast: true,
+        event: 'game:gallery-shown',
+        data: {
+          submissions: Object.entries(gd.submissions).map(([id, sub]) => ({
+            playerId: id,
+            playerName: sub.playerName,
+            imageData: sub.imageData
+          }))
+        }
+      };
+    }
+
+    case 'remove-submission': {
+      const { playerId } = data;
+      gd.displayedSubmissions = gd.displayedSubmissions.filter(id => id !== playerId);
+
+      return {
+        broadcast: true,
+        event: 'game:submission-removed',
+        data: { playerId }
+      };
+    }
+
+    case 'next-squiggle': {
+      gd.phase = 'waiting';
+      gd.squiggle = null;
+      gd.submissions = {};
+      gd.displayedSubmissions = [];
+
+      return {
+        broadcast: true,
+        event: 'game:ready-for-next',
+        data: {}
+      };
+    }
+
+    case 'end-squiggle-story': {
+      return {
+        broadcast: true,
+        event: 'game:squiggle-story-ended',
+        data: {}
+      };
+    }
+
+    default:
+      return null;
+  }
+}
+
+function handleSquiggleStoryPlayerAction(room, playerId, action, data) {
+  const gd = room.gameData;
+  const player = room.players.find(p => p.id === playerId);
+
+  switch (action) {
+    case 'submit-drawing': {
+      if (gd.phase !== 'drawing') return null;
+      if (gd.submissions[playerId]) return null; // Already submitted
+
+      const { imageData } = data;
+      gd.submissions[playerId] = {
+        imageData,
+        playerName: player?.name,
+        submitted: true,
+        submittedAt: Date.now()
+      };
+
+      return {
+        broadcast: true,
+        event: 'game:submission-received',
+        data: {
+          playerId,
+          playerName: player?.name,
+          submissionCount: Object.keys(gd.submissions).length,
+          totalPlayers: room.players.filter(p => p.isConnected).length
+        }
       };
     }
 
