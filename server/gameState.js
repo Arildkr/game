@@ -1840,8 +1840,8 @@ function handleNerdlePlayerAction(room, playerId, action, data) {
         return {
           toPlayer: true,
           playerId,
-          event: 'game:guess-invalid',
-          data: { error: validation.error }
+          playerEvent: 'game:guess-invalid',
+          playerData: { error: validation.error }
         };
       }
 
@@ -1868,8 +1868,8 @@ function handleNerdlePlayerAction(room, playerId, action, data) {
       return {
         toPlayer: true,
         playerId,
-        event: 'game:guess-result',
-        data: {
+        playerEvent: 'game:guess-result',
+        playerData: {
           guess,
           result,
           attemptsLeft: gd.maxAttempts - attempts.guesses.length
@@ -1891,12 +1891,13 @@ function handleHvaManglerHostAction(room, action, data) {
 
   switch (action) {
     case 'start-memorize': {
-      const { image, objects, removedObject, removedObjectImage } = data;
+      const { image, objects, removedObject, removedObjectImage, emojis } = data;
       gd.currentImage = {
         url: image,
         objects,
         removedObject,
-        removedObjectImage
+        removedObjectImage,
+        emojis
       };
       gd.phase = 'memorize';
       gd.buzzerQueue = [];
@@ -1909,7 +1910,8 @@ function handleHvaManglerHostAction(room, action, data) {
         data: {
           imageUrl: image,
           objects,
-          duration: data.duration || 10
+          duration: data.duration || 10,
+          emojis: emojis || {}
         }
       };
     }

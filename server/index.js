@@ -253,23 +253,22 @@ io.on('connection', (socket) => {
     }
   });
 
-
-socket.on('host:game-action', ({ action, data }) => {
-  try {
-    const roomCode = socketToRoom.get(socket.id);
-    const result = handleGameAction(roomCode, action, data);
-    if (result) {
-      if (result.broadcast) {
-        io.to(roomCode).emit(result.event, result.data);
+  socket.on('host:game-action', ({ action, data }) => {
+    try {
+      const roomCode = socketToRoom.get(socket.id);
+      const result = handleGameAction(roomCode, action, data);
+      if (result) {
+        if (result.broadcast) {
+          io.to(roomCode).emit(result.event, result.data);
+        }
+        if (result.toPlayer) {
+          io.to(result.toPlayer).emit(result.playerEvent, result.playerData);
+        }
       }
-      if (result.toPlayer) {
-        io.to(result.toPlayer).emit(result.playerEvent, result.playerData);
-      }
+    } catch (err) {
+      console.error('Error in host:game-action:', err);
     }
-  } catch (err) {
-    console.error('Error in host:game-action:', err);
-  }
-});
+  });
 
   // ==================
   // PLAYER EVENTS
@@ -295,28 +294,28 @@ socket.on('host:game-action', ({ action, data }) => {
     }
   });
 
-socket.on('player:game-action', ({ action, data }) => {
-  try {
-    const roomCode = socketToRoom.get(socket.id);
-    const result = handlePlayerAction(roomCode, socket.id, action, data);
-    if (result) {
-      if (result.broadcast) {
-        io.to(roomCode).emit(result.event, result.data);
-      }
-      if (result.toHost) {
-        const room = rooms[roomCode];
-        if (room) {
-          io.to(room.hostId).emit(result.hostEvent, result.hostData);
+  socket.on('player:game-action', ({ action, data }) => {
+    try {
+      const roomCode = socketToRoom.get(socket.id);
+      const result = handlePlayerAction(roomCode, socket.id, action, data);
+      if (result) {
+        if (result.broadcast) {
+          io.to(roomCode).emit(result.event, result.data);
+        }
+        if (result.toHost) {
+          const room = rooms[roomCode];
+          if (room) {
+            io.to(room.hostId).emit(result.hostEvent, result.hostData);
+          }
+        }
+        if (result.toPlayer) {
+          socket.emit(result.playerEvent, result.playerData);
         }
       }
-      if (result.toPlayer) {
-        socket.emit(result.playerEvent, result.playerData);
-      }
+    } catch (err) {
+      console.error('Error in player:game-action:', err);
     }
-  } catch (err) {
-    console.error('Error in player:game-action:', err);
-  }
-});
+  });
 
   // Lobby minispill score
   socket.on('lobby:submit-score', ({ score }) => {
