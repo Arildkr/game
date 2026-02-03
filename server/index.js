@@ -74,6 +74,11 @@ app.get('/', (req, res) => {
   });
 });
 
+// Minimal ping endpoint for cron jobs
+app.get('/ping', (req, res) => {
+  res.send('pong');
+});
+
 // Sanitize room data for client - avoid circular references and non-serializable objects
 function sanitizeRoom(room) {
   if (!room) return null;
