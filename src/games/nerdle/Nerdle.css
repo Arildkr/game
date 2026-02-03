@@ -455,6 +455,23 @@
   font-size: 0.9rem;
 }
 
+.nerdle-player .wrong-guess-message {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fcd34d;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  animation: fadeInOut 2s ease-in-out;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translateY(-10px); }
+  15% { opacity: 1; transform: translateY(0); }
+  85% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
+
 /* Keyboard */
 .nerdle-player .keyboard {
   width: 100%;

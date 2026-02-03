@@ -218,6 +218,22 @@ export const GameProvider = ({ children }) => {
       if (updatedPlayers) setPlayers(updatedPlayers);
     });
 
+    // Generic handler for game events that include player score updates
+    const handlePlayersUpdate = (data) => {
+      if (data && data.players && Array.isArray(data.players)) {
+        setPlayers(data.players);
+      }
+    };
+
+    // Listen for events that include player updates
+    newSocket.on('game:correct-guess', handlePlayersUpdate);
+    newSocket.on('game:wrong-guess', handlePlayersUpdate);
+    newSocket.on('game:guess-result', handlePlayersUpdate);
+    newSocket.on('game:word-approved', handlePlayersUpdate);
+    newSocket.on('game:word-rejected', handlePlayersUpdate);
+    newSocket.on('game:round-revealed', handlePlayersUpdate);
+    newSocket.on('game:answer-revealed', handlePlayersUpdate);
+
     newSocket.on('game:ended', ({ room } = {}) => {
       // Avslutt tar alle tilbake til lobby (ikke ut av rommet)
       if (room) {

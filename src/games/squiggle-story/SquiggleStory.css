@@ -192,10 +192,36 @@
   overflow: hidden;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
   transition: transform 0.2s;
+  position: relative;
 }
 
 .squigglestory-host .gallery-item:hover {
   transform: scale(1.05);
+}
+
+.squigglestory-host .btn-remove-gallery {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+  font-size: 1rem;
+  cursor: pointer;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.squigglestory-host .gallery-item:hover .btn-remove-gallery {
+  opacity: 1;
+}
+
+.squigglestory-host .btn-remove-gallery:hover {
+  background: #dc2626;
 }
 
 .squigglestory-host .gallery-image {

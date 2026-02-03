@@ -1,7 +1,7 @@
 // game/src/games/squiggle-story/HostGame.jsx
 import { useState, useEffect, useRef } from 'react';
 import { useGame } from '../../contexts/GameContext';
-import { getRandomSquiggle, getAllSquiggles, generateRandomSquiggle } from '../../data/squiggleShapes';
+import { getRandomSquiggle } from '../../data/squiggleShapes';
 import './SquiggleStory.css';
 
 function HostGame() {
@@ -12,7 +12,6 @@ function HostGame() {
   const [submissions, setSubmissions] = useState([]);
   const [submissionCount, setSubmissionCount] = useState(0);
   const [roundNumber, setRoundNumber] = useState(1);
-  const [selectedSquiggleId, setSelectedSquiggleId] = useState('random');
 
   const canvasRef = useRef(null);
   const connectedPlayers = players.filter(p => p.isConnected);
@@ -20,8 +19,16 @@ function HostGame() {
   useEffect(() => {
     if (!socket) return;
 
-    const handleSubmissionReceived = ({ playerId, playerName, submissionCount: count }) => {
+    const handleSubmissionReceived = ({ playerId, playerName, submissionCount: count, imageData }) => {
       setSubmissionCount(count);
+      // Also add to local submissions list for immediate feedback
+      if (imageData) {
+        setSubmissions(prev => {
+          // Don't add duplicates
+          if (prev.some(s => s.playerId === playerId)) return prev;
+          return [...prev, { playerId, playerName, imageData }];
+        });
+      }
     };
 
     const handleGalleryShown = ({ submissions: subs }) => {
@@ -64,14 +71,7 @@ function HostGame() {
   }, [currentSquiggle]);
 
   const startRound = () => {
-    let squiggle;
-    if (selectedSquiggleId === 'random') {
-      squiggle = getRandomSquiggle();
-    } else if (selectedSquiggleId === 'generate') {
-      squiggle = generateRandomSquiggle();
-    } else {
-      squiggle = getAllSquiggles().find(s => s.id === selectedSquiggleId) || getRandomSquiggle();
-    }
+    const squiggle = getRandomSquiggle();
 
     setCurrentSquiggle(squiggle);
     setSubmissionCount(0);
@@ -85,6 +85,11 @@ function HostGame() {
     sendGameAction('show-gallery');
   };
 
+  const removeFromGallery = (playerId) => {
+    setSubmissions(prev => prev.filter(s => s.playerId !== playerId));
+    sendGameAction('remove-submission', { playerId });
+  };
+
   const nextRound = () => {
     setRoundNumber(prev => prev + 1);
     setPhase('setup');
@@ -94,8 +99,6 @@ function HostGame() {
 
     sendGameAction('next-squiggle');
   };
-
-  const allSquiggles = getAllSquiggles();
 
   return (
     <div className="squigglestory-host">
@@ -119,20 +122,6 @@ function HostGame() {
             <p className="description">
               Alle får samme krusedull og lager sin egen tegning!
             </p>
-
-            <div className="squiggle-selector">
-              <label>Velg krusedull:</label>
-              <select
-                value={selectedSquiggleId}
-                onChange={(e) => setSelectedSquiggleId(e.target.value)}
-              >
-                <option value="random">Tilfeldig</option>
-                <option value="generate">Generer ny</option>
-                {allSquiggles.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-            </div>
 
             <button className="btn btn-start" onClick={startRound}>
               Start runde
@@ -190,6 +179,13 @@ function HostGame() {
             <div className="gallery-grid">
               {submissions.map((sub, i) => (
                 <div key={sub.playerId || i} className="gallery-item">
+                  <button
+                    className="btn-remove-gallery"
+                    onClick={() => removeFromGallery(sub.playerId)}
+                    title="Fjern fra galleri"
+                  >
+                    ✕
+                  </button>
                   <img
                     src={sub.imageData}
                     alt={`Tegning av ${sub.playerName}`}

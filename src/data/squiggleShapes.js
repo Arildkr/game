@@ -177,6 +177,207 @@ const squiggles = [
       { x: 340, y: 130 }
     ],
     color: '#000000'
+  },
+  {
+    id: 'curl',
+    name: 'Krøll',
+    points: [
+      { x: 100, y: 200 },
+      { x: 120, y: 150 },
+      { x: 100, y: 100 },
+      { x: 150, y: 80 },
+      { x: 200, y: 100 },
+      { x: 180, y: 150 },
+      { x: 200, y: 200 }
+    ],
+    color: '#000000'
+  },
+  {
+    id: 'snake',
+    name: 'Slange',
+    points: [
+      { x: 50, y: 150 },
+      { x: 80, y: 100 },
+      { x: 120, y: 150 },
+      { x: 160, y: 100 },
+      { x: 200, y: 150 },
+      { x: 240, y: 100 },
+      { x: 280, y: 150 },
+      { x: 320, y: 100 },
+      { x: 350, y: 120 }
+    ],
+    color: '#000000'
+  },
+  {
+    id: 'mountain',
+    name: 'Fjell',
+    points: [
+      { x: 50, y: 250 },
+      { x: 100, y: 100 },
+      { x: 150, y: 180 },
+      { x: 200, y: 50 },
+      { x: 250, y: 180 },
+      { x: 300, y: 120 },
+      { x: 350, y: 250 }
+    ],
+    color: '#000000'
+  },
+  {
+    id: 'infinity',
+    name: 'Uendelig',
+    points: (() => {
+      const points = [];
+      for (let i = 0; i <= 360; i += 15) {
+        const angle = (i * Math.PI) / 180;
+        points.push({
+          x: Math.round(200 + 100 * Math.sin(angle)),
+          y: Math.round(150 + 50 * Math.sin(2 * angle))
+        });
+      }
+      return points;
+    })(),
+    color: '#000000'
+  },
+  {
+    id: 'scribble1',
+    name: 'Krusedull 2',
+    points: [
+      { x: 80, y: 120 },
+      { x: 130, y: 200 },
+      { x: 180, y: 80 },
+      { x: 230, y: 180 },
+      { x: 280, y: 100 },
+      { x: 320, y: 160 }
+    ],
+    color: '#000000'
+  },
+  {
+    id: 'scribble2',
+    name: 'Krusedull 3',
+    points: [
+      { x: 60, y: 180 },
+      { x: 100, y: 80 },
+      { x: 160, y: 220 },
+      { x: 220, y: 60 },
+      { x: 280, y: 200 },
+      { x: 340, y: 100 }
+    ],
+    color: '#000000'
+  },
+  {
+    id: 'arc',
+    name: 'Bue 2',
+    points: [
+      { x: 80, y: 200 },
+      { x: 120, y: 100 },
+      { x: 200, y: 60 },
+      { x: 280, y: 100 },
+      { x: 320, y: 200 }
+    ],
+    color: '#000000'
+  },
+  {
+    id: 'cross',
+    name: 'Kryss',
+    points: [
+      { x: 150, y: 50 },
+      { x: 200, y: 150 },
+      { x: 250, y: 50 },
+      { x: 200, y: 150 },
+      { x: 200, y: 250 }
+    ],
+    color: '#000000'
+  },
+  {
+    id: 'zigzag2',
+    name: 'Sikk-sakk 2',
+    points: [
+      { x: 50, y: 100 },
+      { x: 100, y: 200 },
+      { x: 150, y: 80 },
+      { x: 200, y: 220 },
+      { x: 250, y: 100 },
+      { x: 300, y: 200 },
+      { x: 350, y: 80 }
+    ],
+    color: '#000000'
+  },
+  {
+    id: 'swirl',
+    name: 'Virvel',
+    points: (() => {
+      const points = [];
+      for (let i = 0; i < 540; i += 30) {
+        const angle = (i * Math.PI) / 180;
+        const radius = 20 + i / 15;
+        points.push({
+          x: Math.round(180 + radius * Math.cos(angle)),
+          y: Math.round(150 + radius * Math.sin(angle))
+        });
+      }
+      return points;
+    })(),
+    color: '#000000'
+  },
+  {
+    id: 'wave2',
+    name: 'Bølge 2',
+    points: [
+      { x: 50, y: 150 },
+      { x: 90, y: 80 },
+      { x: 130, y: 150 },
+      { x: 170, y: 220 },
+      { x: 210, y: 150 },
+      { x: 250, y: 80 },
+      { x: 290, y: 150 },
+      { x: 330, y: 220 },
+      { x: 370, y: 150 }
+    ],
+    color: '#000000'
+  },
+  {
+    id: 'blob',
+    name: 'Klump',
+    points: [
+      { x: 150, y: 100 },
+      { x: 200, y: 80 },
+      { x: 250, y: 100 },
+      { x: 270, y: 150 },
+      { x: 250, y: 200 },
+      { x: 200, y: 220 },
+      { x: 150, y: 200 },
+      { x: 130, y: 150 },
+      { x: 150, y: 100 }
+    ],
+    color: '#000000'
+  },
+  {
+    id: 'abstract1',
+    name: 'Abstrakt 1',
+    points: [
+      { x: 100, y: 150 },
+      { x: 150, y: 50 },
+      { x: 200, y: 150 },
+      { x: 250, y: 80 },
+      { x: 300, y: 200 },
+      { x: 200, y: 250 },
+      { x: 100, y: 200 }
+    ],
+    color: '#000000'
+  },
+  {
+    id: 'abstract2',
+    name: 'Abstrakt 2',
+    points: [
+      { x: 80, y: 100 },
+      { x: 180, y: 60 },
+      { x: 120, y: 160 },
+      { x: 220, y: 120 },
+      { x: 160, y: 220 },
+      { x: 260, y: 180 },
+      { x: 320, y: 140 }
+    ],
+    color: '#000000'
   }
 ];
 

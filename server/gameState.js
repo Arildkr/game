@@ -1639,6 +1639,13 @@ function handleVilDuHellerHostAction(room, action, data) {
 function handleVilDuHellerPlayerAction(room, playerId, action, data) {
   const gd = room.gameData;
 
+  // Ensure votes object exists
+  if (!gd.votes) {
+    gd.votes = { optionA: [], optionB: [] };
+  }
+  if (!gd.votes.optionA) gd.votes.optionA = [];
+  if (!gd.votes.optionB) gd.votes.optionB = [];
+
   switch (action) {
     case 'vote': {
       if (gd.showResults) return null;
@@ -1839,13 +1846,44 @@ function handleNerdlePlayerAction(room, playerId, action, data) {
   const gd = room.gameData;
   const player = room.players.find(p => p.id === playerId);
 
-  if (!player || !gd.roundActive) return null;
+  if (!player) return null;
+
+  if (!gd.roundActive) {
+    return {
+      toPlayer: true,
+      playerId,
+      playerEvent: 'game:guess-invalid',
+      playerData: { error: 'Runden er ikke aktiv' }
+    };
+  }
 
   switch (action) {
     case 'submit-guess': {
+      // Initialize attempts if player joined mid-round
+      if (!gd.playerAttempts[playerId]) {
+        gd.playerAttempts[playerId] = {
+          guesses: [],
+          solved: false,
+          solvedAt: null
+        };
+      }
+
       const attempts = gd.playerAttempts[playerId];
-      if (!attempts || attempts.solved || attempts.guesses.length >= gd.maxAttempts) {
-        return null;
+      if (attempts.solved) {
+        return {
+          toPlayer: true,
+          playerId,
+          playerEvent: 'game:guess-invalid',
+          playerData: { error: 'Du har allerede løst denne!' }
+        };
+      }
+      if (attempts.guesses.length >= gd.maxAttempts) {
+        return {
+          toPlayer: true,
+          playerId,
+          playerEvent: 'game:guess-invalid',
+          playerData: { error: 'Ingen flere forsøk' }
+        };
       }
 
       const { guess } = data;
@@ -2422,6 +2460,7 @@ function handleSquiggleStoryPlayerAction(room, playerId, action, data) {
         data: {
           playerId,
           playerName: player?.name,
+          imageData,
           submissionCount: Object.keys(gd.submissions).length,
           totalPlayers: room.players.filter(p => p.isConnected).length
         }

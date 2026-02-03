@@ -19,6 +19,7 @@ function PlayerGame() {
   const [error, setError] = useState(null);
   const [results, setResults] = useState(null);
   const [keyStatus, setKeyStatus] = useState({}); // Track key colors
+  const [wrongGuessMessage, setWrongGuessMessage] = useState(null);
 
   useEffect(() => {
     if (!socket) return;
@@ -30,12 +31,20 @@ function PlayerGame() {
       setMaxAttempts(max);
       setError(null);
       setKeyStatus({});
+      setWrongGuessMessage(null);
     };
 
     const handleGuessResult = ({ guess, result, attemptsLeft }) => {
       setGuesses(prev => [...prev, { guess, result }]);
       setCurrentGuess('');
       setError(null);
+
+      // Check if guess was correct
+      const isCorrect = result.every(r => r === 'correct');
+      if (!isCorrect) {
+        setWrongGuessMessage('Ikke riktig - prøv igjen!');
+        setTimeout(() => setWrongGuessMessage(null), 2000);
+      }
 
       // Update key status
       const newKeyStatus = { ...keyStatus };
@@ -199,6 +208,7 @@ function PlayerGame() {
             </div>
 
             {error && <div className="error-message">{error}</div>}
+            {wrongGuessMessage && <div className="wrong-guess-message">{wrongGuessMessage}</div>}
 
             <div className="keyboard">
               {KEYBOARD_LAYOUT.map((row, rowIndex) => (
