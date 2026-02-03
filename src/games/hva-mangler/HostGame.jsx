@@ -18,8 +18,11 @@ function HostGame() {
   const [currentPlayer, setCurrentPlayer] = useState(null);
   const [pendingGuess, setPendingGuess] = useState(null);
   const [lastResult, setLastResult] = useState(null);
+  const [guessTimeLimit, setGuessTimeLimit] = useState(60);
+  const [guessTimeLeft, setGuessTimeLeft] = useState(0);
 
   const timerRef = useRef(null);
+  const guessTimerRef = useRef(null);
 
   useEffect(() => {
     if (!socket) return;
@@ -41,7 +44,7 @@ function HostGame() {
     };
   }, [socket]);
 
-  // Timer effect
+  // Timer effect for memorize/black phases
   useEffect(() => {
     if (timeLeft > 0) {
       timerRef.current = setTimeout(() => {
@@ -59,6 +62,22 @@ function HostGame() {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [timeLeft, phase]);
+
+  // Timer effect for guess phase
+  useEffect(() => {
+    if (phase === 'guess' && guessTimeLeft > 0) {
+      guessTimerRef.current = setTimeout(() => {
+        setGuessTimeLeft(prev => prev - 1);
+      }, 1000);
+    } else if (phase === 'guess' && guessTimeLeft === 0 && guessTimeLimit > 0) {
+      // Time's up - reveal answer
+      setPhase('reveal');
+    }
+
+    return () => {
+      if (guessTimerRef.current) clearTimeout(guessTimerRef.current);
+    };
+  }, [guessTimeLeft, phase, guessTimeLimit]);
 
   const imageSets = getImageSets();
   const connectedPlayers = players.filter(p => p.isConnected);
@@ -92,8 +111,9 @@ function HostGame() {
 
   const showChangedImage = () => {
     setPhase('guess');
+    setGuessTimeLeft(guessTimeLimit);
 
-    sendGameAction('show-changed', {});
+    sendGameAction('show-changed', { timeLimit: guessTimeLimit });
   };
 
   const selectPlayer = (playerId) => {
@@ -104,16 +124,51 @@ function HostGame() {
     sendGameAction('select-player', { playerId });
   };
 
+  // Fuzzy match function
+  const isFuzzyMatch = (guess, answer) => {
+    const g = guess.toLowerCase().trim();
+    const a = answer.toLowerCase().trim();
+
+    // Exact match
+    if (g === a) return true;
+
+    // Very short guess, need exact
+    if (g.length < 3) return false;
+
+    // Starts with or contains
+    if (a.startsWith(g) || g.startsWith(a)) return true;
+    if (a.includes(g) || g.includes(a)) return true;
+
+    // Levenshtein distance
+    const levenshtein = (s1, s2) => {
+      const m = s1.length, n = s2.length;
+      const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+      for (let i = 0; i <= m; i++) dp[i][0] = i;
+      for (let j = 0; j <= n; j++) dp[0][j] = j;
+      for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+          dp[i][j] = s1[i-1] === s2[j-1]
+            ? dp[i-1][j-1]
+            : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+        }
+      }
+      return dp[m][n];
+    };
+
+    const dist = levenshtein(g, a);
+    const maxLen = Math.max(g.length, a.length);
+    // Allow 1 error for short words, 2 for medium, 3 for long
+    const threshold = maxLen <= 5 ? 1 : maxLen <= 8 ? 2 : 3;
+    return dist <= threshold;
+  };
+
   // Auto-check guess when it comes in
   useEffect(() => {
     if (pendingGuess && currentRound) {
-      const guess = pendingGuess.guess.toLowerCase().trim();
-      const answer = currentRound.removedObject.toLowerCase().trim();
+      const guess = pendingGuess.guess;
+      const answer = currentRound.removedObject;
 
-      // Simple fuzzy match: exact match or starts with same characters
-      const isCorrect = guess === answer ||
-        (guess.length >= 3 && answer.startsWith(guess)) ||
-        (answer.length >= 3 && guess.startsWith(answer));
+      const isCorrect = isFuzzyMatch(guess, answer);
 
       // Auto-validate
       sendGameAction('validate-guess', {
@@ -260,6 +315,20 @@ function HostGame() {
                   <option value={20}>20 sekunder</option>
                 </select>
               </div>
+
+              <div className="option-group">
+                <label>Gjettetid:</label>
+                <select
+                  value={guessTimeLimit}
+                  onChange={(e) => setGuessTimeLimit(Number(e.target.value))}
+                >
+                  <option value={0}>Ingen tidsfrist</option>
+                  <option value={30}>30 sekunder</option>
+                  <option value={60}>60 sekunder</option>
+                  <option value={90}>90 sekunder</option>
+                  <option value={120}>2 minutter</option>
+                </select>
+              </div>
             </div>
 
             <button className="btn btn-start" onClick={startRound}>
@@ -302,9 +371,31 @@ function HostGame() {
           <div className="guess-phase">
             <div className="phase-header">
               <h2>Hva mangler?</h2>
+              {guessTimeLimit > 0 && (
+                <div className={`timer ${guessTimeLeft <= 10 ? 'warning' : ''}`}>
+                  {guessTimeLeft}
+                </div>
+              )}
             </div>
 
             {renderEmojiGrid(currentRound.remainingObjects, currentRound.emojis)}
+
+            {/* Current player answering */}
+            {currentPlayer && (
+              <div className="current-answerer">
+                <span className="answerer-icon">🎤</span>
+                <span className="answerer-name">{currentPlayer.name}</span>
+                <span className="answerer-status">svarer nå...</span>
+              </div>
+            )}
+
+            {/* Pending guess waiting for validation */}
+            {pendingGuess && (
+              <div className="pending-guess-display">
+                <span className="guess-label">Gjetting:</span>
+                <span className="guess-text">"{pendingGuess.guess}"</span>
+              </div>
+            )}
 
             {lastResult && (
               <div className={`last-result ${lastResult.isCorrect ? 'correct' : 'wrong'}`}>
@@ -315,9 +406,9 @@ function HostGame() {
             )}
 
             {/* Buzzer queue */}
-            {!pendingGuess && buzzerQueue.length > 0 && (
+            {!pendingGuess && !currentPlayer && buzzerQueue.length > 0 && (
               <div className="buzzer-queue">
-                <h3>Buzzerkø:</h3>
+                <h3>Buzzerkø ({buzzerQueue.length}):</h3>
                 <div className="queue-list">
                   {buzzerQueue.map((playerId, i) => {
                     const player = players.find(p => p.id === playerId);
@@ -333,6 +424,12 @@ function HostGame() {
                     );
                   })}
                 </div>
+              </div>
+            )}
+
+            {!pendingGuess && !currentPlayer && buzzerQueue.length === 0 && (
+              <div className="waiting-for-buzz">
+                Venter på at noen trykker på buzzeren...
               </div>
             )}
 

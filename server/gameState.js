@@ -781,11 +781,17 @@ function handleQuizPlayerAction(room, playerId, action, data) {
 
 function handleGjettBildetHostAction(room, action, data) {
   const gd = room.gameData;
+  if (!gd) return null;
+
+  // Ensure arrays exist
+  if (!gd.revealedTiles) gd.revealedTiles = [];
+  if (!gd.buzzerQueue) gd.buzzerQueue = [];
+  if (!gd.lockedOutPlayers) gd.lockedOutPlayers = [];
 
   switch (action) {
     case 'reveal-step':
       // Sørg for at vi lagrer steget i server-staten også
-      gd.revealedTiles.push(data.step);
+      if (data.step !== undefined) gd.revealedTiles.push(data.step);
       return {
         broadcast: true,
         event: 'game:reveal-step',
@@ -904,11 +910,16 @@ function handleGjettBildetHostAction(room, action, data) {
 
 function handleGjettBildetPlayerAction(room, playerId, action, data) {
   const gd = room.gameData;
+  if (!gd) return null;
+
+  // Ensure arrays exist
+  if (!gd.buzzerQueue) gd.buzzerQueue = [];
+  if (!gd.lockedOutPlayers) gd.lockedOutPlayers = [];
 
   switch (action) {
     case 'buzz': {
       // Sjekk om spilleren er utestengt på dette bildet
-      if (gd.lockedOutPlayers && gd.lockedOutPlayers.includes(playerId)) {
+      if (gd.lockedOutPlayers.includes(playerId)) {
         return null; // Kan ikke buzze - allerede gjettet feil
       }
 
@@ -2309,10 +2320,40 @@ function handleTegnDetPlayerAction(room, playerId, action, data) {
       const normalizedGuess = guess.toLowerCase().trim();
       const normalizedWord = gd.currentWord.toLowerCase().trim();
 
-      // Fuzzy match - allow some flexibility
-      const isCorrect = normalizedGuess === normalizedWord ||
-        (normalizedGuess.length >= 3 && normalizedWord.startsWith(normalizedGuess)) ||
-        (normalizedWord.length >= 3 && normalizedGuess.startsWith(normalizedWord));
+      // Fuzzy match function with Levenshtein distance
+      const isFuzzyMatch = (g, a) => {
+        // Exact match
+        if (g === a) return true;
+        // Very short, need exact
+        if (g.length < 3) return false;
+        // Starts with or contains
+        if (a.startsWith(g) || g.startsWith(a)) return true;
+        if (a.includes(g) || g.includes(a)) return true;
+
+        // Levenshtein distance
+        const levenshtein = (s1, s2) => {
+          const m = s1.length, n = s2.length;
+          const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+          for (let i = 0; i <= m; i++) dp[i][0] = i;
+          for (let j = 0; j <= n; j++) dp[0][j] = j;
+          for (let i = 1; i <= m; i++) {
+            for (let j = 1; j <= n; j++) {
+              dp[i][j] = s1[i-1] === s2[j-1]
+                ? dp[i-1][j-1]
+                : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+            }
+          }
+          return dp[m][n];
+        };
+
+        const dist = levenshtein(g, a);
+        const maxLen = Math.max(g.length, a.length);
+        // Allow 1 error for short, 2 for medium, 3 for long
+        const threshold = maxLen <= 5 ? 1 : maxLen <= 8 ? 2 : 3;
+        return dist <= threshold;
+      };
+
+      const isCorrect = isFuzzyMatch(normalizedGuess, normalizedWord);
 
       if (isCorrect) {
         // Correct guess!

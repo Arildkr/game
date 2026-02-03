@@ -139,7 +139,8 @@
   gap: 1rem;
 }
 
-.tegndet-host .difficulty-select {
+.tegndet-host .difficulty-select,
+.tegndet-host .time-select {
   padding: 0.5rem 1rem;
   border-radius: 8px;
   border: none;
@@ -148,7 +149,8 @@
   font-size: 1rem;
 }
 
-.tegndet-host .difficulty-select option {
+.tegndet-host .difficulty-select option,
+.tegndet-host .time-select option {
   background: #1f2937;
   color: white;
 }
@@ -205,6 +207,60 @@
 .tegndet-host .hint {
   margin-top: 2rem;
   color: rgba(255, 255, 255, 0.6);
+}
+
+/* Drawer queue */
+.tegndet-host .drawer-queue {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+}
+
+.tegndet-host .drawer-queue .queue-label {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 0.5rem;
+}
+
+.tegndet-host .drawer-queue .queue-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.tegndet-host .drawer-queue .queue-player {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.3rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.tegndet-host .drawer-queue .queue-player.next {
+  background: #f472b6;
+  font-weight: bold;
+}
+
+/* Timer */
+.tegndet-host .timer {
+  font-size: 2rem;
+  font-weight: bold;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.5rem 1.5rem;
+  border-radius: 10px;
+  min-width: 80px;
+  text-align: center;
+}
+
+.tegndet-host .timer.warning {
+  background: rgba(239, 68, 68, 0.5);
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
 }
 
 /* Waiting for word phase */
@@ -455,9 +511,22 @@
   background: rgba(244, 114, 182, 0.3);
 }
 
+.tegndet-host .player-item.has-drawn {
+  opacity: 0.6;
+}
+
 .tegndet-host .player-score {
   color: #f472b6;
   font-weight: 600;
+}
+
+.tegndet-host .cycle-info {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+  text-align: center;
 }
 
 /* ==================

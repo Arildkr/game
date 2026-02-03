@@ -231,6 +231,73 @@
   color: #fca5a5;
 }
 
+/* Timer warning */
+.hvamangler-host .timer.warning {
+  color: #ef4444;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* Current answerer */
+.hvamangler-host .current-answerer {
+  background: rgba(251, 191, 36, 0.3);
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  font-size: 1.3rem;
+}
+
+.hvamangler-host .current-answerer .answerer-icon {
+  font-size: 1.5rem;
+}
+
+.hvamangler-host .current-answerer .answerer-name {
+  font-weight: bold;
+  color: #fbbf24;
+}
+
+.hvamangler-host .current-answerer .answerer-status {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Pending guess display */
+.hvamangler-host .pending-guess-display {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1rem 2rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.hvamangler-host .pending-guess-display .guess-label {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.hvamangler-host .pending-guess-display .guess-text {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #fbbf24;
+  margin: 0;
+}
+
+/* Waiting for buzz */
+.hvamangler-host .waiting-for-buzz {
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
+  margin: 1rem 0;
+}
+
 .hvamangler-host .pending-guess {
   background: rgba(251, 191, 36, 0.2);
   padding: 1.5rem;

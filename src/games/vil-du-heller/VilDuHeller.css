@@ -48,7 +48,8 @@
   gap: 1rem;
 }
 
-.vilduheller-host .category-select {
+.vilduheller-host .category-select,
+.vilduheller-host .time-select {
   padding: 0.5rem 1rem;
   border-radius: 8px;
   border: none;
@@ -58,9 +59,39 @@
   cursor: pointer;
 }
 
-.vilduheller-host .category-select:disabled {
+.vilduheller-host .category-select:disabled,
+.vilduheller-host .time-select:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Timer */
+.vilduheller-host .timer {
+  font-size: 2rem;
+  font-weight: bold;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.5rem 1.5rem;
+  border-radius: 10px;
+  min-width: 60px;
+  text-align: center;
+}
+
+.vilduheller-host .timer.warning {
+  background: rgba(239, 68, 68, 0.5);
+  animation: pulse 1s infinite;
+}
+
+.vilduheller-host .question-header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
 }
 
 .vilduheller-host .btn-end {

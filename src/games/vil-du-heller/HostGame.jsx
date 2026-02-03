@@ -1,5 +1,5 @@
 // game/src/games/vil-du-heller/HostGame.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useGame } from '../../contexts/GameContext';
 import questions, { shuffleQuestions, getQuestionsByCategory, getCategories } from '../../data/vilDuHellerQuestions';
 import './VilDuHeller.css';
@@ -14,11 +14,32 @@ function HostGame() {
   const [votes, setVotes] = useState({ optionA: [], optionB: [] });
   const [category, setCategory] = useState('all');
 
+  // Timer
+  const [timeLimit, setTimeLimit] = useState(30);
+  const [timeLeft, setTimeLeft] = useState(0);
+  const timerRef = useRef(null);
+
   // Initialize questions
   useEffect(() => {
     const filtered = getQuestionsByCategory(category);
     setShuffledQuestions(shuffleQuestions(filtered));
   }, [category]);
+
+  // Timer effect
+  useEffect(() => {
+    if (phase === 'question' && timeLeft > 0) {
+      timerRef.current = setTimeout(() => {
+        setTimeLeft(prev => prev - 1);
+      }, 1000);
+    } else if (phase === 'question' && timeLeft === 0 && timeLimit > 0) {
+      // Time's up - auto-reveal results
+      revealResults();
+    }
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [timeLeft, phase, timeLimit]);
 
   // Listen for game events
   useEffect(() => {
@@ -63,8 +84,9 @@ function HostGame() {
     setCurrentQuestion(question);
     setPhase('question');
     setVotes({ optionA: [], optionB: [] });
+    setTimeLeft(timeLimit);
 
-    sendGameAction('show-question', { question });
+    sendGameAction('show-question', { question, timeLimit });
   };
 
   const revealResults = () => {
@@ -121,6 +143,18 @@ function HostGame() {
             <option value="hverdag">Hverdagen</option>
             <option value="morsom">Morsomme</option>
           </select>
+          <select
+            value={timeLimit}
+            onChange={(e) => setTimeLimit(Number(e.target.value))}
+            className="time-select"
+            disabled={phase !== 'waiting'}
+          >
+            <option value={0}>Ingen tidsfrist</option>
+            <option value={15}>15 sekunder</option>
+            <option value={30}>30 sekunder</option>
+            <option value={45}>45 sekunder</option>
+            <option value={60}>60 sekunder</option>
+          </select>
           <button className="btn btn-end" onClick={() => endGame()}>Avslutt</button>
         </div>
       </header>
@@ -145,7 +179,14 @@ function HostGame() {
         {/* Question phase */}
         {phase === 'question' && currentQuestion && (
           <div className="question-phase">
-            <h2 className="question-title">Vil du heller...</h2>
+            <div className="question-header">
+              <h2 className="question-title">Vil du heller...</h2>
+              {timeLimit > 0 && (
+                <div className={`timer ${timeLeft <= 5 ? 'warning' : ''}`}>
+                  {timeLeft}
+                </div>
+              )}
+            </div>
 
             <div className="options-display">
               <div className="option option-a">
