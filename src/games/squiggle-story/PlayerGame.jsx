@@ -78,7 +78,7 @@ function PlayerGame() {
       socket.off('game:voting-started', handleVotingStarted);
       socket.off('game:results-shown', handleResultsShown);
     };
-  }, [socket]);
+  }, [socket, myPlayerId]);
 
   // Redraw canvas
   const redrawCanvas = useCallback(() => {

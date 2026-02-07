@@ -254,6 +254,11 @@
   cursor: pointer;
 }
 
+.squigglestory-host .btn-next:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Players sidebar */
 .squigglestory-host .players-sidebar {
   background: rgba(0, 0, 0, 0.3);
@@ -486,6 +491,11 @@
   font-weight: 600;
 }
 
+.squigglestory-player .btn-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Submitted phase */
 .squigglestory-player .submitted-phase {
   text-align: center;
@@ -700,5 +710,29 @@
   .squigglestory-host .gallery-grid {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 1rem;
+  }
+
+  .squigglestory-host .results-podium {
+    flex-direction: column;
+    align-items: center;
+    min-height: auto;
+  }
+
+  .squigglestory-host .podium-place-1,
+  .squigglestory-host .podium-place-2,
+  .squigglestory-host .podium-place-3 {
+    order: unset;
+  }
+
+  .squigglestory-host .podium-image {
+    width: 160px;
+  }
+
+  .squigglestory-host .podium-place-1 .podium-image {
+    width: 180px;
+  }
+
+  .squigglestory-host .podium-place-3 .podium-image {
+    width: 140px;
   }
 }

@@ -227,8 +227,12 @@ function HostGame() {
               <p className="no-submissions">Ingen har levert ennå</p>
             )}
 
-            <button className="btn btn-next" onClick={startVoting}>
-              Start avstemming
+            <button
+              className="btn btn-next"
+              onClick={startVoting}
+              disabled={submissions.length < 2}
+            >
+              {submissions.length < 2 ? 'Trenger minst 2 tegninger' : 'Start avstemming'}
             </button>
           </div>
         )}

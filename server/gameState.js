@@ -2484,11 +2484,14 @@ function handleSquiggleStoryHostAction(room, action, data) {
       gd.votes = {};
       gd.voteCount = 0;
 
-      // Send submissions WITHOUT playerName for anonymity
-      const anonymousSubmissions = Object.entries(gd.submissions).map(([id, sub]) => ({
-        playerId: id,
-        imageData: sub.imageData
-      }));
+      // Only include submissions that are still displayed (not removed by host)
+      const displayed = new Set(gd.displayedSubmissions);
+      const anonymousSubmissions = Object.entries(gd.submissions)
+        .filter(([id]) => displayed.has(id))
+        .map(([id, sub]) => ({
+          playerId: id,
+          imageData: sub.imageData
+        }));
 
       return {
         broadcast: true,
@@ -2508,15 +2511,18 @@ function handleSquiggleStoryHostAction(room, action, data) {
         }
       }
 
-      // Build results with player info
-      const results = Object.entries(gd.submissions).map(([id, sub]) => ({
-        playerId: id,
-        playerName: sub.playerName,
-        imageData: sub.imageData,
-        votes: voteTally[id] || 0
-      }));
+      // Build results only for displayed submissions
+      const displayedSet = new Set(gd.displayedSubmissions);
+      const results = Object.entries(gd.submissions)
+        .filter(([id]) => displayedSet.has(id))
+        .map(([id, sub]) => ({
+          playerId: id,
+          playerName: sub.playerName,
+          imageData: sub.imageData,
+          votes: voteTally[id] || 0
+        }));
 
-      // Sort by most votes, then by submission time as tiebreaker
+      // Sort by most votes
       results.sort((a, b) => b.votes - a.votes);
 
       // Top 3
