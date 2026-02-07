@@ -7,11 +7,13 @@ import './SquiggleStory.css';
 function HostGame() {
   const { socket, players, endGame, sendGameAction, roomCode, kickPlayer } = useGame();
 
-  const [phase, setPhase] = useState('setup'); // setup, drawing, gallery
+  const [phase, setPhase] = useState('setup'); // setup, drawing, gallery, voting, results
   const [currentSquiggle, setCurrentSquiggle] = useState(null);
   const [submissions, setSubmissions] = useState([]);
   const [submissionCount, setSubmissionCount] = useState(0);
   const [roundNumber, setRoundNumber] = useState(1);
+  const [voteCount, setVoteCount] = useState(0);
+  const [results, setResults] = useState([]);
 
   const canvasRef = useRef(null);
   const connectedPlayers = players.filter(p => p.isConnected);
@@ -36,12 +38,25 @@ function HostGame() {
       setPhase('gallery');
     };
 
+    const handleVoteReceived = ({ voteCount: count }) => {
+      setVoteCount(count);
+    };
+
+    const handleResultsShown = ({ top3, allResults }) => {
+      setResults(allResults || top3);
+      setPhase('results');
+    };
+
     socket.on('game:submission-received', handleSubmissionReceived);
     socket.on('game:gallery-shown', handleGalleryShown);
+    socket.on('game:vote-received', handleVoteReceived);
+    socket.on('game:results-shown', handleResultsShown);
 
     return () => {
       socket.off('game:submission-received', handleSubmissionReceived);
       socket.off('game:gallery-shown', handleGalleryShown);
+      socket.off('game:vote-received', handleVoteReceived);
+      socket.off('game:results-shown', handleResultsShown);
     };
   }, [socket]);
 
@@ -90,12 +105,24 @@ function HostGame() {
     sendGameAction('remove-submission', { playerId });
   };
 
+  const startVoting = () => {
+    setVoteCount(0);
+    setPhase('voting');
+    sendGameAction('start-voting');
+  };
+
+  const showResults = () => {
+    sendGameAction('show-results');
+  };
+
   const nextRound = () => {
     setRoundNumber(prev => prev + 1);
     setPhase('setup');
     setCurrentSquiggle(null);
     setSubmissions([]);
     setSubmissionCount(0);
+    setVoteCount(0);
+    setResults([]);
 
     sendGameAction('next-squiggle');
   };
@@ -199,6 +226,62 @@ function HostGame() {
             {submissions.length === 0 && (
               <p className="no-submissions">Ingen har levert ennå</p>
             )}
+
+            <button className="btn btn-next" onClick={startVoting}>
+              Start avstemming
+            </button>
+          </div>
+        )}
+
+        {/* Voting phase */}
+        {phase === 'voting' && (
+          <div className="voting-phase">
+            <h2>Avstemming</h2>
+            <p className="description">Spillerne stemmer på favorittegningen sin</p>
+
+            <div className="submission-status">
+              <p>{voteCount} / {connectedPlayers.length} har stemt</p>
+              <div className="progress-bar">
+                <div
+                  className="progress-fill"
+                  style={{
+                    width: `${connectedPlayers.length > 0 ? (voteCount / connectedPlayers.length) * 100 : 0}%`
+                  }}
+                />
+              </div>
+            </div>
+
+            <button
+              className="btn btn-show-results"
+              onClick={showResults}
+              disabled={voteCount === 0}
+            >
+              Vis resultater
+            </button>
+          </div>
+        )}
+
+        {/* Results phase */}
+        {phase === 'results' && (
+          <div className="results-phase">
+            <h2>Resultater</h2>
+
+            <div className="results-podium">
+              {results.slice(0, 3).map((entry, i) => (
+                <div key={entry.playerId} className={`podium-place podium-place-${i + 1}`}>
+                  <div className="podium-medal">
+                    {i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}
+                  </div>
+                  <img
+                    src={entry.imageData}
+                    alt={`Tegning av ${entry.playerName}`}
+                    className="podium-image"
+                  />
+                  <div className="podium-name">{entry.playerName}</div>
+                  <div className="podium-votes">{entry.votes} {entry.votes === 1 ? 'stemme' : 'stemmer'}</div>
+                </div>
+              ))}
+            </div>
 
             <button className="btn btn-next" onClick={nextRound}>
               Neste runde

@@ -312,7 +312,9 @@ function initializeGameData(game, players, config) {
         squiggle: null,
         submissions: {},
         displayedSubmissions: [],
-        phase: 'waiting' // waiting, drawing, gallery
+        phase: 'waiting', // waiting, drawing, gallery, voting, results
+        votes: {},        // { playerId: [votedForId1, votedForId2] }
+        voteCount: 0
       };
 
     default:
@@ -2477,11 +2479,63 @@ function handleSquiggleStoryHostAction(room, action, data) {
       };
     }
 
+    case 'start-voting': {
+      gd.phase = 'voting';
+      gd.votes = {};
+      gd.voteCount = 0;
+
+      // Send submissions WITHOUT playerName for anonymity
+      const anonymousSubmissions = Object.entries(gd.submissions).map(([id, sub]) => ({
+        playerId: id,
+        imageData: sub.imageData
+      }));
+
+      return {
+        broadcast: true,
+        event: 'game:voting-started',
+        data: { submissions: anonymousSubmissions }
+      };
+    }
+
+    case 'show-results': {
+      gd.phase = 'results';
+
+      // Count votes per submission
+      const voteTally = {};
+      for (const [, votedFor] of Object.entries(gd.votes)) {
+        for (const targetId of votedFor) {
+          voteTally[targetId] = (voteTally[targetId] || 0) + 1;
+        }
+      }
+
+      // Build results with player info
+      const results = Object.entries(gd.submissions).map(([id, sub]) => ({
+        playerId: id,
+        playerName: sub.playerName,
+        imageData: sub.imageData,
+        votes: voteTally[id] || 0
+      }));
+
+      // Sort by most votes, then by submission time as tiebreaker
+      results.sort((a, b) => b.votes - a.votes);
+
+      // Top 3
+      const top3 = results.slice(0, 3);
+
+      return {
+        broadcast: true,
+        event: 'game:results-shown',
+        data: { top3, allResults: results }
+      };
+    }
+
     case 'next-squiggle': {
       gd.phase = 'waiting';
       gd.squiggle = null;
       gd.submissions = {};
       gd.displayedSubmissions = [];
+      gd.votes = {};
+      gd.voteCount = 0;
 
       return {
         broadcast: true,
@@ -2528,6 +2582,34 @@ function handleSquiggleStoryPlayerAction(room, playerId, action, data) {
           playerName: player?.name,
           imageData,
           submissionCount: Object.keys(gd.submissions).length,
+          totalPlayers: room.players.filter(p => p.isConnected).length
+        }
+      };
+    }
+
+    case 'submit-votes': {
+      if (gd.phase !== 'voting') return null;
+      if (gd.votes[playerId]) return null; // Already voted
+
+      const { votedFor } = data; // array of playerIds
+
+      // Validate: max 2 votes
+      if (!Array.isArray(votedFor) || votedFor.length === 0 || votedFor.length > 2) return null;
+
+      // Validate: can't vote for yourself
+      if (votedFor.includes(playerId)) return null;
+
+      // Validate: can only vote for players who submitted
+      if (!votedFor.every(id => gd.submissions[id])) return null;
+
+      gd.votes[playerId] = votedFor;
+      gd.voteCount = Object.keys(gd.votes).length;
+
+      return {
+        broadcast: true,
+        event: 'game:vote-received',
+        data: {
+          voteCount: gd.voteCount,
           totalPlayers: room.players.filter(p => p.isConnected).length
         }
       };

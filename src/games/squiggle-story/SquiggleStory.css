@@ -518,6 +518,173 @@
 }
 
 /* ==================
+   HOST VOTING PHASE
+   ================== */
+
+.squigglestory-host .voting-phase {
+  text-align: center;
+  width: 100%;
+  max-width: 600px;
+}
+
+.squigglestory-host .btn-show-results {
+  background: #06b6d4;
+  color: white;
+  padding: 1rem 2.5rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.3rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 1rem;
+}
+
+.squigglestory-host .btn-show-results:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ==================
+   HOST RESULTS PHASE
+   ================== */
+
+.squigglestory-host .results-phase {
+  text-align: center;
+  width: 100%;
+  max-width: 900px;
+}
+
+.squigglestory-host .results-podium {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 1.5rem;
+  margin: 2rem 0;
+  min-height: 350px;
+}
+
+.squigglestory-host .podium-place {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 1.5rem;
+  transition: transform 0.3s;
+}
+
+.squigglestory-host .podium-place-1 {
+  order: 2;
+  transform: scale(1.1);
+  background: rgba(255, 215, 0, 0.15);
+  border: 2px solid rgba(255, 215, 0, 0.4);
+}
+
+.squigglestory-host .podium-place-2 {
+  order: 1;
+  background: rgba(192, 192, 192, 0.12);
+  border: 2px solid rgba(192, 192, 192, 0.3);
+}
+
+.squigglestory-host .podium-place-3 {
+  order: 3;
+  background: rgba(205, 127, 50, 0.12);
+  border: 2px solid rgba(205, 127, 50, 0.3);
+}
+
+.squigglestory-host .podium-medal {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.squigglestory-host .podium-image {
+  width: 180px;
+  height: auto;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  background: white;
+}
+
+.squigglestory-host .podium-place-1 .podium-image {
+  width: 220px;
+}
+
+.squigglestory-host .podium-place-3 .podium-image {
+  width: 150px;
+}
+
+.squigglestory-host .podium-name {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-top: 0.75rem;
+}
+
+.squigglestory-host .podium-votes {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 0.25rem;
+}
+
+/* ==================
+   PLAYER VOTING PHASE
+   ================== */
+
+.squigglestory-player .voting-phase {
+  text-align: center;
+  width: 100%;
+}
+
+.squigglestory-player .voting-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0;
+  padding: 0 0.5rem;
+}
+
+.squigglestory-player .vote-card {
+  position: relative;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 3px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.squigglestory-player .vote-card:hover {
+  transform: scale(1.03);
+}
+
+.squigglestory-player .vote-card.voted {
+  border-color: #06b6d4;
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.4);
+}
+
+.squigglestory-player .vote-image {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.squigglestory-player .vote-check {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  background: #06b6d4;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+/* ==================
    RESPONSIVE
    ================== */
 

@@ -4,9 +4,9 @@ import { useGame } from '../../contexts/GameContext';
 import './SquiggleStory.css';
 
 function PlayerGame() {
-  const { socket, playerName, leaveRoom } = useGame();
+  const { socket, playerName, leaveRoom, myPlayerId } = useGame();
 
-  const [phase, setPhase] = useState('waiting'); // waiting, drawing, submitted, gallery
+  const [phase, setPhase] = useState('waiting'); // waiting, drawing, submitted, gallery, voting, voted, results
   const [squiggle, setSquiggle] = useState(null);
   const [strokes, setStrokes] = useState([]);
   const [currentStroke, setCurrentStroke] = useState([]);
@@ -14,6 +14,8 @@ function PlayerGame() {
   const [color, setColor] = useState('#000000');
   const [lineWidth, setLineWidth] = useState(4);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [votingSubmissions, setVotingSubmissions] = useState([]);
+  const [selectedVotes, setSelectedVotes] = useState([]);
 
   const canvasRef = useRef(null);
   const lastPointRef = useRef(null);
@@ -47,16 +49,34 @@ function PlayerGame() {
       setSquiggle(null);
       setStrokes([]);
       setHasSubmitted(false);
+      setVotingSubmissions([]);
+      setSelectedVotes([]);
+    };
+
+    const handleVotingStarted = ({ submissions: subs }) => {
+      // Filter out own submission for anonymity
+      const othersSubmissions = subs.filter(s => s.playerId !== myPlayerId);
+      setVotingSubmissions(othersSubmissions);
+      setSelectedVotes([]);
+      setPhase('voting');
+    };
+
+    const handleResultsShown = () => {
+      setPhase('results');
     };
 
     socket.on('game:round-started', handleRoundStarted);
     socket.on('game:gallery-shown', handleGalleryShown);
     socket.on('game:ready-for-next', handleReadyForNext);
+    socket.on('game:voting-started', handleVotingStarted);
+    socket.on('game:results-shown', handleResultsShown);
 
     return () => {
       socket.off('game:round-started', handleRoundStarted);
       socket.off('game:gallery-shown', handleGalleryShown);
       socket.off('game:ready-for-next', handleReadyForNext);
+      socket.off('game:voting-started', handleVotingStarted);
+      socket.off('game:results-shown', handleResultsShown);
     };
   }, [socket]);
 
@@ -205,6 +225,27 @@ function PlayerGame() {
     setPhase('submitted');
   };
 
+  const toggleVote = (playerId) => {
+    setSelectedVotes(prev => {
+      if (prev.includes(playerId)) {
+        return prev.filter(id => id !== playerId);
+      }
+      if (prev.length >= 2) return prev;
+      return [...prev, playerId];
+    });
+  };
+
+  const submitVotes = () => {
+    if (selectedVotes.length === 0) return;
+
+    socket.emit('player:game-action', {
+      action: 'submit-votes',
+      data: { votedFor: selectedVotes }
+    });
+
+    setPhase('voted');
+  };
+
   return (
     <div className="squigglestory-player">
       {/* Header */}
@@ -331,6 +372,59 @@ function PlayerGame() {
             <div className="gallery-icon">🖼️</div>
             <h2>Se på storskjermen!</h2>
             <p>Alle tegningene vises nå i galleriet</p>
+          </div>
+        )}
+
+        {/* Voting phase */}
+        {phase === 'voting' && (
+          <div className="voting-phase">
+            <h2>Stem på favorittene!</h2>
+            <p className="instruction">Velg 1-2 tegninger du liker best</p>
+
+            <div className="voting-grid">
+              {votingSubmissions.map((sub) => (
+                <button
+                  key={sub.playerId}
+                  className={`vote-card ${selectedVotes.includes(sub.playerId) ? 'voted' : ''}`}
+                  onClick={() => toggleVote(sub.playerId)}
+                >
+                  <img
+                    src={sub.imageData}
+                    alt="Tegning"
+                    className="vote-image"
+                  />
+                  {selectedVotes.includes(sub.playerId) && (
+                    <div className="vote-check">✓</div>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            <button
+              className="btn btn-submit"
+              onClick={submitVotes}
+              disabled={selectedVotes.length === 0}
+            >
+              Send stemme ({selectedVotes.length})
+            </button>
+          </div>
+        )}
+
+        {/* Voted phase */}
+        {phase === 'voted' && (
+          <div className="submitted-phase">
+            <div className="submitted-icon">✓</div>
+            <h2>Stemme sendt!</h2>
+            <p>Venter på de andre...</p>
+          </div>
+        )}
+
+        {/* Results phase */}
+        {phase === 'results' && (
+          <div className="gallery-phase">
+            <div className="gallery-icon">🏆</div>
+            <h2>Se på storskjermen!</h2>
+            <p>Resultatene vises nå</p>
           </div>
         )}
       </main>
