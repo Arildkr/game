@@ -11,7 +11,8 @@ function HostGame() {
     roomCode,
     endGame,
     sendGameAction,
-    gameData
+    gameData,
+    kickPlayer
   } = useGame();
 
   const [wordChain, setWordChain] = useState([]);
@@ -113,6 +114,13 @@ function HostGame() {
       return () => clearTimeout(timer);
     }
   }, [currentPlayer, timeLeft, pendingWord]);
+
+  // Auto-reject når tiden går ut
+  useEffect(() => {
+    if (currentPlayer && timeLeft === 0 && !pendingWord) {
+      sendGameAction('time-expired');
+    }
+  }, [currentPlayer, timeLeft, pendingWord, sendGameAction]);
 
   const handleSelectPlayer = (playerId) => {
     if (!currentPlayer) {
@@ -340,6 +348,7 @@ function HostGame() {
                 <span className={`player-words ${config?.mode === 'konkurranse' && player.score < 0 ? 'negative' : ''}`}>
                   {config?.mode === 'konkurranse' ? (player.score || 0) : (player.wordsSubmitted || 0)}
                 </span>
+                <button className="btn-kick" onClick={(e) => { e.stopPropagation(); kickPlayer(player.id); }} title="Fjern spiller">✕</button>
               </li>
             ))}
         </ul>

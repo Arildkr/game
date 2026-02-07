@@ -130,6 +130,11 @@ function PlayerGame() {
       const timer = setTimeout(() => setTimeLeft(t => t - 1), 1000);
       return () => clearTimeout(timer);
     }
+    // Auto-submit når tiden går ut
+    if (isMyTurn && timeLeft === 0 && !hasSubmitted) {
+      sendPlayerAction('submit-word', { word: '—' });
+      setHasSubmitted(true);
+    }
   }, [isMyTurn, timeLeft, hasSubmitted]);
 
   // Reset on my turn

@@ -5,7 +5,7 @@ import { getRandomEquation } from '../../data/nerdleEquations';
 import './Nerdle.css';
 
 function HostGame() {
-  const { socket, players, endGame, sendGameAction, roomCode } = useGame();
+  const { socket, players, endGame, sendGameAction, roomCode, kickPlayer } = useGame();
 
   const [phase, setPhase] = useState('waiting'); // waiting, playing, results
   const [currentEquation, setCurrentEquation] = useState(null);
@@ -181,6 +181,7 @@ function HostGame() {
                   </span>
                 )}
                 <span className="player-score">{player.score || 0}</span>
+                <button className="btn-kick" onClick={() => kickPlayer(player.id)} title="Fjern spiller">✕</button>
               </li>
             );
           })}

@@ -38,7 +38,7 @@ function generateNumbers(difficulty = 'medium') {
 }
 
 function HostGame() {
-  const { socket, players, endGame, sendGameAction, roomCode } = useGame();
+  const { socket, players, endGame, sendGameAction, roomCode, kickPlayer } = useGame();
 
   const [phase, setPhase] = useState('waiting'); // waiting, playing, reveal, finished
   const [currentRound, setCurrentRound] = useState(1);
@@ -305,12 +305,14 @@ function HostGame() {
               <span className="rank">{index + 1}</span>
               <span className="name">{player.name}</span>
               <span className="score">{player.score}</span>
+              <button className="btn-kick" onClick={() => kickPlayer(player.id)} title="Fjern spiller">✕</button>
             </li>
           )) : connectedPlayers.slice(0, 5).map((player, index) => (
             <li key={player.id} className="leaderboard-item">
               <span className="rank">{index + 1}</span>
               <span className="name">{player.name}</span>
               <span className="score">0</span>
+              <button className="btn-kick" onClick={() => kickPlayer(player.id)} title="Fjern spiller">✕</button>
             </li>
           ))}
         </ul>

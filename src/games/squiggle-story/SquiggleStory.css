@@ -380,7 +380,10 @@
 
 .squigglestory-player .color-picker {
   display: flex;
-  gap: 0.4rem;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: center;
+  max-width: 230px;
 }
 
 .squigglestory-player .color-btn {
@@ -399,6 +402,19 @@
 .squigglestory-player .color-btn.selected {
   border-color: white;
   transform: scale(1.15);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.5);
+}
+
+.squigglestory-player .custom-color-btn {
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.squigglestory-player .hidden-color-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
 }
 
 .squigglestory-player .size-picker {

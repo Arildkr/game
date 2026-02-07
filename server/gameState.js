@@ -1454,6 +1454,31 @@ function handleSlangeHostAction(room, action, data) {
       };
     }
 
+    case 'time-expired': {
+      // Tiden gikk ut for nåværende spiller
+      const timedOutPlayerId = gd.currentPlayer?.id;
+      const timedOutPlayer = room.players.find(p => p.id === timedOutPlayerId);
+
+      // Trekk poeng i konkurransemodus
+      if (gd.mode === 'konkurranse' && timedOutPlayer) {
+        timedOutPlayer.score = (timedOutPlayer.score || 0) - 5;
+      }
+
+      gd.currentPlayer = null;
+      gd.pendingWord = null;
+
+      return {
+        broadcast: true,
+        event: 'game:word-rejected',
+        data: {
+          playerId: timedOutPlayerId,
+          reason: 'Tiden gikk ut!',
+          autoRejected: true,
+          players: room.players
+        }
+      };
+    }
+
     case 'skip-letter': {
       // Velg en ny tilfeldig bokstav (unngå vanskelige bokstaver)
       const letters = 'ABDEFGHIKLMNOPRSTUVWY';

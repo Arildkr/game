@@ -5,7 +5,7 @@ import questions, { shuffleQuestions, getQuestionsByCategory, categories } from 
 import './Quiz.css';
 
 function HostGame() {
-  const { socket, players, endGame, sendGameAction, roomCode } = useGame();
+  const { socket, players, endGame, sendGameAction, roomCode, kickPlayer } = useGame();
 
   const [shuffledQuestions, setShuffledQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -302,6 +302,7 @@ function HostGame() {
               <span className="rank">{index + 1}</span>
               <span className="name">{player.name}</span>
               <span className="score">{player.score}</span>
+              <button className="btn-kick" onClick={() => kickPlayer(player.id)} title="Fjern spiller">✕</button>
             </li>
           ))}
           {leaderboard.length === 0 && connectedPlayers.slice(0, 5).map((player, index) => (
@@ -309,6 +310,7 @@ function HostGame() {
               <span className="rank">{index + 1}</span>
               <span className="name">{player.name}</span>
               <span className="score">0</span>
+              <button className="btn-kick" onClick={() => kickPlayer(player.id)} title="Fjern spiller">✕</button>
             </li>
           ))}
         </ul>

@@ -5,7 +5,7 @@ import { getImageSets, generateRound } from '../../data/hvaManglerImages';
 import './HvaMangler.css';
 
 function HostGame() {
-  const { socket, players, endGame, sendGameAction, roomCode } = useGame();
+  const { socket, players, endGame, sendGameAction, roomCode, kickPlayer } = useGame();
 
   const [phase, setPhase] = useState('setup'); // setup, memorize, black, guess, reveal
   const [currentRound, setCurrentRound] = useState(null);
@@ -116,13 +116,37 @@ function HostGame() {
     sendGameAction('show-changed', { timeLimit: guessTimeLimit });
   };
 
+  const [answerTimeLeft, setAnswerTimeLeft] = useState(15);
+
   const selectPlayer = (playerId) => {
     const player = players.find(p => p.id === playerId);
     setCurrentPlayer({ id: playerId, name: player?.name });
     setBuzzerQueue(prev => prev.filter(id => id !== playerId));
+    setAnswerTimeLeft(15);
 
     sendGameAction('select-player', { playerId });
   };
+
+  // Nedtelling for svarfrist
+  useEffect(() => {
+    if (currentPlayer && answerTimeLeft > 0 && !pendingGuess) {
+      const timer = setTimeout(() => setAnswerTimeLeft(t => t - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [currentPlayer, answerTimeLeft, pendingGuess]);
+
+  // Auto-reject når svarfristen utløper
+  useEffect(() => {
+    if (currentPlayer && answerTimeLeft === 0 && !pendingGuess) {
+      sendGameAction('validate-guess', {
+        playerId: currentPlayer.id,
+        isCorrect: false,
+        answer: currentRound?.removedObject,
+        playerName: currentPlayer.name
+      });
+      setCurrentPlayer(null);
+    }
+  }, [currentPlayer, answerTimeLeft, pendingGuess]);
 
   // Fuzzy match function
   const isFuzzyMatch = (guess, answer) => {
@@ -385,7 +409,7 @@ function HostGame() {
               <div className="current-answerer">
                 <span className="answerer-icon">🎤</span>
                 <span className="answerer-name">{currentPlayer.name}</span>
-                <span className="answerer-status">svarer nå...</span>
+                <span className={`answerer-timer ${answerTimeLeft <= 5 ? 'urgent' : ''}`}>{answerTimeLeft}s</span>
               </div>
             )}
 
@@ -470,6 +494,7 @@ function HostGame() {
             <li key={player.id} className="player-item">
               <span className="player-name">{player.name}</span>
               <span className="player-score">{player.score || 0}</span>
+              <button className="btn-kick" onClick={() => kickPlayer(player.id)} title="Fjern spiller">✕</button>
             </li>
           ))}
         </ul>

@@ -5,7 +5,7 @@ import questions, { shuffleQuestions, getQuestionsByCategory, getCategories } fr
 import './VilDuHeller.css';
 
 function HostGame() {
-  const { socket, players, endGame, sendGameAction, roomCode } = useGame();
+  const { socket, players, endGame, sendGameAction, roomCode, kickPlayer } = useGame();
 
   const [shuffledQuestions, setShuffledQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -293,6 +293,7 @@ function HostGame() {
                     {hasVoted ? '✓' : '...'}
                   </span>
                 )}
+                <button className="btn-kick" onClick={() => kickPlayer(player.id)} title="Fjern spiller">✕</button>
               </li>
             );
           })}

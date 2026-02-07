@@ -45,6 +45,7 @@ function PlayerGame() {
       if (playerId === socket.id) {
         setIsSelected(true);
         setPhase('selected');
+        setTimeLeft(15); // 15 sekunder å svare
         setTimeout(() => inputRef.current?.focus(), 100);
       }
     };
@@ -95,6 +96,17 @@ function PlayerGame() {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [timeLeft]);
+
+  // Auto-submit når tiden går ut
+  useEffect(() => {
+    if (isSelected && phase === 'selected' && timeLeft === 0) {
+      socket.emit('player:game-action', {
+        action: 'submit-guess',
+        data: { guess: 'TIDEN UTE' }
+      });
+      setIsSelected(false);
+    }
+  }, [isSelected, phase, timeLeft, socket]);
 
   const buzz = () => {
     if (hasBuzzed || phase !== 'guess') return;

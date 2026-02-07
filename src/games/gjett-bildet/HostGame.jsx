@@ -163,7 +163,8 @@ function HostGame() {
     roomCode,
     endGame,
     sendGameAction,
-    gameData
+    gameData,
+    kickPlayer
   } = useGame();
 
   const [images, setImages] = useState([]);
@@ -181,6 +182,7 @@ function HostGame() {
   const [wrongGuessDisplay, setWrongGuessDisplay] = useState(null);
   const [currentMode, setCurrentMode] = useState('blur'); // Aktiv modus for dette bildet
   const [focalPoint, setFocalPoint] = useState({ x: 50, y: 50 }); // Tilfeldig fokuspunkt for mask/zoom
+  const [answerTimeLeft, setAnswerTimeLeft] = useState(15); // Tidsfrist for svar (synkronisert med elev)
 
   const initDone = useRef(false);
   const currentImage = images[currentIndex];
@@ -244,6 +246,7 @@ function HostGame() {
       setCurrentPlayer({ id: playerId, name: playerName });
       setBuzzerQueue([]);
       setPhase('answering');
+      setAnswerTimeLeft(15);
     };
 
     const handleGuessSubmitted = ({ playerId, guess }) => {
@@ -260,6 +263,7 @@ function HostGame() {
       }
 
       if (isCorrect) {
+        setRevealStep(REVEAL_STEPS.length - 1); // Vis hele bildet
         setPhase('roundEnd');
         setWrongGuessDisplay(null);
       } else {
@@ -319,6 +323,14 @@ function HostGame() {
       socket.off('game:buzzer-cleared', handleBuzzerCleared);
     };
   }, [socket, config.mode, getRandomMode, getRandomFocalPoint]);
+
+  // Nedtelling for svar-tid (synkronisert med elev)
+  useEffect(() => {
+    if (phase === 'answering' && answerTimeLeft > 0) {
+      const timer = setTimeout(() => setAnswerTimeLeft(t => t - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [phase, answerTimeLeft]);
 
   // AUTO-VALIDERING
   useEffect(() => {
@@ -522,24 +534,7 @@ function HostGame() {
     );
   }
 
-  // Round End screen
-  if (phase === 'roundEnd' && lastResult) {
-    const winner = players.find(p => p.id === lastResult.playerId);
-    return (
-      <div className="gjett-bildet-host round-end-screen">
-        <div className="round-end-content">
-          <div className="success-icon">🎉</div>
-          <h2>Riktig svar!</h2>
-          <p className="winner-name">{winner?.name} svarte riktig!</p>
-          <p className="correct-answer">Svaret var: <strong>{lastResult.correctAnswer}</strong></p>
-          <p className="points-awarded">+{lastResult.points || POINTS_BY_STEP[revealStep] || 20} poeng</p>
-          <button className="btn btn-primary" onClick={handleNextImageAction}>
-            {isLastImage ? 'Se resultater' : 'Neste bilde'}
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // Round End - vises som overlay på bildet (ikke separat skjerm)
 
   const categoryInfo = categories.find(c => c.id === config.category) || categories[4];
   const modeInfo = MODE_NAMES[currentMode] || MODE_NAMES.blur;
@@ -562,89 +557,105 @@ function HostGame() {
       <main className="game-main">
         <div className="image-section">
           {renderImage()}
-          <div className="controls">
-            <button
-              className="btn btn-hint"
-              onClick={handleReveal}
-              disabled={revealStep >= REVEAL_STEPS.length - 1 || phase === 'showingAnswer'}
-            >
-              Neste hint ({revealStep + 1}/{REVEAL_STEPS.length})
-            </button>
-            <button
-              className="btn btn-reveal"
-              onClick={() => {
-                setRevealStep(REVEAL_STEPS.length - 1);
-                sendGameAction('reveal-step', { step: REVEAL_STEPS.length - 1 });
-              }}
-              disabled={revealStep >= REVEAL_STEPS.length - 1 || phase === 'showingAnswer'}
-            >
-              Vis svaret
-            </button>
-            {revealStep >= REVEAL_STEPS.length - 1 && (
+
+          {phase === 'roundEnd' && lastResult && (
+            <div className="round-end-overlay">
+              <div className="round-end-card">
+                <div className="success-icon">🎉</div>
+                <h2>{players.find(p => p.id === lastResult.playerId)?.name} svarte riktig!</h2>
+                <p className="correct-answer">{lastResult.correctAnswer}</p>
+                <p className="points-awarded">+{lastResult.points || POINTS_BY_STEP[revealStep] || 20} poeng</p>
+                <button className="btn btn-primary" onClick={handleNextImageAction}>
+                  {isLastImage ? 'Se resultater' : 'Neste bilde'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="game-status-row">
+            <div className="controls">
               <button
-                className="btn btn-next"
-                onClick={handleNextImageAction}
-                disabled={phase === 'showingAnswer'}
+                className="btn btn-hint"
+                onClick={handleReveal}
+                disabled={revealStep >= REVEAL_STEPS.length - 1 || phase === 'showingAnswer'}
               >
-                {phase === 'showingAnswer' ? 'Viser fasit...' : (isLastImage ? 'Se resultater' : 'Gå videre →')}
+                Neste hint ({revealStep + 1}/{REVEAL_STEPS.length})
               </button>
-            )}
-            <button
-              className="btn btn-secondary"
-              onClick={handleClearBuzzer}
-              disabled={buzzerQueue.length === 0 || phase === 'showingAnswer'}
-            >
-              Nullstill buzzer
-            </button>
+              <button
+                className="btn btn-reveal"
+                onClick={() => {
+                  setRevealStep(REVEAL_STEPS.length - 1);
+                  sendGameAction('reveal-step', { step: REVEAL_STEPS.length - 1 });
+                }}
+                disabled={revealStep >= REVEAL_STEPS.length - 1 || phase === 'showingAnswer'}
+              >
+                Vis svaret
+              </button>
+              {revealStep >= REVEAL_STEPS.length - 1 && (
+                <button
+                  className="btn btn-next"
+                  onClick={handleNextImageAction}
+                  disabled={phase === 'showingAnswer'}
+                >
+                  {phase === 'showingAnswer' ? 'Viser fasit...' : (isLastImage ? 'Se resultater' : 'Gå videre →')}
+                </button>
+              )}
+              <button
+                className="btn btn-secondary"
+                onClick={handleClearBuzzer}
+                disabled={buzzerQueue.length === 0 || phase === 'showingAnswer'}
+              >
+                Nullstill buzzer
+              </button>
+            </div>
+
+            <div className="control-panel">
+              {pendingGuess && phase === 'checking' && (
+                <div className="pending-guess-card">
+                  <h3>{currentPlayer?.name || getPlayerName(pendingGuess.playerId)} svarer:</h3>
+                  <p className="guess-text">"{pendingGuess.guess}"</p>
+                  <p className="checking-text">Sjekker svar...</p>
+                </div>
+              )}
+
+              {currentPlayer && !pendingGuess && phase === 'answering' && (
+                <div className="answering-card">
+                  <div className={`host-timer ${answerTimeLeft <= 5 ? 'urgent' : ''}`}>{answerTimeLeft}s</div>
+                  <h3>{currentPlayer.name} svarer...</h3>
+                </div>
+              )}
+
+              {!currentPlayer && buzzerQueue.length > 0 && phase === 'playing' && (
+                <div className="buzzer-section">
+                  <h3>Buzzerkø ({buzzerQueue.length})</h3>
+                  <ul className="buzzer-list">
+                    {buzzerQueue.map((playerId, index) => (
+                      <li key={playerId} className="buzzer-item">
+                        <span className="buzzer-position">{index + 1}</span>
+                        <span className="buzzer-name">{getPlayerName(playerId)}</span>
+                        <button className="btn btn-select" onClick={() => handleSelectPlayer(playerId)}>Velg</button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {!currentPlayer && buzzerQueue.length === 0 && phase === 'playing' && (
+                <div className="waiting-buzz">
+                  <div className="waiting-icon">🔔</div>
+                  <p>Venter på buzz...</p>
+                </div>
+              )}
+
+              {wrongGuessDisplay && (
+                <div className="wrong-guess-display">
+                  <div className="wrong-icon">❌</div>
+                  <p><strong>{wrongGuessDisplay.playerName}</strong>: "{wrongGuessDisplay.guess}"</p>
+                  <p className="wrong-text">Feil svar!</p>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-
-        <div className="control-panel">
-          {pendingGuess && phase === 'checking' && (
-            <div className="pending-guess-card">
-              <h3>{currentPlayer?.name || getPlayerName(pendingGuess.playerId)} svarer:</h3>
-              <p className="guess-text">"{pendingGuess.guess}"</p>
-              <p className="checking-text">Sjekker svar...</p>
-            </div>
-          )}
-
-          {currentPlayer && !pendingGuess && phase === 'answering' && (
-            <div className="answering-card">
-              <h3>{currentPlayer.name} svarer...</h3>
-              <p>Venter på svar...</p>
-            </div>
-          )}
-
-          {!currentPlayer && buzzerQueue.length > 0 && phase === 'playing' && (
-            <div className="buzzer-section">
-              <h3>Buzzerkø ({buzzerQueue.length})</h3>
-              <ul className="buzzer-list">
-                {buzzerQueue.map((playerId, index) => (
-                  <li key={playerId} className="buzzer-item">
-                    <span className="buzzer-position">{index + 1}</span>
-                    <span className="buzzer-name">{getPlayerName(playerId)}</span>
-                    <button className="btn btn-select" onClick={() => handleSelectPlayer(playerId)}>Velg</button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {!currentPlayer && buzzerQueue.length === 0 && phase === 'playing' && (
-            <div className="waiting-buzz">
-              <div className="waiting-icon">🔔</div>
-              <p>Venter på at noen buzzer inn...</p>
-            </div>
-          )}
-
-          {wrongGuessDisplay && (
-            <div className="wrong-guess-display">
-              <div className="wrong-icon">❌</div>
-              <p><strong>{wrongGuessDisplay.playerName}</strong> svarte:</p>
-              <p className="wrong-guess">"{wrongGuessDisplay.guess}"</p>
-              <p className="wrong-text">Feil svar!</p>
-            </div>
-          )}
         </div>
       </main>
 
@@ -659,6 +670,7 @@ function HostGame() {
                 <span className="rank">{index + 1}</span>
                 <span className="name">{player.name}</span>
                 <span className="score">{player.score || 0}</span>
+                <button className="btn-kick" onClick={(e) => { e.stopPropagation(); kickPlayer(player.id); }} title="Fjern spiller">✕</button>
               </li>
             ))}
         </ul>

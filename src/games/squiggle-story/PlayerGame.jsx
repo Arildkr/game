@@ -17,10 +17,14 @@ function PlayerGame() {
 
   const canvasRef = useRef(null);
   const lastPointRef = useRef(null);
+  const colorInputRef = useRef(null);
+  const [customColor, setCustomColor] = useState(null);
 
   const colors = [
-    '#000000', '#ef4444', '#f97316', '#eab308',
-    '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899'
+    '#000000', '#ffffff', '#6b7280',
+    '#ef4444', '#f97316', '#92400e',
+    '#eab308', '#22c55e', '#06b6d4',
+    '#3b82f6', '#8b5cf6', '#ec4899'
   ];
 
   useEffect(() => {
@@ -247,11 +251,27 @@ function PlayerGame() {
                 {colors.map(c => (
                   <button
                     key={c}
-                    className={`color-btn ${color === c ? 'selected' : ''}`}
-                    style={{ backgroundColor: c }}
-                    onClick={() => setColor(c)}
+                    className={`color-btn ${color === c && !customColor ? 'selected' : ''}`}
+                    style={{ backgroundColor: c, border: c === '#ffffff' ? '2px solid rgba(255,255,255,0.4)' : undefined }}
+                    onClick={() => { setColor(c); setCustomColor(null); }}
                   />
                 ))}
+                <button
+                  className={`color-btn custom-color-btn ${customColor ? 'selected' : ''}`}
+                  style={{ background: customColor || 'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)' }}
+                  onClick={() => colorInputRef.current?.click()}
+                  title="Velg farge"
+                />
+                <input
+                  ref={colorInputRef}
+                  type="color"
+                  className="hidden-color-input"
+                  value={customColor || '#ff0000'}
+                  onChange={(e) => {
+                    setCustomColor(e.target.value);
+                    setColor(e.target.value);
+                  }}
+                />
               </div>
 
               <div className="size-picker">

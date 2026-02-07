@@ -5,7 +5,7 @@ import { getRandomSquiggle } from '../../data/squiggleShapes';
 import './SquiggleStory.css';
 
 function HostGame() {
-  const { socket, players, endGame, sendGameAction, roomCode } = useGame();
+  const { socket, players, endGame, sendGameAction, roomCode, kickPlayer } = useGame();
 
   const [phase, setPhase] = useState('setup'); // setup, drawing, gallery
   const [currentSquiggle, setCurrentSquiggle] = useState(null);
@@ -214,6 +214,7 @@ function HostGame() {
           {connectedPlayers.map(player => (
             <li key={player.id} className="player-item">
               <span className="player-name">{player.name}</span>
+              <button className="btn-kick" onClick={() => kickPlayer(player.id)} title="Fjern spiller">✕</button>
             </li>
           ))}
         </ul>

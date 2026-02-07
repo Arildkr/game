@@ -6,7 +6,7 @@ import DrawingCanvas from './DrawingCanvas';
 import './TegnDet.css';
 
 function HostGame() {
-  const { socket, players, endGame, sendGameAction, roomCode } = useGame();
+  const { socket, players, endGame, sendGameAction, roomCode, kickPlayer } = useGame();
 
   const [phase, setPhase] = useState('setup'); // setup, waitingForWord, drawing, result
   const [currentWord, setCurrentWord] = useState(null);
@@ -347,6 +347,7 @@ function HostGame() {
                   {player.name}
                 </span>
                 <span className="player-score">{player.score || 0}</span>
+                <button className="btn-kick" onClick={() => kickPlayer(player.id)} title="Fjern spiller">✕</button>
               </li>
             ))}
         </ul>

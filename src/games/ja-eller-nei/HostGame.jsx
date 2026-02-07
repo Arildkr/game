@@ -5,7 +5,7 @@ import questions, { shuffleQuestions, getQuestionsByDifficulty } from '../../dat
 import './JaEllerNei.css';
 
 function HostGame() {
-  const { socket, players, endGame, sendGameAction, roomCode } = useGame();
+  const { socket, players, endGame, sendGameAction, roomCode, kickPlayer } = useGame();
 
   const [shuffledQuestions, setShuffledQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -237,6 +237,7 @@ function HostGame() {
                     {localAnswers[player.id] ? '✓' : '...'}
                   </span>
                 )}
+                <button className="btn-kick" onClick={() => kickPlayer(player.id)} title="Fjern spiller">✕</button>
               </li>
             ))}
           </ul>
@@ -250,6 +251,7 @@ function HostGame() {
                 <li key={player.id} className="player-item eliminated">
                   <span className="player-status">🔴</span>
                   <span className="player-name">{player.name}</span>
+                  <button className="btn-kick" onClick={() => kickPlayer(player.id)} title="Fjern spiller">✕</button>
                 </li>
               ))}
             </ul>
