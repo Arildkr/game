@@ -53,9 +53,12 @@ function PlayerGame() {
       setSelectedVotes([]);
     };
 
-    const handleVotingStarted = ({ submissions: subs }) => {
-      // Filter out own submission for anonymity
-      const othersSubmissions = subs.filter(s => s.playerId !== myPlayerId);
+    const handleVotingStarted = ({ submissions: subs, nameToSubmissionId }) => {
+      // Filter out own submission - check both current socket ID and name-based lookup (handles reconnection)
+      const mySubmissionId = nameToSubmissionId?.[playerName?.toLowerCase()] || null;
+      const othersSubmissions = subs.filter(s =>
+        s.playerId !== myPlayerId && s.playerId !== mySubmissionId
+      );
       setVotingSubmissions(othersSubmissions);
       setSelectedVotes([]);
       setPhase('voting');
@@ -78,7 +81,7 @@ function PlayerGame() {
       socket.off('game:voting-started', handleVotingStarted);
       socket.off('game:results-shown', handleResultsShown);
     };
-  }, [socket, myPlayerId]);
+  }, [socket, myPlayerId, playerName]);
 
   // Redraw canvas
   const redrawCanvas = useCallback(() => {

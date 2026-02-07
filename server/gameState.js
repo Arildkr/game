@@ -2493,10 +2493,18 @@ function handleSquiggleStoryHostAction(room, action, data) {
           imageData: sub.imageData
         }));
 
+      // Also build a lookup of playerName -> submissionPlayerId for self-filtering on reconnected clients
+      const nameToSubmissionId = {};
+      for (const [id, sub] of Object.entries(gd.submissions)) {
+        if (displayed.has(id)) {
+          nameToSubmissionId[sub.playerName?.toLowerCase()] = id;
+        }
+      }
+
       return {
         broadcast: true,
         event: 'game:voting-started',
-        data: { submissions: anonymousSubmissions }
+        data: { submissions: anonymousSubmissions, nameToSubmissionId }
       };
     }
 
@@ -2602,11 +2610,17 @@ function handleSquiggleStoryPlayerAction(room, playerId, action, data) {
       // Validate: max 2 votes
       if (!Array.isArray(votedFor) || votedFor.length === 0 || votedFor.length > 2) return null;
 
-      // Validate: can't vote for yourself
-      if (votedFor.includes(playerId)) return null;
+      // Validate: no duplicate targets
+      if (new Set(votedFor).size !== votedFor.length) return null;
 
-      // Validate: can only vote for players who submitted
-      if (!votedFor.every(id => gd.submissions[id])) return null;
+      // Validate: can't vote for yourself (check both socket ID and player name for reconnection safety)
+      if (votedFor.includes(playerId)) return null;
+      const myName = player?.name?.toLowerCase();
+      if (myName && votedFor.some(id => gd.submissions[id]?.playerName?.toLowerCase() === myName)) return null;
+
+      // Validate: can only vote for displayed submissions
+      const displayedVoteSet = new Set(gd.displayedSubmissions);
+      if (!votedFor.every(id => displayedVoteSet.has(id))) return null;
 
       gd.votes[playerId] = votedFor;
       gd.voteCount = Object.keys(gd.votes).length;
