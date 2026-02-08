@@ -43,7 +43,8 @@ export function createRoom(hostSocketId, game = null) {
       playerScores: {}, // playerId -> { jumperScore, jumperBest }
       leaderboard: []
     },
-    createdAt: new Date()
+    createdAt: new Date(),
+    lastActivity: Date.now()
   };
 
   socketToRoom.set(hostSocketId, roomCode);
@@ -257,6 +258,8 @@ function migratePlayerId(room, oldId, newId) {
 export function joinRoom(roomCode, playerId, playerName) {
   const room = rooms[roomCode?.toUpperCase()];
   if (!room) return null;
+
+  room.lastActivity = Date.now();
 
   // Check if player with same name exists and is disconnected (reconnection)
   const existingPlayer = room.players.find(p =>
@@ -473,6 +476,8 @@ export function handleGameAction(roomCode, action, data) {
   const room = rooms[roomCode];
   if (!room) return null;
 
+  room.lastActivity = Date.now();
+
   // Game-specific action handling
   // This will be expanded for each game
   switch (room.game) {
@@ -509,6 +514,8 @@ export function handleGameAction(roomCode, action, data) {
 export function handlePlayerAction(roomCode, playerId, action, data) {
   const room = rooms[roomCode];
   if (!room) return null;
+
+  room.lastActivity = Date.now();
 
   // Game-specific player action handling
   switch (room.game) {
@@ -586,9 +593,9 @@ function handleJaEllerNeiHostAction(room, action, data) {
         }
       }
 
-      // Also eliminate players who didn't answer
+      // Also eliminate connected players who didn't answer
       for (const player of room.players) {
-        if (!player.isEliminated && !gd.answers[player.id]) {
+        if (!player.isEliminated && player.isConnected && !gd.answers[player.id]) {
           player.isEliminated = true;
           eliminatedThisRound.push(player.id);
         }
@@ -2487,6 +2494,9 @@ function handleTegnDetPlayerAction(room, playerId, action, data) {
       // Drawer can't guess
       if (playerId === gd.drawerId) return null;
 
+      // No active word - round not in progress
+      if (!gd.currentWord) return null;
+
       // Check if locked out
       if (gd.lockedOutPlayers.includes(playerId)) {
         return {
@@ -2497,6 +2507,7 @@ function handleTegnDetPlayerAction(room, playerId, action, data) {
       }
 
       const { guess } = data;
+      if (!guess || typeof guess !== 'string') return null;
       const normalizedGuess = guess.toLowerCase().trim();
       const normalizedWord = gd.currentWord.toLowerCase().trim();
 
@@ -2846,12 +2857,14 @@ export function getRoomBySocketId(socketId) {
 /**
  * Cleans up old rooms
  */
-export function cleanupOldRooms(maxAgeMs = 3600000) {
+export function cleanupOldRooms(maxInactiveMs = 3 * 3600000) {
   const now = Date.now();
   for (const code in rooms) {
-    if (now - rooms[code].createdAt.getTime() > maxAgeMs) {
-      rooms[code].players.forEach(p => socketToRoom.delete(p.id));
-      socketToRoom.delete(rooms[code].hostId);
+    const room = rooms[code];
+    const lastActive = room.lastActivity || room.createdAt.getTime();
+    if (now - lastActive > maxInactiveMs) {
+      room.players.forEach(p => socketToRoom.delete(p.id));
+      socketToRoom.delete(room.hostId);
       delete rooms[code];
     }
   }
