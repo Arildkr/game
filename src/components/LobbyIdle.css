@@ -395,6 +395,21 @@
   min-height: 0;
 }
 
+/* === HOST MINIGAME TABS (in header) === */
+.host-minigame-tabs {
+  display: flex;
+  gap: 0.2rem;
+}
+
+.host-minigame-tabs .minigame-tab {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+.host-minigame-tabs .minigame-tab .tab-icon {
+  font-size: 1.1rem;
+}
+
 /* Responsive for header */
 @media (max-width: 900px) {
   .lobby-idle-header {

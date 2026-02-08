@@ -142,6 +142,7 @@ function sanitizeRoom(room) {
     code: room.code,
     game: room.game,
     gameState: room.gameState,
+    lobbyMinigame: room.lobbyMinigame || 'jumper',
     players: room.players.map(p => ({
       id: p.id,
       name: p.name,
@@ -185,7 +186,8 @@ io.on('connection', (socket) => {
       socket.emit('lobby:created', {
         roomCode,
         gameState: room.gameState,
-        lobbyData: room.lobbyData
+        lobbyData: room.lobbyData,
+        lobbyMinigame: room.lobbyMinigame
       });
       console.log(`Host ${socket.id} created lobby: ${roomCode}`);
     }
@@ -270,6 +272,15 @@ io.on('connection', (socket) => {
   // ==================
   // DEMO MODE EVENTS
   // ==================
+
+  socket.on('host:select-minigame', ({ minigame }) => {
+    const roomCode = socketToRoom.get(socket.id);
+    const room = rooms[roomCode];
+    if (!room) return;
+    room.lobbyMinigame = minigame || 'jumper';
+    io.to(roomCode).emit('lobby:minigame-selected', { minigame: room.lobbyMinigame });
+    console.log(`Minigame changed in room ${roomCode}: ${room.lobbyMinigame}`);
+  });
 
   socket.on('host:enable-demo', ({ count = 5 } = {}) => {
     const roomCode = socketToRoom.get(socket.id);

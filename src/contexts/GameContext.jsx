@@ -34,6 +34,9 @@ export const GameProvider = ({ children }) => {
     playerScores: {}
   });
 
+  // Lobby minigame state (teacher-controlled)
+  const [lobbyMinigame, setLobbyMinigame] = useState('jumper');
+
   // Demo mode state
   const [isDemoActive, setIsDemoActive] = useState(false);
   const [botIds, setBotIds] = useState([]);
@@ -53,6 +56,7 @@ export const GameProvider = ({ children }) => {
     setGameState('LOBBY');
     setGameData(null);
     setLobbyData({ totalScore: 0, leaderboard: [], playerScores: {} });
+    setLobbyMinigame('jumper');
     setIsDemoActive(false);
     setBotIds([]);
   }, []);
@@ -138,12 +142,13 @@ export const GameProvider = ({ children }) => {
     });
 
     // Lobby events
-    newSocket.on('lobby:created', ({ roomCode: code, gameState: state, lobbyData: lData }) => {
+    newSocket.on('lobby:created', ({ roomCode: code, gameState: state, lobbyData: lData, lobbyMinigame: mg }) => {
       setRoomCode(code);
       setCurrentGame(null);
       setGameState(state || 'LOBBY_IDLE');
       setIsHost(true);
       setLobbyData(lData || { totalScore: 0, leaderboard: [], playerScores: {} });
+      if (mg) setLobbyMinigame(mg);
       setError(null);
     });
 
@@ -159,6 +164,7 @@ export const GameProvider = ({ children }) => {
       setGameData(null);
       setPlayers(room.players);
       setLobbyData(lData || { totalScore: 0, leaderboard: [], playerScores: {} });
+      if (room.lobbyMinigame) setLobbyMinigame(room.lobbyMinigame);
     });
 
     newSocket.on('lobby:score-update', ({ totalScore, leaderboard }) => {
@@ -178,6 +184,8 @@ export const GameProvider = ({ children }) => {
       // Bruk functional update for å unngå stale closure
       setRoomCode(prev => prev || room.code);
       setCurrentGame(prev => prev === null ? room.game : prev);
+      // Oppdater lobby-minispill fra serveren
+      if (room.lobbyMinigame) setLobbyMinigame(room.lobbyMinigame);
       // Oppdater spillernavnet fra serveren (kan ha blitt sanitert eller fått nummer)
       const myPlayer = room.players.find(p => p.id === newSocket.id);
       if (myPlayer) {
@@ -252,6 +260,7 @@ export const GameProvider = ({ children }) => {
       // Avslutt tar alle tilbake til lobby (ikke ut av rommet)
       if (room) {
         setPlayers(room.players || []);
+        if (room.lobbyMinigame) setLobbyMinigame(room.lobbyMinigame);
       }
       setCurrentGame(null);
       setGameState('LOBBY_IDLE');
@@ -275,6 +284,11 @@ export const GameProvider = ({ children }) => {
     newSocket.on('demo:disabled', () => {
       setIsDemoActive(false);
       setBotIds([]);
+    });
+
+    // Lobby minigame events
+    newSocket.on('lobby:minigame-selected', ({ minigame }) => {
+      setLobbyMinigame(minigame || 'jumper');
     });
 
     // Cleanup ved unmount
@@ -390,6 +404,13 @@ const sendPlayerAction = useCallback((action, data = {}) => {
     }
   }, [socket]);
 
+  // Lobby minigame action (teacher selects which minigame students play)
+  const selectMinigame = useCallback((minigame) => {
+    if (socket && isHost) {
+      socket.emit('host:select-minigame', { minigame });
+    }
+  }, [socket, isHost]);
+
   // Demo mode actions
   const enableDemo = useCallback((count = 5) => {
     if (socket && isHost) {
@@ -473,6 +494,10 @@ const sendPlayerAction = useCallback((action, data = {}) => {
     // Lobby state
     lobbyData,
     setLobbyData,
+
+    // Lobby minigame
+    lobbyMinigame,
+    selectMinigame,
 
     // Demo mode
     isDemoActive,

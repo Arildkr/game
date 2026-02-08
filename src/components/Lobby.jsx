@@ -1,7 +1,7 @@
 // game/src/components/Lobby.jsx
 import { useState } from 'react';
 import { useGame } from '../contexts/GameContext';
-import LobbyMinigameSelector from './LobbyMinigameSelector';
+import LobbyMinigameSelector, { MINIGAMES } from './LobbyMinigameSelector';
 import { TIDSLINJE_CATEGORIES } from '../data/tidslinjeEvents';
 import './LobbyIdle.css'; // Gjenbruk stiler for join-info
 
@@ -44,6 +44,8 @@ function Lobby() {
     kickPlayer,
     resetGameState,
     returnToLobby,
+    lobbyMinigame,
+    selectMinigame,
     isDemoActive,
     enableDemo,
     disableDemo
@@ -94,6 +96,19 @@ function Lobby() {
             <span className="game-badge" style={{ fontSize: '1.2rem', padding: '0.75rem 1.5rem' }}>
               {gameInfo.icon} {gameInfo.name}
             </span>
+            {/* Minigame selector for teacher */}
+            <div className="minigame-tabs host-minigame-tabs">
+              {MINIGAMES.map(game => (
+                <button
+                  key={game.id}
+                  className={`minigame-tab ${lobbyMinigame === game.id ? 'active' : ''}`}
+                  onClick={() => selectMinigame(game.id)}
+                  title={game.name}
+                >
+                  <span className="tab-icon">{game.icon}</span>
+                </button>
+              ))}
+            </div>
             {!isDemoActive ? (
               <button className="btn-demo" onClick={() => enableDemo()} title="Legg til demo-elever">Demo</button>
             ) : (
@@ -232,7 +247,7 @@ function Lobby() {
       </div>
 
       <div className="minigame-container">
-        <LobbyMinigameSelector />
+        <LobbyMinigameSelector gameId={lobbyMinigame} />
       </div>
 
       <div className="players-count">

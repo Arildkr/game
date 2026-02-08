@@ -1,6 +1,6 @@
 // game/src/components/LobbyIdle.jsx
 import { useGame } from '../contexts/GameContext';
-import LobbyMinigameSelector from './LobbyMinigameSelector';
+import LobbyMinigameSelector, { MINIGAMES } from './LobbyMinigameSelector';
 import './LobbyIdle.css';
 
 const AVAILABLE_GAMES = [
@@ -27,6 +27,8 @@ function LobbyIdle() {
     kickPlayer,
     resetGameState,
     lobbyData,
+    lobbyMinigame,
+    selectMinigame,
     isDemoActive,
     enableDemo,
     disableDemo
@@ -56,6 +58,19 @@ function LobbyIdle() {
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {/* Minigame selector for teacher */}
+            <div className="minigame-tabs host-minigame-tabs">
+              {MINIGAMES.map(game => (
+                <button
+                  key={game.id}
+                  className={`minigame-tab ${lobbyMinigame === game.id ? 'active' : ''}`}
+                  onClick={() => selectMinigame(game.id)}
+                  title={game.name}
+                >
+                  <span className="tab-icon">{game.icon}</span>
+                </button>
+              ))}
+            </div>
             {!isDemoActive ? (
               <button className="btn-demo" onClick={() => enableDemo()} title="Legg til demo-elever">Demo</button>
             ) : (
@@ -155,7 +170,7 @@ function LobbyIdle() {
         </div>
 
         <div className="minigame-section">
-          <LobbyMinigameSelector />
+          <LobbyMinigameSelector gameId={lobbyMinigame} />
         </div>
       </main>
     </div>

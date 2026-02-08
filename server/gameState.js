@@ -138,6 +138,7 @@ export function createRoom(hostSocketId, game = null) {
       playerScores: {}, // playerId -> { jumperScore, jumperBest }
       leaderboard: []
     },
+    lobbyMinigame: 'jumper',
     createdAt: new Date(),
     lastActivity: Date.now()
   };

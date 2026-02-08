@@ -3,27 +3,29 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import { useGame } from '../contexts/GameContext';
 import './LobbyJumper.css';
 
-// Spillkonstanter (større canvas for bedre skalering)
-const CANVAS_WIDTH = 720;
-const CANVAS_HEIGHT = 300;
-const GROUND_HEIGHT = 36;
-const PLAYER_SIZE = 36;
-const OBSTACLE_WIDTH = 26;
-const OBSTACLE_MIN_HEIGHT = 36;
-const OBSTACLE_MAX_HEIGHT = 80;
-const GRAVITY = 0.9;
-const JUMP_FORCE = -15;
-const DOUBLE_JUMP_FORCE = -12;
-const INITIAL_SPEED = 5;
-const MAX_SPEED = 18;
+// Spillkonstanter - originale størrelser, CSS håndterer visningsstørrelse
+const CANVAS_WIDTH = 360;
+const CANVAS_HEIGHT = 200;
+const GROUND_HEIGHT = 30;
+const PLAYER_SIZE = 30;
+const OBSTACLE_WIDTH = 20;
+const OBSTACLE_MIN_HEIGHT = 30;
+const OBSTACLE_MAX_HEIGHT = 60;
+const GRAVITY = 0.8;
+const JUMP_FORCE = -14;
+const DOUBLE_JUMP_FORCE = -11;
+const INITIAL_SPEED = 4;
+const MAX_SPEED = 14;
 const SPEED_INCREMENT = 0.0015;
 
 // Takhindre
 const CEILING_OBSTACLE_START_SCORE = 500;
+const CEILING_GAP_MIN = 80;
+const CEILING_GAP_MAX = 120;
 
 // Star powerup
-const STAR_SIZE = 22;
-const STAR_SPAWN_CHANCE = 0.08; // 8% sjanse per spawn-syklus
+const STAR_SIZE = 18;
+const STAR_SPAWN_CHANCE = 0.08;
 
 function LobbyJumper() {
   const { submitLobbyScore } = useGame();
@@ -46,7 +48,7 @@ function LobbyJumper() {
 
   // Spilltilstand - alt i refs for å unngå re-renders under spilling
   const playerRef = useRef({
-    x: 80,
+    x: 50,
     y: CANVAS_HEIGHT - GROUND_HEIGHT - PLAYER_SIZE,
     vy: 0,
     isJumping: false,
@@ -150,16 +152,16 @@ function LobbyJumper() {
     // Skjold-effekt
     if (player.hasShield) {
       ctx.strokeStyle = '#ffd700';
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(pcx, pcy, PLAYER_SIZE / 2 + 5, 0, Math.PI * 2);
+      ctx.arc(pcx, pcy, PLAYER_SIZE / 2 + 4, 0, Math.PI * 2);
       ctx.stroke();
 
       // Glow
       ctx.strokeStyle = 'rgba(255, 215, 0, 0.3)';
-      ctx.lineWidth = 6;
+      ctx.lineWidth = 4;
       ctx.beginPath();
-      ctx.arc(pcx, pcy, PLAYER_SIZE / 2 + 8, 0, Math.PI * 2);
+      ctx.arc(pcx, pcy, PLAYER_SIZE / 2 + 6, 0, Math.PI * 2);
       ctx.stroke();
     }
 
@@ -167,7 +169,7 @@ function LobbyJumper() {
     if (player.shieldFlash > 0) {
       ctx.fillStyle = `rgba(255, 215, 0, ${player.shieldFlash * 0.3})`;
       ctx.beginPath();
-      ctx.arc(pcx, pcy, PLAYER_SIZE + 10, 0, Math.PI * 2);
+      ctx.arc(pcx, pcy, PLAYER_SIZE + 8, 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -180,18 +182,18 @@ function LobbyJumper() {
     // Øyne
     ctx.fillStyle = '#fff';
     ctx.beginPath();
-    ctx.arc(player.x + PLAYER_SIZE * 0.6, player.y + PLAYER_SIZE * 0.35, 6, 0, Math.PI * 2);
+    ctx.arc(player.x + PLAYER_SIZE * 0.6, player.y + PLAYER_SIZE * 0.35, 5, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = '#0f0f23';
     ctx.beginPath();
-    ctx.arc(player.x + PLAYER_SIZE * 0.65, player.y + PLAYER_SIZE * 0.35, 2.5, 0, Math.PI * 2);
+    ctx.arc(player.x + PLAYER_SIZE * 0.65, player.y + PLAYER_SIZE * 0.35, 2, 0, Math.PI * 2);
     ctx.fill();
 
     // Dobbelthopp-indikator (liten prikk under spilleren)
     if (player.isJumping && player.jumpsRemaining > 0) {
       ctx.fillStyle = 'rgba(78, 205, 196, 0.6)';
       ctx.beginPath();
-      ctx.arc(pcx, pcy + PLAYER_SIZE / 2 + 6, 3, 0, Math.PI * 2);
+      ctx.arc(pcx, pcy + PLAYER_SIZE / 2 + 5, 2, 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -219,30 +221,30 @@ function LobbyJumper() {
 
     // Tegn poengsum
     ctx.fillStyle = '#fff';
-    ctx.font = 'bold 20px monospace';
+    ctx.font = 'bold 16px monospace';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'top';
-    ctx.fillText(`${Math.floor(currentScore)}`, CANVAS_WIDTH - 14, 22);
+    ctx.fillText(`${Math.floor(currentScore)}`, CANVAS_WIDTH - 10, 20);
 
     // High score
     ctx.fillStyle = '#888';
-    ctx.font = '14px monospace';
-    ctx.fillText(`HI: ${currentHighScore}`, CANVAS_WIDTH - 14, 46);
+    ctx.font = '12px monospace';
+    ctx.fillText(`HI: ${currentHighScore}`, CANVAS_WIDTH - 10, 38);
 
     // Vis vanskelighetsindikator
     const difficulty = Math.min(10, Math.floor(speedRef.current - INITIAL_SPEED));
     if (difficulty > 0) {
       ctx.fillStyle = `hsl(${120 - difficulty * 12}, 70%, 50%)`;
-      ctx.font = '12px monospace';
+      ctx.font = '10px monospace';
       ctx.textAlign = 'left';
-      ctx.fillText(`LVL ${difficulty}`, 14, 18);
+      ctx.fillText(`LVL ${difficulty}`, 10, 14);
     }
 
     // Skjold-indikator
     if (player.hasShield) {
-      ctx.font = '14px sans-serif';
+      ctx.font = '12px sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText('⭐', 14, 34);
+      ctx.fillText('⭐', 10, 28);
     }
   }, []);
 
@@ -412,7 +414,7 @@ function LobbyJumper() {
   // Start spillet
   const startGame = useCallback(() => {
     playerRef.current = {
-      x: 80,
+      x: 50,
       y: CANVAS_HEIGHT - GROUND_HEIGHT - PLAYER_SIZE,
       vy: 0,
       isJumping: false,
