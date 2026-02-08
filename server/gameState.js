@@ -2303,9 +2303,12 @@ function handleTegnDetHostAction(room, action, data) {
         event: 'game:drawer-selected',
         data: {
           drawerId,
-          drawerName,
-          wordOptions // Only drawer will use this
-        }
+          drawerName
+        },
+        // Send word options only to the drawer
+        toPlayer: drawerId,
+        playerEvent: 'game:word-options',
+        playerData: { wordOptions }
       };
     }
 
@@ -2503,9 +2506,6 @@ function handleTegnDetPlayerAction(room, playerId, action, data) {
         if (g === a) return true;
         // Very short, need exact
         if (g.length < 3) return false;
-        // Starts with or contains
-        if (a.startsWith(g) || g.startsWith(a)) return true;
-        if (a.includes(g) || g.includes(a)) return true;
 
         // Levenshtein distance
         const levenshtein = (s1, s2) => {

@@ -24,8 +24,8 @@ function PlayerGame() {
   useEffect(() => {
     if (!socket) return;
 
-    // When drawer is selected, drawer gets word options
-    const handleDrawerSelected = ({ drawerId, drawerName: name, wordOptions: options }) => {
+    // When drawer is selected
+    const handleDrawerSelected = ({ drawerId, drawerName: name }) => {
       setDrawerName(name);
       setStrokes([]);
       setGuess('');
@@ -33,9 +33,8 @@ function PlayerGame() {
       setIsLockedOut(false);
 
       if (drawerId === socket.id) {
-        // I am the drawer - show word selection
+        // I am the drawer - wait for word options via separate event
         setIsDrawer(true);
-        setWordOptions(options);
         setPhase('selectWord');
       } else {
         // I am a guesser - wait for round to start
@@ -43,6 +42,11 @@ function PlayerGame() {
         setWord('');
         setPhase('waiting');
       }
+    };
+
+    // Word options sent separately only to the drawer
+    const handleWordOptions = ({ wordOptions: options }) => {
+      setWordOptions(options);
     };
 
     const handleRoundStarted = ({ drawerId, drawerName: name }) => {
@@ -117,6 +121,7 @@ function PlayerGame() {
     };
 
     socket.on('game:drawer-selected', handleDrawerSelected);
+    socket.on('game:word-options', handleWordOptions);
     socket.on('game:round-started', handleRoundStarted);
     socket.on('game:your-word', handleYourWord);
     socket.on('game:drawing-update', handleDrawingUpdate);
@@ -127,6 +132,7 @@ function PlayerGame() {
 
     return () => {
       socket.off('game:drawer-selected', handleDrawerSelected);
+      socket.off('game:word-options', handleWordOptions);
       socket.off('game:round-started', handleRoundStarted);
       socket.off('game:your-word', handleYourWord);
       socket.off('game:drawing-update', handleDrawingUpdate);
