@@ -3,29 +3,28 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import { useGame } from '../contexts/GameContext';
 import './LobbyJumper.css';
 
-// Spillkonstanter - originale størrelser, CSS håndterer visningsstørrelse
-const CANVAS_WIDTH = 360;
-const CANVAS_HEIGHT = 200;
+// Canvas: 2x bredere og høyere enn originalen for skarp visning
+// Elementstørrelser er UENDRET fra originalen (ikke skalert)
+const CANVAS_WIDTH = 720;
+const CANVAS_HEIGHT = 400;
 const GROUND_HEIGHT = 30;
 const PLAYER_SIZE = 30;
 const OBSTACLE_WIDTH = 20;
 const OBSTACLE_MIN_HEIGHT = 30;
-const OBSTACLE_MAX_HEIGHT = 60;
+const OBSTACLE_MAX_HEIGHT = 70;
 const GRAVITY = 0.8;
-const JUMP_FORCE = -14;
-const DOUBLE_JUMP_FORCE = -11;
-const INITIAL_SPEED = 4;
-const MAX_SPEED = 14;
-const SPEED_INCREMENT = 0.0015;
+const JUMP_FORCE = -12;
+const DOUBLE_JUMP_FORCE = -10;
+const INITIAL_SPEED = 5;
+const MAX_SPEED = 16;
+const SPEED_INCREMENT = 0.002;
 
 // Takhindre
 const CEILING_OBSTACLE_START_SCORE = 500;
-const CEILING_GAP_MIN = 80;
-const CEILING_GAP_MAX = 120;
 
 // Star powerup
 const STAR_SIZE = 18;
-const STAR_SPAWN_CHANCE = 0.08;
+const STAR_SPAWN_CHANCE = 0.06;
 
 function LobbyJumper() {
   const { submitLobbyScore } = useGame();
@@ -274,7 +273,13 @@ function LobbyJumper() {
       player.jumpsRemaining = 2;
     }
 
-    // Kollisjon med taket (når takhindre er aktive)
+    // Begrens spilleren til å ikke gå over toppen av skjermen
+    if (player.y < 0) {
+      player.y = 0;
+      player.vy = Math.abs(player.vy) * 0.3;
+    }
+
+    // Ekstra begrensning for takhindre-sonen
     if (currentScore >= CEILING_OBSTACLE_START_SCORE && player.y < 15) {
       player.y = 15;
       player.vy = Math.abs(player.vy) * 0.5;
@@ -297,7 +302,7 @@ function LobbyJumper() {
 
     // Spawn gulvhindringer
     frameCountRef.current++;
-    const spawnRate = Math.max(60, 100 - (speedRef.current - INITIAL_SPEED) * 4);
+    const spawnRate = Math.max(50, 90 - (speedRef.current - INITIAL_SPEED) * 3);
 
     if (frameCountRef.current % Math.floor(spawnRate) === 0) {
       if (Math.random() < 0.7) {
@@ -325,7 +330,7 @@ function LobbyJumper() {
     if (currentScore >= CEILING_OBSTACLE_START_SCORE) {
       if (frameCountRef.current % Math.floor(spawnRate * 1.5) === 0) {
         if (Math.random() < 0.5) {
-          const height = 15 + 20 + Math.random() * 30;
+          const height = 15 + 20 + Math.random() * 40;
           ceilingObstaclesRef.current.push({
             x: CANVAS_WIDTH,
             height: height

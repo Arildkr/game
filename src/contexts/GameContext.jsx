@@ -406,6 +406,8 @@ const sendPlayerAction = useCallback((action, data = {}) => {
 
   // Lobby minigame action (teacher selects which minigame students play)
   const selectMinigame = useCallback((minigame) => {
+    // Optimistisk lokal oppdatering for umiddelbar respons
+    setLobbyMinigame(minigame);
     if (socket && isHost) {
       socket.emit('host:select-minigame', { minigame });
     }
