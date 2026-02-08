@@ -29,7 +29,7 @@ function LobbyIdle() {
     lobbyData
   } = useGame();
 
-  const joinUrl = 'game.ak-kreativ.no';
+  const joinUrl = import.meta.env.VITE_APP_URL || 'game.ak-kreativ.no';
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://${joinUrl}`;
 
   // Host view - spillvelger

@@ -7,6 +7,7 @@ import PlayerJoin from './components/PlayerJoin';
 import Lobby from './components/Lobby';
 import LobbyIdle from './components/LobbyIdle';
 import GameRouter from './components/GameRouter';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
   const {
@@ -66,7 +67,9 @@ function App() {
     if (gameState === 'PLAYING' || gameState === 'GAME_OVER') {
       return (
         <div className="app">
-          <GameRouter />
+          <ErrorBoundary>
+            <GameRouter />
+          </ErrorBoundary>
         </div>
       );
     }

@@ -42,7 +42,7 @@ const io = new Server(server, {
       if (origin.endsWith('.vercel.app') || origin.endsWith('.netlify.app') || origin.includes('localhost')) {
         return callback(null, true);
       }
-      callback(null, true); // Allow all for now to debug
+      callback(new Error('CORS not allowed'), false);
     },
     methods: ['GET', 'POST'],
     credentials: true
@@ -285,12 +285,15 @@ io.on('connection', (socket) => {
     const room = joinRoom(roomCode, socket.id, playerName);
     if (room) {
       socket.join(room.code);
+      // Use the actual name from the room (may be sanitized or have a number appended)
+      const actualPlayer = room.players.find(p => p.id === socket.id);
+      const actualName = actualPlayer?.name || playerName;
       io.to(room.code).emit('room:player-joined', {
         playerId: socket.id,
-        playerName,
+        playerName: actualName,
         room: sanitizeRoom(room)
       });
-      console.log(`Player ${playerName} (${socket.id}) joined room ${room.code}`);
+      console.log(`Player ${actualName} (${socket.id}) joined room ${room.code}`);
 
       // If game is already in progress, send current state
       if (room.gameState === 'PLAYING') {
@@ -298,6 +301,19 @@ io.on('connection', (socket) => {
       }
     } else {
       socket.emit('room:join-error', { message: 'Kunne ikke bli med i rommet. Sjekk at romkoden er riktig.' });
+    }
+  });
+
+  socket.on('player:leave-room', () => {
+    const roomCode = socketToRoom.get(socket.id);
+    const result = removePlayer(socket.id);
+    if (result && !result.hostLeft && roomCode) {
+      socket.leave(roomCode);
+      io.to(roomCode).emit('room:player-left', {
+        room: sanitizeRoom(result.room),
+        playerId: socket.id
+      });
+      console.log(`Player ${socket.id} left room ${roomCode} voluntarily`);
     }
   });
 

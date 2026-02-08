@@ -2,6 +2,101 @@
 
 import { checkAnswer, startsWithLetter, getLastLetter } from './answerChecker.js';
 
+/**
+ * Safely evaluates a simple arithmetic expression.
+ * Only allows digits, +, -, *, /, parentheses, and decimal points.
+ * Returns the numeric result or null if invalid.
+ */
+function safeEvalMath(expression) {
+  if (!expression || typeof expression !== 'string') return null;
+  if (expression.length > 100) return null;
+
+  // Tokenize: numbers, operators, parentheses
+  const tokens = [];
+  let i = 0;
+  while (i < expression.length) {
+    const ch = expression[i];
+    if (ch === ' ') { i++; continue; }
+    if ('+-*/()'.includes(ch)) {
+      tokens.push(ch);
+      i++;
+    } else if (/[0-9.]/.test(ch)) {
+      let num = '';
+      while (i < expression.length && /[0-9.]/.test(expression[i])) {
+        num += expression[i];
+        i++;
+      }
+      const parsed = Number(num);
+      if (isNaN(parsed)) return null;
+      tokens.push(parsed);
+    } else {
+      return null; // Invalid character
+    }
+  }
+
+  if (tokens.length === 0) return null;
+
+  // Recursive descent parser: expr -> term ((+|-) term)*
+  let pos = 0;
+
+  function parseExpr() {
+    let left = parseTerm();
+    if (left === null) return null;
+    while (pos < tokens.length && (tokens[pos] === '+' || tokens[pos] === '-')) {
+      const op = tokens[pos++];
+      const right = parseTerm();
+      if (right === null) return null;
+      left = op === '+' ? left + right : left - right;
+    }
+    return left;
+  }
+
+  function parseTerm() {
+    let left = parseFactor();
+    if (left === null) return null;
+    while (pos < tokens.length && (tokens[pos] === '*' || tokens[pos] === '/')) {
+      const op = tokens[pos++];
+      const right = parseFactor();
+      if (right === null) return null;
+      if (op === '/') {
+        if (right === 0) return null; // Division by zero
+        left = left / right;
+      } else {
+        left = left * right;
+      }
+    }
+    return left;
+  }
+
+  function parseFactor() {
+    if (pos >= tokens.length) return null;
+    // Unary minus
+    if (tokens[pos] === '-') {
+      pos++;
+      const val = parseFactor();
+      return val === null ? null : -val;
+    }
+    // Parentheses
+    if (tokens[pos] === '(') {
+      pos++;
+      const val = parseExpr();
+      if (val === null || pos >= tokens.length || tokens[pos] !== ')') return null;
+      pos++;
+      return val;
+    }
+    // Number
+    if (typeof tokens[pos] === 'number') {
+      return tokens[pos++];
+    }
+    return null;
+  }
+
+  const result = parseExpr();
+  if (result === null || pos !== tokens.length) return null;
+  if (!isFinite(result)) return null;
+  return result;
+}
+
 export const rooms = {};
 export const socketToRoom = new Map();
 
@@ -261,13 +356,17 @@ export function joinRoom(roomCode, playerId, playerName) {
 
   room.lastActivity = Date.now();
 
-  // Check if player with same name exists and is disconnected (reconnection)
+  // Sanitize player name: strip HTML tags, trim, limit length
+  let safeName = (playerName || '').replace(/<[^>]*>/g, '').trim().slice(0, 20);
+  if (!safeName) safeName = 'Spiller';
+
+  // Check if player with same name exists (reconnection candidate)
   const existingPlayer = room.players.find(p =>
-    p.name.toLowerCase() === playerName.toLowerCase()
+    p.name.toLowerCase() === safeName.toLowerCase()
   );
 
-  if (existingPlayer) {
-    // Reconnecting player - update their socket ID and mark as connected
+  if (existingPlayer && !existingPlayer.isConnected) {
+    // Reconnecting a disconnected player - update their socket ID
     const oldId = existingPlayer.id;
     existingPlayer.id = playerId;
     existingPlayer.isConnected = true;
@@ -282,6 +381,17 @@ export function joinRoom(roomCode, playerId, playerName) {
     return room;
   }
 
+  // If a connected player already has this name, append a number to avoid collision
+  if (existingPlayer && existingPlayer.isConnected) {
+    let counter = 2;
+    let uniqueName = `${safeName} ${counter}`;
+    while (room.players.some(p => p.name.toLowerCase() === uniqueName.toLowerCase())) {
+      counter++;
+      uniqueName = `${safeName} ${counter}`;
+    }
+    safeName = uniqueName;
+  }
+
   // Check if already in room with same socket ID
   if (room.players.some(p => p.id === playerId)) {
     return room;
@@ -290,7 +400,7 @@ export function joinRoom(roomCode, playerId, playerName) {
   // New player joining
   room.players.push({
     id: playerId,
-    name: playerName,
+    name: safeName,
     score: 0,
     isConnected: true,
     isEliminated: false
@@ -567,7 +677,8 @@ function handleJaEllerNeiHostAction(room, action, data) {
         event: 'game:question-shown',
         data: {
           question: question.question,
-          questionIndex: gd.currentQuestionIndex
+          questionIndex: gd.currentQuestionIndex,
+          serverTimestamp: Date.now()
         }
       };
     }
@@ -742,7 +853,8 @@ function handleQuizHostAction(room, action, data) {
           question: question.question,
           options: question.options, // Kan være undefined for fritekst-quiz
           questionIndex,
-          timeLimit
+          timeLimit,
+          serverTimestamp: Date.now()
         }
       };
     }
@@ -875,11 +987,14 @@ function handleQuizPlayerAction(room, playerId, action, data) {
   switch (action) {
     case 'answer': {
       // Player submits their answer
-      if (gd.showAnswer) return null; // Too late
+      if (gd.showAnswer) return null; // Too late - answer already revealed
       if (gd.answers[playerId]) return null; // Already answered
 
-      const { answer } = data; // Kan være indeks (0-3) eller tekststreng
+      // Reject answers that arrive after the time limit (server-authoritative)
       const timeTaken = Date.now() - gd.questionStartTime;
+      if (gd.timeLimit && timeTaken > gd.timeLimit + 2000) return null; // 2s grace for network delay
+
+      const { answer } = data; // Kan være indeks (0-3) eller tekststreng
 
       gd.answers[playerId] = {
         answer,
@@ -1114,7 +1229,7 @@ function handleTallkampHostAction(room, action, data) {
       return {
         broadcast: true,
         event: 'game:round-started',
-        data: { numbers, target, timeLimit, round }
+        data: { numbers, target, timeLimit, round, serverTimestamp: Date.now() }
       };
     }
 
@@ -1158,10 +1273,10 @@ function handleTallkampHostAction(room, action, data) {
           }
 
           // HASTIGHETSBONUS (20% av totalpoeng)
-          // Maks 200 poeng for hastighet - avhenger av rekkefølge
-          if (numSubmissions > 0) {
-            // Første får 200, siste får ~50
-            const orderRatio = 1 - ((submission.order - 1) / Math.max(numSubmissions, 1));
+          // Maks 200 poeng for hastighet - basert på rekkefølge relativt til totalt antall spillere
+          const totalPlayers = room.players.filter(p => p.isConnected).length;
+          if (totalPlayers > 0) {
+            const orderRatio = 1 - ((submission.order - 1) / Math.max(totalPlayers, 1));
             speedBonus = Math.round(50 + orderRatio * 150);
           }
 
@@ -1243,19 +1358,8 @@ function handleTallkampPlayerAction(room, playerId, action, data) {
 
       const { expression } = data;
 
-      // Evaluate expression server-side instead of trusting client result
-      let result = null;
-      try {
-        const safeExpr = expression.replace(/[^0-9+\-*/().]/g, '');
-        if (safeExpr.length > 0 && safeExpr.length <= 100) {
-          result = new Function('return ' + safeExpr)();
-          if (typeof result !== 'number' || !isFinite(result)) {
-            result = null;
-          }
-        }
-      } catch (e) {
-        result = null;
-      }
+      // Evaluate expression server-side with safe parser
+      const result = safeEvalMath(expression);
 
       if (result === null) return null; // Invalid expression
 
@@ -1303,7 +1407,7 @@ function handleTidslinjeHostAction(room, action, data) {
       return {
         broadcast: true,
         event: 'game:round-started',
-        data: { setName, events, timeLimit, round }
+        data: { setName, events, timeLimit, round, serverTimestamp: Date.now() }
       };
     }
 
@@ -1347,25 +1451,33 @@ function handleTidslinjeHostAction(room, action, data) {
         }
       }
 
-      // Second pass: award points to all who locked
+      // Second pass: award points to all who locked, build all results
       let bestResult = null;
+      const allResults = [];
       for (const [playerId, result] of Object.entries(playerResults)) {
         const player = room.players.find(p => p.id === playerId);
         if (player) {
           player.score = (player.score || 0) + result.points;
         }
 
+        const playerResult = {
+          playerId,
+          playerName: player?.name,
+          isCorrect: result.isCorrect,
+          correctCount: result.correctCount,
+          totalCount,
+          points: result.points
+        };
+
+        allResults.push(playerResult);
+
         if (playerId === bestPlayerId) {
-          bestResult = {
-            playerId,
-            playerName: player?.name,
-            isCorrect: result.isCorrect,
-            correctCount: result.correctCount,
-            totalCount,
-            points: result.points
-          };
+          bestResult = playerResult;
         }
       }
+
+      // Sort all results by correct count descending
+      allResults.sort((a, b) => b.correctCount - a.correctCount || b.points - a.points);
 
       // Create leaderboard
       const leaderboard = room.players
@@ -1384,6 +1496,7 @@ function handleTidslinjeHostAction(room, action, data) {
             totalCount,
             points: 0
           }),
+          allResults,
           correctOrder,
           eventsWithYears,
           leaderboard
@@ -1898,28 +2011,19 @@ function validateNerdleEquation(guess) {
     return { valid: false, error: 'Ugyldige tegn' };
   }
 
-  // Evaluate left side
-  try {
-    // Replace any dangerous patterns (security)
-    const safeLeft = leftSide.replace(/[^0-9+\-*/]/g, '');
-    const safeRight = rightSide.replace(/[^0-9]/g, '');
+  // Evaluate left side with safe parser
+  const leftResult = safeEvalMath(leftSide);
+  const rightResult = safeEvalMath(rightSide);
 
-    // Use Function constructor for safer eval
-    const leftResult = new Function('return ' + safeLeft)();
-    const rightResult = parseInt(safeRight, 10);
-
-    if (isNaN(leftResult) || isNaN(rightResult)) {
-      return { valid: false, error: 'Ugyldig matematikk' };
-    }
-
-    if (leftResult !== rightResult) {
-      return { valid: false, error: 'Regnestykket stemmer ikke' };
-    }
-
-    return { valid: true, result: leftResult };
-  } catch (e) {
-    return { valid: false, error: 'Ugyldig regnestykke' };
+  if (leftResult === null || rightResult === null) {
+    return { valid: false, error: 'Ugyldig matematikk' };
   }
+
+  if (leftResult !== rightResult) {
+    return { valid: false, error: 'Regnestykket stemmer ikke' };
+  }
+
+  return { valid: true, result: leftResult };
 }
 
 function checkNerdleGuess(guess, target) {
@@ -2680,7 +2784,7 @@ function handleSquiggleStoryHostAction(room, action, data) {
         }
       }
 
-      // Build results only for displayed submissions
+      // Build results for displayed submissions only
       const displayedSet = new Set(gd.displayedSubmissions);
       const results = Object.entries(gd.submissions)
         .filter(([id]) => displayedSet.has(id))

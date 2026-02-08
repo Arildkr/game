@@ -54,7 +54,7 @@ function Lobby() {
   const [tidslinjeCategory, setTidslinjeCategory] = useState('blanding');
 
   const gameInfo = GAME_NAMES[currentGame] || { name: currentGame, icon: '🎮' };
-  const joinUrl = 'game.ak-kreativ.no';
+  const joinUrl = import.meta.env.VITE_APP_URL || 'game.ak-kreativ.no';
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://${joinUrl}`;
 
   const handleStartGame = () => {

@@ -53,8 +53,7 @@ export const GameProvider = ({ children }) => {
 
   // Initialize socket connection - kjører kun én gang ved mount
   useEffect(() => {
-    // Alltid bruk Render-serveren
-    const SOCKET_SERVER_URL = 'https://game-p2u5.onrender.com';
+    const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_SERVER_URL || 'https://game-p2u5.onrender.com';
 
     const newSocket = io(SOCKET_SERVER_URL, {
       // Bruk websocket først - polling kan ha CORS-problemer
@@ -173,6 +172,11 @@ export const GameProvider = ({ children }) => {
       // Bruk functional update for å unngå stale closure
       setRoomCode(prev => prev || room.code);
       setCurrentGame(prev => prev === null ? room.game : prev);
+      // Oppdater spillernavnet fra serveren (kan ha blitt sanitert eller fått nummer)
+      const myPlayer = room.players.find(p => p.id === newSocket.id);
+      if (myPlayer) {
+        setPlayerName(myPlayer.name);
+      }
       setError(null);
     });
 
@@ -367,10 +371,13 @@ const sendPlayerAction = useCallback((action, data = {}) => {
 
   // Leave room (for players to go back to start)
   const leaveRoom = useCallback(() => {
+    if (socket) {
+      socket.emit('player:leave-room');
+    }
     doResetGameState();
     setPlayerName('');
     setError(null);
-  }, [doResetGameState]);
+  }, [socket, doResetGameState]);
 
   // Retry connection
   const retryConnection = useCallback(() => {

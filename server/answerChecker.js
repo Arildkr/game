@@ -48,16 +48,22 @@ function levenshteinDistance(a, b) {
 function normalizeString(str) {
   if (!str || typeof str !== 'string') return '';
 
-  return str
+  let s = str
     .toLowerCase()
     .trim()
     .replace(/\s+/g, ' ')           // Erstatt multiple mellomrom med ett
-    .replace(/[.,\-!?'"()]/g, '')   // Fjern vanlige tegnsettingstegn
-    .normalize('NFD')               // Normaliser unicode
-    .replace(/[\u0300-\u036f]/g, '') // Fjern diakritiske tegn (æøå beholdes)
-    .replace(/æ/g, 'ae')
-    .replace(/ø/g, 'o')
-    .replace(/å/g, 'a');
+    .replace(/[.,\-!?'"()]/g, '');  // Fjern vanlige tegnsettingstegn
+
+  // Bevar norske bokstaver gjennom NFD-normalisering
+  s = s.replace(/æ/g, '\x01AE\x01')
+       .replace(/ø/g, '\x01OE\x01')
+       .replace(/å/g, '\x01AA\x01');
+  s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // Fjern diakritiske tegn (é→e, ü→u, etc.)
+  s = s.replace(/\x01AE\x01/g, 'æ')
+       .replace(/\x01OE\x01/g, 'ø')
+       .replace(/\x01AA\x01/g, 'å');
+
+  return s;
 }
 
 /**
