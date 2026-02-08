@@ -43,7 +43,10 @@ function Lobby() {
     startGame,
     kickPlayer,
     resetGameState,
-    returnToLobby
+    returnToLobby,
+    isDemoActive,
+    enableDemo,
+    disableDemo
   } = useGame();
 
   // Slange-konfigurasjon
@@ -91,6 +94,11 @@ function Lobby() {
             <span className="game-badge" style={{ fontSize: '1.2rem', padding: '0.75rem 1.5rem' }}>
               {gameInfo.icon} {gameInfo.name}
             </span>
+            {!isDemoActive ? (
+              <button className="btn-demo" onClick={() => enableDemo()} title="Legg til demo-elever">Demo</button>
+            ) : (
+              <button className="btn-demo active" onClick={() => disableDemo()} title="Fjern demo-elever">Fjern demo</button>
+            )}
             <button className="btn-close" onClick={() => resetGameState()} title="Avslutt rom">✕</button>
           </div>
         </div>

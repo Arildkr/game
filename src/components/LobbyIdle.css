@@ -97,6 +97,36 @@
   filter: drop-shadow(0 4px 15px rgba(0, 217, 255, 0.5));
 }
 
+/* Demo button */
+.btn-demo {
+  background: transparent;
+  color: #888;
+  border: 1px solid #555;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: all 0.2s;
+}
+
+.btn-demo:hover {
+  opacity: 1;
+  border-color: #00d9ff;
+  color: #00d9ff;
+}
+
+.btn-demo.active {
+  border-color: #e74c3c;
+  color: #e74c3c;
+  opacity: 0.8;
+}
+
+.btn-demo.active:hover {
+  opacity: 1;
+  background: rgba(231, 76, 60, 0.1);
+}
+
 .lobby-idle-header .btn-close {
   background: #e74c3c;
   color: white;

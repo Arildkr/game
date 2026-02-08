@@ -26,7 +26,10 @@ function LobbyIdle() {
     selectGame,
     kickPlayer,
     resetGameState,
-    lobbyData
+    lobbyData,
+    isDemoActive,
+    enableDemo,
+    disableDemo
   } = useGame();
 
   const joinUrl = import.meta.env.VITE_APP_URL || 'game.ak-kreativ.no';
@@ -52,7 +55,14 @@ function LobbyIdle() {
               </div>
             </div>
           </div>
-          <button className="btn-close" onClick={() => resetGameState()} title="Avslutt rom">✕</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {!isDemoActive ? (
+              <button className="btn-demo" onClick={() => enableDemo()} title="Legg til demo-elever">Demo</button>
+            ) : (
+              <button className="btn-demo active" onClick={() => disableDemo()} title="Fjern demo-elever">Fjern demo</button>
+            )}
+            <button className="btn-close" onClick={() => resetGameState()} title="Avslutt rom">✕</button>
+          </div>
         </header>
 
         <main className="lobby-idle-main">

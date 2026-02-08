@@ -34,6 +34,10 @@ export const GameProvider = ({ children }) => {
     playerScores: {}
   });
 
+  // Demo mode state
+  const [isDemoActive, setIsDemoActive] = useState(false);
+  const [botIds, setBotIds] = useState([]);
+
   // Ref for å unngå stale closures i socket handlers
   const roomCodeRef = useRef(roomCode);
   useEffect(() => {
@@ -49,6 +53,8 @@ export const GameProvider = ({ children }) => {
     setGameState('LOBBY');
     setGameData(null);
     setLobbyData({ totalScore: 0, leaderboard: [], playerScores: {} });
+    setIsDemoActive(false);
+    setBotIds([]);
   }, []);
 
   // Initialize socket connection - kjører kun én gang ved mount
@@ -197,6 +203,8 @@ export const GameProvider = ({ children }) => {
       setGameState('LOBBY');
       setGameData(null);
       setLobbyData({ totalScore: 0, leaderboard: [], playerScores: {} });
+      setIsDemoActive(false);
+      setBotIds([]);
     });
 
     newSocket.on('room:kicked', () => {
@@ -208,6 +216,8 @@ export const GameProvider = ({ children }) => {
       setGameState('LOBBY');
       setGameData(null);
       setLobbyData({ totalScore: 0, leaderboard: [], playerScores: {} });
+      setIsDemoActive(false);
+      setBotIds([]);
     });
 
     // Game events
@@ -254,6 +264,17 @@ export const GameProvider = ({ children }) => {
       setCurrentGame(room.game);
       setGameData(room.gameData);
       setPlayers(room.players);
+    });
+
+    // Demo mode events
+    newSocket.on('demo:enabled', ({ botIds: ids }) => {
+      setIsDemoActive(true);
+      setBotIds(ids || []);
+    });
+
+    newSocket.on('demo:disabled', () => {
+      setIsDemoActive(false);
+      setBotIds([]);
     });
 
     // Cleanup ved unmount
@@ -369,6 +390,19 @@ const sendPlayerAction = useCallback((action, data = {}) => {
     }
   }, [socket]);
 
+  // Demo mode actions
+  const enableDemo = useCallback((count = 5) => {
+    if (socket && isHost) {
+      socket.emit('host:enable-demo', { count });
+    }
+  }, [socket, isHost]);
+
+  const disableDemo = useCallback(() => {
+    if (socket && isHost) {
+      socket.emit('host:disable-demo');
+    }
+  }, [socket, isHost]);
+
   // Leave room (for players to go back to start)
   const leaveRoom = useCallback(() => {
     if (socket) {
@@ -439,6 +473,12 @@ const sendPlayerAction = useCallback((action, data = {}) => {
     // Lobby state
     lobbyData,
     setLobbyData,
+
+    // Demo mode
+    isDemoActive,
+    botIds,
+    enableDemo,
+    disableDemo,
 
     // Host actions
     createRoom,

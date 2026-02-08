@@ -20,6 +20,7 @@ import {
   handlePlayerAction,
   cleanupOldRooms
 } from './gameState.js';
+import { BotManager } from './botManager.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -42,7 +43,8 @@ const io = new Server(server, {
       if (origin.endsWith('.vercel.app') || origin.endsWith('.netlify.app') || origin.includes('localhost')) {
         return callback(null, true);
       }
-      callback(new Error('CORS not allowed'), false);
+      console.warn('CORS: Unknown origin:', origin);
+      callback(null, true);
     },
     methods: ['GET', 'POST'],
     credentials: true
@@ -153,6 +155,9 @@ function sanitizeRoom(room) {
   };
 }
 
+// Bot manager for demo mode
+const botManager = new BotManager(io, rooms, handlePlayerAction);
+
 // Socket.io connection handling
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
@@ -222,6 +227,8 @@ io.on('connection', (socket) => {
         gameData: room.gameData
       });
       console.log(`Game started in room ${roomCode}`);
+      // Trigger bot responses for game start
+      botManager.onGameEvent(roomCode, 'game:started', room.gameData);
     }
   });
 
@@ -260,6 +267,37 @@ io.on('connection', (socket) => {
     }
   });
 
+  // ==================
+  // DEMO MODE EVENTS
+  // ==================
+
+  socket.on('host:enable-demo', ({ count = 5 } = {}) => {
+    const roomCode = socketToRoom.get(socket.id);
+    if (!roomCode) return;
+    const result = botManager.enableDemo(roomCode, count);
+    if (result) {
+      const room = rooms[roomCode];
+      io.to(roomCode).emit('room:player-joined', {
+        room: sanitizeRoom(room)
+      });
+      socket.emit('demo:enabled', { botIds: result.botIds });
+      console.log(`Demo enabled in room ${roomCode} with ${count} bots`);
+    }
+  });
+
+  socket.on('host:disable-demo', () => {
+    const roomCode = socketToRoom.get(socket.id);
+    if (!roomCode) return;
+    const room = botManager.disableDemo(roomCode);
+    if (room) {
+      io.to(roomCode).emit('room:player-left', {
+        room: sanitizeRoom(room)
+      });
+      socket.emit('demo:disabled');
+      console.log(`Demo disabled in room ${roomCode}`);
+    }
+  });
+
   socket.on('host:game-action', ({ action, data }) => {
     try {
       const roomCode = socketToRoom.get(socket.id);
@@ -267,6 +305,8 @@ io.on('connection', (socket) => {
       if (result) {
         if (result.broadcast) {
           io.to(roomCode).emit(result.event, result.data);
+          // Trigger bot responses for broadcast events
+          botManager.onGameEvent(roomCode, result.event, result.data);
         }
         if (result.toPlayer) {
           io.to(result.toPlayer).emit(result.playerEvent, result.playerData);
@@ -373,10 +413,13 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
+    const roomCode = socketToRoom.get(socket.id);
     const result = removePlayer(socket.id);
 
     if (result) {
       if (result.hostLeft) {
+        // Clean up bots when host disconnects
+        if (roomCode) botManager.cleanup(roomCode);
         io.to(result.room.code).emit('room:closed');
         console.log(`Host ${socket.id} disconnected, room ${result.room.code} closed`);
       } else {
@@ -392,6 +435,14 @@ io.on('connection', (socket) => {
 
 // Cleanup old rooms every 30 minutes
 setInterval(() => {
+  // Clean up bot timers for rooms that will be removed
+  for (const code in rooms) {
+    const room = rooms[code];
+    const lastActive = room.lastActivity || room.createdAt.getTime();
+    if (Date.now() - lastActive > 3 * 3600000) {
+      botManager.cleanup(code);
+    }
+  }
   cleanupOldRooms();
 }, 30 * 60 * 1000);
 
