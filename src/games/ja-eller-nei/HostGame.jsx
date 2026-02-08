@@ -44,7 +44,10 @@ function HostGame() {
       setPhase('reveal');
       if (data.winner) {
         setWinner(data.winner);
-        setPhase('winner');
+        // Show the answer first, then transition to winner after delay
+        setTimeout(() => {
+          setPhase('winner');
+        }, 4000);
       }
     };
 

@@ -1,7 +1,7 @@
 // game/src/components/Lobby.jsx
 import { useState } from 'react';
 import { useGame } from '../contexts/GameContext';
-import LobbyJumper from './LobbyJumper';
+import LobbyMinigameSelector from './LobbyMinigameSelector';
 import { TIDSLINJE_CATEGORIES } from '../data/tidslinjeEvents';
 import './LobbyIdle.css'; // Gjenbruk stiler for join-info
 
@@ -232,7 +232,7 @@ function Lobby() {
       </div>
 
       <div className="minigame-container">
-        <LobbyJumper />
+        <LobbyMinigameSelector />
       </div>
 
       <div className="players-count">

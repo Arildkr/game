@@ -1,6 +1,6 @@
 // game/src/components/LobbyIdle.jsx
 import { useGame } from '../contexts/GameContext';
-import LobbyJumper from './LobbyJumper';
+import LobbyMinigameSelector from './LobbyMinigameSelector';
 import './LobbyIdle.css';
 
 const AVAILABLE_GAMES = [
@@ -155,7 +155,7 @@ function LobbyIdle() {
         </div>
 
         <div className="minigame-section">
-          <LobbyJumper />
+          <LobbyMinigameSelector />
         </div>
       </main>
     </div>

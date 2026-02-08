@@ -1,7 +1,7 @@
 // game/server/botManager.js
 // Server-side bot manager for demo mode
 
-const BOT_NAMES = ['Emma', 'Noah', 'Nora', 'Jakob', 'Sofie', 'Oliver', 'Ella', 'Filip', 'Maja', 'Liam'];
+const BOT_NAMES = ['Eva', 'Noah', 'Nora', 'Julian', 'Sofie', 'Oliver', 'Ella', 'Filip', 'Maja', 'Liam'];
 
 const WORD_BANK = {
   'A': ['appelsin', 'ananas', 'ape', 'aksel', 'avis', 'arm', 'ant', 'atlas', 'aks'],
@@ -139,6 +139,8 @@ export class BotManager {
 
       if (result.broadcast) {
         this.io.to(roomCode).emit(result.event, result.data);
+        // Trigger other bots to respond to this broadcast
+        this.onGameEvent(roomCode, result.event, result.data);
       }
       if (result.toHost) {
         const room = this.rooms[roomCode];
@@ -450,12 +452,25 @@ export class BotManager {
   // TEGN DET
   // ==================
   handleTegnDetBots(roomCode, event, data, botIds) {
-    if (event !== 'game:round-started') return;
-
     const room = this.rooms[roomCode];
     if (!room || !room.gameData) return;
 
-    // Bots are never the drawer - only guess
+    // When a bot is selected as drawer, auto-select a word
+    if (event === 'game:drawer-selected') {
+      const { drawerId } = data;
+      if (botIds.includes(drawerId)) {
+        const wordOptions = room.gameData.wordOptions || [];
+        if (wordOptions.length > 0) {
+          const word = wordOptions[Math.floor(Math.random() * wordOptions.length)];
+          this.scheduleAction(roomCode, drawerId, 'select-word', { word }, 1500, 3000);
+        }
+      }
+      return;
+    }
+
+    if (event !== 'game:round-started') return;
+
+    // Bots that are not the drawer - guess
     const nonDrawerBots = botIds.filter(id => id !== room.gameData.drawerId);
 
     for (const botId of nonDrawerBots) {

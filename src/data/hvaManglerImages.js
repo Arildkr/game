@@ -6,7 +6,7 @@ const imageSets = [
   {
     id: 'skolesaker',
     name: 'Skolesaker',
-    objects: ['blyant', 'viskelær', 'linjal', 'saks', 'limstift', 'penn', 'blyantspiser', 'markeringstusj', 'bok', 'kalkulator', 'passer', 'gradskive', 'mappe', 'stiftemaskin', 'klips'],
+    objects: ['blyant', 'viskelær', 'linjal', 'saks', 'limstift', 'penn', 'markeringstusj', 'bok', 'kalkulator', 'passer', 'mappe', 'stiftemaskin', 'klips', 'notatblokk', 'tavle'],
     emojis: {
       'blyant': '✏️',
       'viskelær': '🧽',
@@ -14,15 +14,15 @@ const imageSets = [
       'saks': '✂️',
       'limstift': '🧴',
       'penn': '🖊️',
-      'blyantspiser': '✏️',
       'markeringstusj': '🖍️',
       'bok': '📚',
       'kalkulator': '🧮',
       'passer': '📐',
-      'gradskive': '📐',
       'mappe': '📁',
       'stiftemaskin': '🗜️',
-      'klips': '📎'
+      'klips': '📎',
+      'notatblokk': '📒',
+      'tavle': '📋'
     }
   },
   {
@@ -43,7 +43,7 @@ const imageSets = [
       'mango': '🥭',
       'kiwi': '🥝',
       'fersken': '🍑',
-      'plomme': '🫐',
+      'plomme': '🍑',
       'blåbær': '🫐'
     }
   },
@@ -173,10 +173,10 @@ const imageSets = [
       'saxofon': '🎷',
       'radio': '📻',
       'høyttaler': '🔊',
-      'banjo': '🪕',
-      'harpe': '🎵',
-      'fløyte': '🎶',
-      'maracas': '🎶'
+      'banjo': '🪗',
+      'harpe': '🪕',
+      'fløyte': '🪈',
+      'maracas': '🪇'
     }
   },
   {
@@ -185,7 +185,7 @@ const imageSets = [
     objects: ['sofa', 'bord', 'stol', 'lampe', 'tv', 'seng', 'skap', 'klokke', 'speil', 'vaskemaskin', 'kjøleskap', 'ovn', 'støvsuger', 'dusj', 'toalett'],
     emojis: {
       'sofa': '🛋️',
-      'bord': '🪑',
+      'bord': '🪵',
       'stol': '🪑',
       'lampe': '💡',
       'tv': '📺',
@@ -218,9 +218,9 @@ const imageSets = [
       'dress': '🤵',
       'bikini': '👙',
       'shorts': '🩳',
-      'genser': '🧥',
+      'genser': '🧶',
       'støvler': '🥾',
-      'caps': '🧢'
+      'caps': '👒'
     }
   }
 ];
