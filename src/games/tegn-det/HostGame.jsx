@@ -84,11 +84,16 @@ function HostGame() {
     };
 
     // When drawer selects a word and round starts
-    const handleRoundStarted = ({ drawerId, drawerName, wordForDrawer }) => {
+    const handleRoundStarted = ({ drawerId, drawerName }) => {
       setStrokes([]);
       setLastResult(null);
       setPhase('drawing');
       setTimeLeft(timeLimit);
+    };
+
+    // Host receives the selected word separately
+    const handleWordSelected = ({ word }) => {
+      setCurrentWord(word);
     };
 
     socket.on('game:drawing-update', handleDrawingUpdate);
@@ -96,6 +101,7 @@ function HostGame() {
     socket.on('game:correct-guess', handleCorrectGuess);
     socket.on('game:wrong-guess', handleWrongGuess);
     socket.on('game:round-started', handleRoundStarted);
+    socket.on('game:word-selected', handleWordSelected);
 
     return () => {
       socket.off('game:drawing-update', handleDrawingUpdate);
@@ -103,6 +109,7 @@ function HostGame() {
       socket.off('game:correct-guess', handleCorrectGuess);
       socket.off('game:wrong-guess', handleWrongGuess);
       socket.off('game:round-started', handleRoundStarted);
+      socket.off('game:word-selected', handleWordSelected);
     };
   }, [socket, phase, timeLimit]);
 

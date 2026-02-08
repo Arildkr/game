@@ -45,7 +45,7 @@ function PlayerGame() {
       }
     };
 
-    const handleRoundStarted = ({ drawerId, drawerName: name, wordForDrawer }) => {
+    const handleRoundStarted = ({ drawerId, drawerName: name }) => {
       setDrawerName(name);
       setStrokes([]);
       setGuess('');
@@ -54,7 +54,6 @@ function PlayerGame() {
 
       if (drawerId === socket.id) {
         setIsDrawer(true);
-        setWord(wordForDrawer);
         setPhase('drawing');
       } else {
         setIsDrawer(false);
@@ -63,6 +62,11 @@ function PlayerGame() {
         // Focus input after a short delay
         setTimeout(() => inputRef.current?.focus(), 300);
       }
+    };
+
+    // Word is sent separately only to the drawer
+    const handleYourWord = ({ word: w }) => {
+      setWord(w);
     };
 
     const handleDrawingUpdate = ({ stroke }) => {
@@ -114,6 +118,7 @@ function PlayerGame() {
 
     socket.on('game:drawer-selected', handleDrawerSelected);
     socket.on('game:round-started', handleRoundStarted);
+    socket.on('game:your-word', handleYourWord);
     socket.on('game:drawing-update', handleDrawingUpdate);
     socket.on('game:canvas-cleared', handleCanvasCleared);
     socket.on('game:correct-guess', handleCorrectGuess);
@@ -123,6 +128,7 @@ function PlayerGame() {
     return () => {
       socket.off('game:drawer-selected', handleDrawerSelected);
       socket.off('game:round-started', handleRoundStarted);
+      socket.off('game:your-word', handleYourWord);
       socket.off('game:drawing-update', handleDrawingUpdate);
       socket.off('game:canvas-cleared', handleCanvasCleared);
       socket.off('game:correct-guess', handleCorrectGuess);

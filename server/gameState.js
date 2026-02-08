@@ -140,6 +140,118 @@ export function submitLobbyScore(roomCode, playerId, score) {
 }
 
 /**
+ * Migrates all game data and lobby data from old socket ID to new socket ID.
+ * Called when a player reconnects with a new socket.
+ */
+function migratePlayerId(room, oldId, newId) {
+  // Migrate lobby scores
+  if (room.lobbyData?.playerScores?.[oldId]) {
+    room.lobbyData.playerScores[newId] = room.lobbyData.playerScores[oldId];
+    delete room.lobbyData.playerScores[oldId];
+    // Rebuild leaderboard with updated IDs
+    room.lobbyData.leaderboard = Object.entries(room.lobbyData.playerScores)
+      .map(([id, data]) => ({
+        playerId: id,
+        playerName: data.playerName,
+        totalScore: data.jumperScore,
+        bestScore: data.jumperBest
+      }))
+      .sort((a, b) => b.totalScore - a.totalScore)
+      .slice(0, 10);
+  }
+
+  const gd = room.gameData;
+  if (!gd) return;
+
+  // Helper: migrate a key in an object (answers, solutions, etc.)
+  function migrateKey(obj) {
+    if (obj && oldId in obj) {
+      obj[newId] = obj[oldId];
+      delete obj[oldId];
+    }
+  }
+
+  // Helper: replace oldId with newId in an array
+  function migrateArray(arr) {
+    if (!Array.isArray(arr)) return;
+    for (let i = 0; i < arr.length; i++) {
+      if (arr[i] === oldId) arr[i] = newId;
+    }
+  }
+
+  // Helper: migrate currentPlayer-style objects
+  function migrateCurrentPlayer(obj) {
+    if (obj && obj.id === oldId) obj.id = newId;
+  }
+
+  switch (room.game) {
+    case 'ja-eller-nei':
+      migrateKey(gd.answers);
+      migrateArray(gd.eliminatedThisRound);
+      break;
+
+    case 'quiz':
+      migrateKey(gd.answers);
+      break;
+
+    case 'gjett-bildet':
+      migrateArray(gd.buzzerQueue);
+      migrateArray(gd.lockedOutPlayers);
+      migrateCurrentPlayer(gd.currentPlayer);
+      if (gd.pendingGuess?.playerId === oldId) gd.pendingGuess.playerId = newId;
+      break;
+
+    case 'tallkamp':
+      migrateKey(gd.solutions);
+      break;
+
+    case 'tidslinje':
+      migrateKey(gd.lockedAnswers);
+      break;
+
+    case 'slange':
+      migrateArray(gd.buzzerQueue);
+      migrateCurrentPlayer(gd.currentPlayer);
+      break;
+
+    case 'vil-du-heller':
+      if (gd.votes) {
+        migrateArray(gd.votes.optionA);
+        migrateArray(gd.votes.optionB);
+      }
+      break;
+
+    case 'nerdle':
+      migrateKey(gd.playerAttempts);
+      break;
+
+    case 'hva-mangler':
+      migrateArray(gd.buzzerQueue);
+      migrateArray(gd.correctGuessers);
+      migrateCurrentPlayer(gd.currentPlayer);
+      if (gd.pendingGuess?.playerId === oldId) gd.pendingGuess.playerId = newId;
+      break;
+
+    case 'tegn-det':
+      if (gd.drawerId === oldId) gd.drawerId = newId;
+      migrateArray(gd.buzzerQueue);
+      migrateArray(gd.lockedOutPlayers);
+      migrateCurrentPlayer(gd.currentGuesser);
+      migrateKey(gd.scores);
+      break;
+
+    case 'squiggle-story':
+      migrateKey(gd.submissions);
+      migrateArray(gd.displayedSubmissions);
+      migrateKey(gd.votes);
+      break;
+
+    default:
+      break;
+  }
+}
+
+/**
  * Adds a player to a room or reconnects an existing player
  */
 export function joinRoom(roomCode, playerId, playerName) {
@@ -158,6 +270,12 @@ export function joinRoom(roomCode, playerId, playerName) {
     existingPlayer.isConnected = true;
     socketToRoom.delete(oldId);
     socketToRoom.set(playerId, roomCode.toUpperCase());
+
+    // Migrate all game data and lobby data referencing old socket ID
+    if (oldId !== playerId) {
+      migratePlayerId(room, oldId, playerId);
+    }
+
     return room;
   }
 
@@ -938,11 +1056,11 @@ function handleGjettBildetPlayerAction(room, playerId, action, data) {
     }
 
     case 'submit-guess': {
-      const { guess, correctAnswers } = data;
+      const { guess } = data;
       gd.pendingGuess = { playerId, guess };
 
-      // Auto-sjekk svar hvis vi har gyldige svar
-      const answersToCheck = correctAnswers || gd.currentImageAnswers || [];
+      // Auto-sjekk svar mot server-lagrede svar (ikke stol på klient-data)
+      const answersToCheck = gd.currentImageAnswers || [];
       let autoResult = null;
 
       if (answersToCheck.length > 0 && guess) {
@@ -1116,7 +1234,24 @@ function handleTallkampPlayerAction(room, playerId, action, data) {
     case 'submit': {
       if (gd.solutions[playerId]) return null; // Already submitted
 
-      const { expression, result } = data;
+      const { expression } = data;
+
+      // Evaluate expression server-side instead of trusting client result
+      let result = null;
+      try {
+        const safeExpr = expression.replace(/[^0-9+\-*/().]/g, '');
+        if (safeExpr.length > 0 && safeExpr.length <= 100) {
+          result = new Function('return ' + safeExpr)();
+          if (typeof result !== 'number' || !isFinite(result)) {
+            result = null;
+          }
+        }
+      } catch (e) {
+        result = null;
+      }
+
+      if (result === null) return null; // Invalid expression
+
       gd.solutions[playerId] = {
         expression,
         result,
@@ -1168,11 +1303,13 @@ function handleTidslinjeHostAction(room, action, data) {
     case 'reveal-round': {
       const correctOrder = gd.correctOrder;
       const eventsWithYears = gd.eventsWithYears || [];
+      const totalCount = correctOrder.length;
 
-      // Find the best locked answer
-      let bestResult = null;
+      // First pass: calculate scores for all players who locked, find the best
+      let bestPlayerId = null;
       let bestCorrectCount = -1;
       let bestLockTime = Infinity;
+      const playerResults = {};
 
       for (const [playerId, lockData] of Object.entries(gd.lockedAnswers || {})) {
         const player = room.players.find(p => p.id === playerId);
@@ -1186,30 +1323,39 @@ function handleTidslinjeHostAction(room, action, data) {
           }
         }
 
-        // Better score, or same score but locked earlier
+        const isCorrect = correctCount === totalCount;
+        let points = correctCount * 200;
+        if (isCorrect) {
+          points += 500; // Perfect bonus
+        }
+
+        playerResults[playerId] = { correctCount, isCorrect, points };
+
+        // Track the best
         if (correctCount > bestCorrectCount ||
             (correctCount === bestCorrectCount && lockData.lockTime < bestLockTime)) {
           bestCorrectCount = correctCount;
           bestLockTime = lockData.lockTime;
+          bestPlayerId = playerId;
+        }
+      }
 
-          const totalCount = correctOrder.length;
-          const isCorrect = correctCount === totalCount;
+      // Second pass: award points to all who locked
+      let bestResult = null;
+      for (const [playerId, result] of Object.entries(playerResults)) {
+        const player = room.players.find(p => p.id === playerId);
+        if (player) {
+          player.score = (player.score || 0) + result.points;
+        }
 
-          // Calculate points - more for earlier lock + correctness
-          let points = correctCount * 200;
-          if (isCorrect) {
-            points += 500; // Perfect bonus
-          }
-
-          player.score = (player.score || 0) + points;
-
+        if (playerId === bestPlayerId) {
           bestResult = {
             playerId,
-            playerName: player.name,
-            isCorrect,
-            correctCount,
+            playerName: player?.name,
+            isCorrect: result.isCorrect,
+            correctCount: result.correctCount,
             totalCount,
-            points
+            points: result.points
           };
         }
       }
@@ -1228,7 +1374,7 @@ function handleTidslinjeHostAction(room, action, data) {
             playerName: null,
             isCorrect: false,
             correctCount: 0,
-            totalCount: correctOrder.length,
+            totalCount,
             points: 0
           }),
           correctOrder,
@@ -2181,10 +2327,12 @@ function handleTegnDetHostAction(room, action, data) {
         event: 'game:round-started',
         data: {
           drawerId,
-          drawerName: drawer?.name,
-          // Only send word to drawer
-          wordForDrawer: word
-        }
+          drawerName: drawer?.name
+        },
+        // Send word only to drawer
+        toPlayer: drawerId,
+        playerEvent: 'game:your-word',
+        playerData: { word }
       };
     }
 
@@ -2292,15 +2440,17 @@ function handleTegnDetPlayerAction(room, playerId, action, data) {
       gd.currentWord = word;
       gd.roundStartTime = Date.now();
 
-      // Broadcast to all - start the round
+      // Broadcast round start to all (without the word) and send word to host only
       return {
         broadcast: true,
         event: 'game:round-started',
         data: {
           drawerId: gd.drawerId,
-          drawerName: gd.drawerName,
-          wordForDrawer: word
-        }
+          drawerName: gd.drawerName
+        },
+        toHost: true,
+        hostEvent: 'game:word-selected',
+        hostData: { word }
       };
     }
 
