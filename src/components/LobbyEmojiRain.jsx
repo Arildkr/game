@@ -3,8 +3,21 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import { useGame } from '../contexts/GameContext';
 import './LobbyMinigames.css';
 
+// Polyfill for roundRect (missing in older Safari/iOS)
+if (typeof CanvasRenderingContext2D !== 'undefined' && !CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+    const radius = typeof r === 'number' ? r : (Array.isArray(r) ? r[0] : 0);
+    this.moveTo(x + radius, y);
+    this.arcTo(x + w, y, x + w, y + h, radius);
+    this.arcTo(x + w, y + h, x, y + h, radius);
+    this.arcTo(x, y + h, x, y, radius);
+    this.arcTo(x, y, x + w, y, radius);
+    this.closePath();
+  };
+}
+
 const CANVAS_WIDTH = 720;
-const CANVAS_HEIGHT = 300;
+const CANVAS_HEIGHT = 400;
 
 // Spill-innstillinger
 const GAME_DURATION = 15000; // 15 sekunder

@@ -160,6 +160,12 @@ export class BotManager {
   scheduleAction(roomCode, botId, action, data, minDelay, maxDelay) {
     const delay = minDelay + Math.random() * (maxDelay - minDelay);
     const timer = setTimeout(() => {
+      // Remove this timer from the list
+      const timers = this.botTimers.get(roomCode);
+      if (timers) {
+        const idx = timers.indexOf(timer);
+        if (idx !== -1) timers.splice(idx, 1);
+      }
       // Verify room and demo still exist
       if (!this.rooms[roomCode] || !this.isDemoActive(roomCode)) return;
       this.executeBotAction(roomCode, botId, action, data);

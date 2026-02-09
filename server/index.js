@@ -277,7 +277,8 @@ io.on('connection', (socket) => {
     const roomCode = socketToRoom.get(socket.id);
     const room = rooms[roomCode];
     if (!room) return;
-    room.lobbyMinigame = minigame || 'jumper';
+    const VALID_MINIGAMES = ['jumper', 'flappy', 'clicker', 'emoji', 'pattern'];
+    room.lobbyMinigame = VALID_MINIGAMES.includes(minigame) ? minigame : 'jumper';
     io.to(roomCode).emit('lobby:minigame-selected', { minigame: room.lobbyMinigame });
     console.log(`Minigame changed in room ${roomCode}: ${room.lobbyMinigame}`);
   });
@@ -312,6 +313,7 @@ io.on('connection', (socket) => {
   socket.on('host:game-action', ({ action, data }) => {
     try {
       const roomCode = socketToRoom.get(socket.id);
+      if (!roomCode) return;
       const result = handleGameAction(roomCode, action, data);
       if (result) {
         if (result.broadcast) {
@@ -371,6 +373,7 @@ io.on('connection', (socket) => {
   socket.on('player:game-action', ({ action, data }) => {
     try {
       const roomCode = socketToRoom.get(socket.id);
+      if (!roomCode) return;
       const result = handlePlayerAction(roomCode, socket.id, action, data);
       if (result) {
         if (result.broadcast) {

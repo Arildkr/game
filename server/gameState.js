@@ -199,6 +199,10 @@ export function submitLobbyScore(roomCode, playerId, score, gameId = 'jumper') {
   const room = rooms[roomCode];
   if (!room) return null;
 
+  // Validate score
+  if (typeof score !== 'number' || !isFinite(score) || score < 0) return null;
+  score = Math.floor(score); // Ensure integer
+
   const player = room.players.find(p => p.id === playerId);
   if (!player) return null;
 

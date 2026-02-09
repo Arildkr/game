@@ -180,7 +180,7 @@ function LobbyPatternMatcher() {
       if (inputIndexRef.current >= pattern.length) {
         // Fullførte runden
         roundRef.current++;
-        const newScore = roundRef.current;
+        const newScore = roundRef.current * 10;
         setScore(newScore);
 
         if (navigator.vibrate) navigator.vibrate(30);
@@ -202,7 +202,7 @@ function LobbyPatternMatcher() {
 
       if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
 
-      const finalScore = roundRef.current;
+      const finalScore = roundRef.current * 10;
       setGameState('dead');
       setScore(finalScore);
 

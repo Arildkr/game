@@ -434,8 +434,10 @@ function LobbyFlappy() {
       }
     }
 
-    // Ta opp ghost-data (fuglen sin Y-posisjon per frame)
-    ghostRecordingRef.current.push(bird.y);
+    // Ta opp ghost-data (fuglen sin Y-posisjon per frame, maks 10 min)
+    if (ghostRecordingRef.current.length < 36000) {
+      ghostRecordingRef.current.push(bird.y);
+    }
 
     return false;
   }, [spawnPipe]);
