@@ -92,6 +92,11 @@ export const GameProvider = ({ children }) => {
 
     // Track om vi har hatt minst én vellykket tilkobling (for å skille reconnect fra first-connect)
     let hasConnectedBefore = false;
+    // Retry-state for player rejoin (når rom gjenskapes av læreren)
+    let playerRejoinRetries = 0;
+    let playerRejoinTimer = null;
+    const MAX_PLAYER_REJOIN_RETRIES = 5;
+    const PLAYER_REJOIN_DELAY_MS = 2000;
 
     newSocket.on('connect', () => {
       console.log('Connected to socket server, id:', newSocket.id);
@@ -109,6 +114,7 @@ export const GameProvider = ({ children }) => {
             console.log(`Auto-rejoining room ${code} as host`);
             newSocket.emit('host:rejoin', { roomCode: code });
           } else if (playerNameRef.current) {
+            playerRejoinRetries = 0; // Reset retries on new connection
             console.log(`Auto-rejoining room ${code} as player ${playerNameRef.current}`);
             newSocket.emit('player:rejoin', { roomCode: code, playerName: playerNameRef.current });
           }
@@ -216,11 +222,39 @@ export const GameProvider = ({ children }) => {
     });
 
     // Rejoin failed - room no longer exists on server after reconnect
+    // For host: should rarely happen (server auto-recreates room)
+    // For player: retry a few times (teacher may be recreating room)
     newSocket.on('room:rejoin-failed', ({ message }) => {
-      console.warn('Rejoin failed:', message);
-      doResetGameState();
-      setPlayerName('');
-      setError(message || 'Mistet forbindelsen til rommet. Opprett eller bli med i et nytt rom.');
+      if (isHostRef.current) {
+        // Host rejoin failed even with auto-recreate - give up
+        console.warn('Host rejoin failed:', message);
+        doResetGameState();
+        setError(message || 'Mistet forbindelsen. Opprett et nytt rom.');
+      } else if (playerRejoinRetries < MAX_PLAYER_REJOIN_RETRIES) {
+        // Player: retry - teacher may be recreating the room
+        playerRejoinRetries++;
+        console.log(`Player rejoin retry ${playerRejoinRetries}/${MAX_PLAYER_REJOIN_RETRIES}...`);
+        if (playerRejoinTimer) clearTimeout(playerRejoinTimer);
+        playerRejoinTimer = setTimeout(() => {
+          const code = roomCodeRef.current;
+          const name = playerNameRef.current;
+          if (code && name && newSocket.connected) {
+            newSocket.emit('player:rejoin', { roomCode: code, playerName: name });
+          } else {
+            // Can't retry - give up
+            doResetGameState();
+            setPlayerName('');
+            setError('Mistet forbindelsen til rommet.');
+          }
+        }, PLAYER_REJOIN_DELAY_MS);
+      } else {
+        // All retries exhausted
+        console.warn('Player rejoin failed after retries:', message);
+        if (playerRejoinTimer) clearTimeout(playerRejoinTimer);
+        doResetGameState();
+        setPlayerName('');
+        setError('Mistet forbindelsen til rommet. Be læreren starte på nytt.');
+      }
     });
 
     newSocket.on('room:closed', () => {
@@ -301,8 +335,8 @@ export const GameProvider = ({ children }) => {
     });
 
     // Host rejoin success - sync full state after reconnection
-    newSocket.on('host:rejoin-success', ({ roomCode: code, room, lobbyData: lData, lobbyMinigame: mg }) => {
-      console.log('Host rejoin success for room', code);
+    newSocket.on('host:rejoin-success', ({ roomCode: code, room, lobbyData: lData, lobbyMinigame: mg, recreated }) => {
+      console.log('Host rejoin success for room', code, recreated ? '(recreated)' : '');
       setRoomCode(code);
       setIsHost(true);
       setMyPlayerId(newSocket.id);
@@ -314,6 +348,7 @@ export const GameProvider = ({ children }) => {
       }
       if (lData) setLobbyData(lData);
       if (mg) setLobbyMinigame(mg);
+      setError(null);
     });
 
     // Demo mode events
@@ -334,6 +369,7 @@ export const GameProvider = ({ children }) => {
 
     // Cleanup ved unmount
     return () => {
+      if (playerRejoinTimer) clearTimeout(playerRejoinTimer);
       newSocket.disconnect();
     };
   }, []); // Tom dependency array - kjører kun én gang

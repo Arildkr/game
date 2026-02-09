@@ -122,8 +122,11 @@ function generateUniqueRoomCode() {
 /**
  * Creates a new room (lobby uten spill valgt)
  */
-export function createRoom(hostSocketId, game = null) {
-  const roomCode = generateUniqueRoomCode();
+export function createRoom(hostSocketId, game = null, preferredRoomCode = null) {
+  // Use preferred code if provided and not already taken
+  const roomCode = (preferredRoomCode && !rooms[preferredRoomCode])
+    ? preferredRoomCode
+    : generateUniqueRoomCode();
 
   rooms[roomCode] = {
     code: roomCode,
@@ -151,8 +154,8 @@ export function createRoom(hostSocketId, game = null) {
 /**
  * Creates a lobby (uten spill valgt)
  */
-export function createLobby(hostSocketId) {
-  return createRoom(hostSocketId, null);
+export function createLobby(hostSocketId, preferredRoomCode = null) {
+  return createRoom(hostSocketId, null, preferredRoomCode);
 }
 
 /**

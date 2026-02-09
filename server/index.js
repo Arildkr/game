@@ -280,9 +280,26 @@ io.on('connection', (socket) => {
   socket.on('host:rejoin', ({ roomCode: code }) => {
     if (!code) return;
     const upperCode = code.toUpperCase();
-    const room = rooms[upperCode];
+    let room = rooms[upperCode];
+
     if (!room) {
-      socket.emit('room:rejoin-failed', { message: 'Rommet finnes ikke lenger.' });
+      // Room lost (server restart, etc) - auto-recreate with same code
+      console.log(`Room ${upperCode} not found, auto-recreating for host ${socket.id}`);
+      const newCode = createLobby(socket.id, upperCode);
+      if (!newCode) {
+        socket.emit('room:rejoin-failed', { message: 'Kunne ikke opprette rommet på nytt.' });
+        return;
+      }
+      room = rooms[newCode];
+      socket.join(newCode);
+      socket.emit('host:rejoin-success', {
+        roomCode: newCode,
+        room: sanitizeRoom(room),
+        lobbyData: room.lobbyData,
+        lobbyMinigame: room.lobbyMinigame || 'jumper',
+        recreated: true
+      });
+      console.log(`Host ${socket.id} auto-recreated room ${newCode}`);
       return;
     }
 
