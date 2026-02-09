@@ -148,3 +148,46 @@
 .lobby-minigame .best-score {
   color: #888;
 }
+
+/* Minigame-spesifikke klikkerstiler */
+.lobby-minigame .minigame-stats {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.5rem 0;
+  font-size: 0.9rem;
+}
+
+.lobby-minigame .minigame-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 0.5rem;
+}
+
+.lobby-minigame .final-cps {
+  color: #f59e0b;
+  font-size: 1.1rem;
+  margin: 0.3rem 0;
+}
+
+/* Mobilskalering */
+@media (max-width: 480px) {
+  .lobby-minigame .start-overlay p {
+    font-size: 1rem;
+  }
+
+  .lobby-minigame .start-overlay .game-title,
+  .lobby-minigame .start-overlay .minigame-title {
+    font-size: 1.2rem;
+  }
+
+  .lobby-minigame .death-overlay .final-score {
+    font-size: 2.2rem;
+  }
+
+  .lobby-minigame .game-stats,
+  .lobby-minigame .minigame-stats {
+    font-size: 0.8rem;
+  }
+}

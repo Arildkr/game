@@ -13,8 +13,8 @@ const OBSTACLE_WIDTH = 20;
 const OBSTACLE_MIN_HEIGHT = 30;
 const OBSTACLE_MAX_HEIGHT = 70;
 const GRAVITY = 0.8;
-const JUMP_FORCE = -12;
-const DOUBLE_JUMP_FORCE = -10;
+const JUMP_FORCE = -16;
+const DOUBLE_JUMP_FORCE = -13;
 const INITIAL_SPEED = 5;
 const MAX_SPEED = 16;
 const SPEED_INCREMENT = 0.002;
@@ -285,20 +285,26 @@ function LobbyJumper() {
       player.vy = Math.abs(player.vy) * 0.5;
     }
 
-    // Oppdater gulvhindringer
-    obstaclesRef.current = obstaclesRef.current
-      .map(o => ({ ...o, x: o.x - speedRef.current }))
-      .filter(o => o.x > -OBSTACLE_WIDTH);
+    // Oppdater gulvhindringer (in-place for ytelse)
+    const obstacles = obstaclesRef.current;
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+      obstacles[i].x -= speedRef.current;
+      if (obstacles[i].x <= -OBSTACLE_WIDTH) obstacles.splice(i, 1);
+    }
 
-    // Oppdater takhindringer
-    ceilingObstaclesRef.current = ceilingObstaclesRef.current
-      .map(o => ({ ...o, x: o.x - speedRef.current }))
-      .filter(o => o.x > -OBSTACLE_WIDTH);
+    // Oppdater takhindringer (in-place for ytelse)
+    const ceilingObs = ceilingObstaclesRef.current;
+    for (let i = ceilingObs.length - 1; i >= 0; i--) {
+      ceilingObs[i].x -= speedRef.current;
+      if (ceilingObs[i].x <= -OBSTACLE_WIDTH) ceilingObs.splice(i, 1);
+    }
 
-    // Oppdater stjerner
-    starsRef.current = starsRef.current
-      .map(s => ({ ...s, x: s.x - speedRef.current }))
-      .filter(s => s.x > -STAR_SIZE);
+    // Oppdater stjerner (in-place for ytelse)
+    const stars = starsRef.current;
+    for (let i = stars.length - 1; i >= 0; i--) {
+      stars[i].x -= speedRef.current;
+      if (stars[i].x <= -STAR_SIZE) stars.splice(i, 1);
+    }
 
     // Spawn gulvhindringer
     frameCountRef.current++;
@@ -454,7 +460,7 @@ function LobbyJumper() {
 
     // Send poeng til server
     if (finalScore > 0 && submitLobbyScoreRef.current) {
-      submitLobbyScoreRef.current(finalScore);
+      submitLobbyScoreRef.current(finalScore, 'jumper');
     }
   }, []);
 
@@ -476,7 +482,7 @@ function LobbyJumper() {
         if (died) {
           handleDeath();
         } else {
-          if (frameCountRef.current % 10 === 0) {
+          if (frameCountRef.current % 30 === 0) {
             setScore(Math.floor(scoreRef.current));
           }
         }

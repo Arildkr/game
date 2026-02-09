@@ -246,7 +246,7 @@ io.on('connection', (socket) => {
       if (room) {
         // Sikre at lobbyData alltid er definert
         if (!room.lobbyData) {
-          room.lobbyData = { totalScore: 0, playerScores: {}, leaderboard: [] };
+          room.lobbyData = { totalScore: 0, playerScores: {}, leaderboard: [], gameLeaderboards: {} };
         }
         io.to(roomCode).emit('game:ended', {
           room: sanitizeRoom(room),
@@ -392,16 +392,16 @@ io.on('connection', (socket) => {
   });
 
   // Lobby minispill score
-  socket.on('lobby:submit-score', ({ score }) => {
+  socket.on('lobby:submit-score', ({ score, gameId }) => {
     const roomCode = socketToRoom.get(socket.id);
-    const result = submitLobbyScore(roomCode, socket.id, score);
+    const result = submitLobbyScore(roomCode, socket.id, score, gameId || 'jumper');
     if (result) {
       // Send oppdatering til alle i rommet
       io.to(roomCode).emit('lobby:score-update', {
         playerId: socket.id,
-        playerScore: result.playerScore,
         totalScore: result.totalScore,
-        leaderboard: result.leaderboard
+        leaderboard: result.leaderboard,
+        gameLeaderboards: result.gameLeaderboards
       });
     }
   });
@@ -413,6 +413,7 @@ io.on('connection', (socket) => {
       socket.emit('lobby:scores', {
         totalScore: room.lobbyData.totalScore,
         leaderboard: room.lobbyData.leaderboard,
+        gameLeaderboards: room.lobbyData.gameLeaderboards || {},
         playerScores: room.lobbyData.playerScores
       });
     }

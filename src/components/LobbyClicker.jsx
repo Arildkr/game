@@ -76,6 +76,7 @@ function LobbyClicker() {
   const bgColorRef = useRef(COMBO_COLORS[0]);
   const ringParticlesRef = useRef([]);     // ring-eksplosjon
   const floatingTextsRef = useRef([]);     // flytende +1 tekst
+  const deathTimeRef = useRef(0);          // tidspunkt for game over (for restart-cooldown)
 
   // Sync refs med state
   useEffect(() => {
@@ -325,7 +326,7 @@ function LobbyClicker() {
       ctx.fillText('Trykk for a starte', BUTTON_X, BUTTON_Y + 14);
     } else if (state === 'playing') {
       // Stort klikk-tall pa knappen
-      ctx.font = `bold ${28 + tier * 2}px monospace`;
+      ctx.font = `bold ${36 + tier * 3}px monospace`;
       ctx.fillText(`${clicks}`, BUTTON_X, BUTTON_Y);
     } else {
       // Dead state - vis resultatet
@@ -429,28 +430,33 @@ function LobbyClicker() {
     shakeRef.current.x *= 0.85;
     shakeRef.current.y *= 0.85;
 
-    // Oppdater partikler
-    particlesRef.current = particlesRef.current
-      .map(p => ({
-        ...p,
-        x: p.x + p.vx,
-        y: p.y + p.vy,
-        vy: p.vy + 0.12, // gravitasjon
-        vx: p.vx * 0.98,
-        life: p.life - 1,
-        rotation: p.rotation + p.rotSpeed,
-      }))
-      .filter(p => p.life > 0);
+    // Oppdater partikler (in-place for ytelse)
+    const particles = particlesRef.current;
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.12;
+      p.vx *= 0.98;
+      p.life -= 1;
+      p.rotation += p.rotSpeed;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
 
-    // Oppdater ring-eksplosjoner
-    ringParticlesRef.current = ringParticlesRef.current
-      .map(r => ({ ...r, life: r.life - 1 }))
-      .filter(r => r.life > 0);
+    // Oppdater ring-eksplosjoner (in-place for ytelse)
+    const rings = ringParticlesRef.current;
+    for (let i = rings.length - 1; i >= 0; i--) {
+      rings[i].life -= 1;
+      if (rings[i].life <= 0) rings.splice(i, 1);
+    }
 
-    // Oppdater flytende tekst
-    floatingTextsRef.current = floatingTextsRef.current
-      .map(ft => ({ ...ft, y: ft.y + ft.vy, life: ft.life - 1 }))
-      .filter(ft => ft.life > 0);
+    // Oppdater flytende tekst (in-place for ytelse)
+    const texts = floatingTextsRef.current;
+    for (let i = texts.length - 1; i >= 0; i--) {
+      texts[i].y += texts[i].vy;
+      texts[i].life -= 1;
+      if (texts[i].life <= 0) texts.splice(i, 1);
+    }
 
     frameCountRef.current++;
 
@@ -490,6 +496,7 @@ function LobbyClicker() {
 
     setGameState('dead');
     setDisplayScore(finalScore);
+    deathTimeRef.current = performance.now();
 
     // Oppdater high score
     if (finalScore > highScoreRef.current) {
@@ -499,13 +506,19 @@ function LobbyClicker() {
 
     // Send poeng til server
     if (finalScore > 0 && submitLobbyScoreRef.current) {
-      submitLobbyScoreRef.current(finalScore);
+      submitLobbyScoreRef.current(finalScore, 'clicker');
     }
   }, []);
 
   // Klikk-handler
   const handleClick = useCallback((e) => {
-    if (gameStateRef.current === 'idle' || gameStateRef.current === 'dead') {
+    if (gameStateRef.current === 'idle') {
+      startGame();
+      return;
+    }
+    if (gameStateRef.current === 'dead') {
+      // Vent 1.5s etter game over før restart tillates
+      if (performance.now() - deathTimeRef.current < 1500) return;
       startGame();
       return;
     }
@@ -551,7 +564,12 @@ function LobbyClicker() {
   // Touch-handler
   const handleTouch = useCallback((e) => {
     e.preventDefault();
-    if (gameStateRef.current === 'idle' || gameStateRef.current === 'dead') {
+    if (gameStateRef.current === 'idle') {
+      startGame();
+      return;
+    }
+    if (gameStateRef.current === 'dead') {
+      if (performance.now() - deathTimeRef.current < 1500) return;
       startGame();
       return;
     }

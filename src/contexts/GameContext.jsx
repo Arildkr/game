@@ -31,6 +31,7 @@ export const GameProvider = ({ children }) => {
   const [lobbyData, setLobbyData] = useState({
     totalScore: 0,
     leaderboard: [],
+    gameLeaderboards: {},
     playerScores: {}
   });
 
@@ -55,7 +56,7 @@ export const GameProvider = ({ children }) => {
     setCurrentGame(null);
     setGameState('LOBBY');
     setGameData(null);
-    setLobbyData({ totalScore: 0, leaderboard: [], playerScores: {} });
+    setLobbyData({ totalScore: 0, leaderboard: [], gameLeaderboards: {}, playerScores: {} });
     setLobbyMinigame('jumper');
     setIsDemoActive(false);
     setBotIds([]);
@@ -147,7 +148,7 @@ export const GameProvider = ({ children }) => {
       setCurrentGame(null);
       setGameState(state || 'LOBBY_IDLE');
       setIsHost(true);
-      setLobbyData(lData || { totalScore: 0, leaderboard: [], playerScores: {} });
+      setLobbyData(lData || { totalScore: 0, leaderboard: [], gameLeaderboards: {}, playerScores: {} });
       if (mg) setLobbyMinigame(mg);
       setError(null);
     });
@@ -163,20 +164,21 @@ export const GameProvider = ({ children }) => {
       setCurrentGame(null);
       setGameData(null);
       setPlayers(room.players);
-      setLobbyData(lData || { totalScore: 0, leaderboard: [], playerScores: {} });
+      setLobbyData(lData || { totalScore: 0, leaderboard: [], gameLeaderboards: {}, playerScores: {} });
       if (room.lobbyMinigame) setLobbyMinigame(room.lobbyMinigame);
     });
 
-    newSocket.on('lobby:score-update', ({ totalScore, leaderboard }) => {
+    newSocket.on('lobby:score-update', ({ totalScore, leaderboard, gameLeaderboards }) => {
       setLobbyData(prev => ({
         ...prev,
         totalScore,
-        leaderboard
+        leaderboard,
+        gameLeaderboards: gameLeaderboards || prev.gameLeaderboards
       }));
     });
 
-    newSocket.on('lobby:scores', ({ totalScore, leaderboard, playerScores }) => {
-      setLobbyData({ totalScore, leaderboard, playerScores });
+    newSocket.on('lobby:scores', ({ totalScore, leaderboard, gameLeaderboards, playerScores }) => {
+      setLobbyData({ totalScore, leaderboard, gameLeaderboards: gameLeaderboards || {}, playerScores });
     });
 
     newSocket.on('room:player-joined', ({ room }) => {
@@ -210,7 +212,7 @@ export const GameProvider = ({ children }) => {
       setCurrentGame(null);
       setGameState('LOBBY');
       setGameData(null);
-      setLobbyData({ totalScore: 0, leaderboard: [], playerScores: {} });
+      setLobbyData({ totalScore: 0, leaderboard: [], gameLeaderboards: {}, playerScores: {} });
       setIsDemoActive(false);
       setBotIds([]);
     });
@@ -223,7 +225,7 @@ export const GameProvider = ({ children }) => {
       setCurrentGame(null);
       setGameState('LOBBY');
       setGameData(null);
-      setLobbyData({ totalScore: 0, leaderboard: [], playerScores: {} });
+      setLobbyData({ totalScore: 0, leaderboard: [], gameLeaderboards: {}, playerScores: {} });
       setIsDemoActive(false);
       setBotIds([]);
     });
@@ -256,11 +258,14 @@ export const GameProvider = ({ children }) => {
     newSocket.on('game:round-revealed', handlePlayersUpdate);
     newSocket.on('game:answer-revealed', handlePlayersUpdate);
 
-    newSocket.on('game:ended', ({ room } = {}) => {
+    newSocket.on('game:ended', ({ room, lobbyData: lData } = {}) => {
       // Avslutt tar alle tilbake til lobby (ikke ut av rommet)
       if (room) {
         setPlayers(room.players || []);
         if (room.lobbyMinigame) setLobbyMinigame(room.lobbyMinigame);
+      }
+      if (lData) {
+        setLobbyData(lData);
       }
       setCurrentGame(null);
       setGameState('LOBBY_IDLE');
@@ -390,10 +395,10 @@ const sendPlayerAction = useCallback((action, data = {}) => {
   }
 }, [socket, isHost]);
 
-  // Ny: Send lobby-score
-  const submitLobbyScore = useCallback((score) => {
+  // Ny: Send lobby-score med spill-ID
+  const submitLobbyScore = useCallback((score, gameId) => {
     if (socket) {
-      socket.emit('lobby:submit-score', { score });
+      socket.emit('lobby:submit-score', { score, gameId });
     }
   }, [socket]);
 

@@ -383,10 +383,12 @@ function LobbyFlappy() {
     // Beregn effektiv rørhastighet (dash gir boost)
     const currentPipeSpeed = dash.active ? PIPE_SPEED + DASH_SPEED_BOOST : PIPE_SPEED;
 
-    // Flytt rør
-    pipesRef.current = pipesRef.current
-      .map(p => ({ ...p, x: p.x - currentPipeSpeed }))
-      .filter(p => p.x > -PIPE_WIDTH);
+    // Flytt rør (in-place for ytelse)
+    const pipes = pipesRef.current;
+    for (let i = pipes.length - 1; i >= 0; i--) {
+      pipes[i].x -= currentPipeSpeed;
+      if (pipes[i].x <= -PIPE_WIDTH) pipes.splice(i, 1);
+    }
 
     // Spawn nye rør
     if (frameCountRef.current % PIPE_SPAWN_INTERVAL === 0) {
@@ -452,10 +454,10 @@ function LobbyFlappy() {
       ghostReplayRef.current = [...ghostRecordingRef.current];
     }
 
-    // Reset alt
+    // Reset alt - gi fuglen en liten oppadgående fart så den ikke faller rett ned
     birdRef.current = {
       y: CANVAS_HEIGHT / 2,
-      vy: 0,
+      vy: FLAP_FORCE * 0.5,
       rotation: 0
     };
     pipesRef.current = [];
@@ -491,7 +493,7 @@ function LobbyFlappy() {
 
     // Send poeng til server
     if (finalScore > 0 && submitLobbyScoreRef.current) {
-      submitLobbyScoreRef.current(finalScore);
+      submitLobbyScoreRef.current(finalScore, 'flappy');
     }
   }, []);
 

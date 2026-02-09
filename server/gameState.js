@@ -135,8 +135,9 @@ export function createRoom(hostSocketId, game = null) {
     gameData: null,
     lobbyData: {
       totalScore: 0,
-      playerScores: {}, // playerId -> { jumperScore, jumperBest }
-      leaderboard: []
+      playerScores: {}, // playerId -> { playerName, games: { gameId: { total, best } } }
+      leaderboard: [],
+      gameLeaderboards: {} // gameId -> [{ playerId, playerName, totalScore, bestScore }]
     },
     lobbyMinigame: 'jumper',
     createdAt: new Date(),
@@ -194,7 +195,7 @@ export function returnToLobby(roomCode) {
 /**
  * Sender inn lobby-poeng (fra minispill)
  */
-export function submitLobbyScore(roomCode, playerId, score) {
+export function submitLobbyScore(roomCode, playerId, score, gameId = 'jumper') {
   const room = rooms[roomCode];
   if (!room) return null;
 
@@ -204,36 +205,75 @@ export function submitLobbyScore(roomCode, playerId, score) {
   // Oppdater spillerens lobby-score
   if (!room.lobbyData.playerScores[playerId]) {
     room.lobbyData.playerScores[playerId] = {
-      jumperScore: 0,
-      jumperBest: 0,
-      playerName: player.name
+      playerName: player.name,
+      games: {}
     };
   }
 
   const playerData = room.lobbyData.playerScores[playerId];
-  playerData.jumperScore += score;
-  playerData.jumperBest = Math.max(playerData.jumperBest, score);
+  playerData.playerName = player.name; // Hold oppdatert
+
+  if (!playerData.games[gameId]) {
+    playerData.games[gameId] = { total: 0, best: 0 };
+  }
+
+  playerData.games[gameId].total += score;
+  playerData.games[gameId].best = Math.max(playerData.games[gameId].best, score);
 
   // Oppdater total klassescore
   room.lobbyData.totalScore += score;
 
-  // Oppdater leaderboard
-  room.lobbyData.leaderboard = Object.entries(room.lobbyData.playerScores)
-    .map(([id, data]) => ({
-      playerId: id,
-      playerName: data.playerName,
-      totalScore: data.jumperScore,
-      bestScore: data.jumperBest
-    }))
-    .sort((a, b) => b.totalScore - a.totalScore)
-    .slice(0, 10);
+  // Bygg leaderboard per spill
+  rebuildLeaderboards(room);
 
   return {
     room,
-    playerScore: playerData,
     totalScore: room.lobbyData.totalScore,
-    leaderboard: room.lobbyData.leaderboard
+    leaderboard: room.lobbyData.leaderboard,
+    gameLeaderboards: room.lobbyData.gameLeaderboards
   };
+}
+
+/**
+ * Bygger opp leaderboards fra playerScores
+ */
+function rebuildLeaderboards(room) {
+  const scores = room.lobbyData.playerScores;
+
+  // Samle alle spilltyper
+  const allGameIds = new Set();
+  Object.values(scores).forEach(p => {
+    Object.keys(p.games || {}).forEach(g => allGameIds.add(g));
+  });
+
+  // Per-spill leaderboard
+  room.lobbyData.gameLeaderboards = {};
+  for (const gid of allGameIds) {
+    room.lobbyData.gameLeaderboards[gid] = Object.entries(scores)
+      .filter(([, data]) => data.games?.[gid])
+      .map(([id, data]) => ({
+        playerId: id,
+        playerName: data.playerName,
+        totalScore: data.games[gid].total,
+        bestScore: data.games[gid].best
+      }))
+      .sort((a, b) => b.bestScore - a.bestScore)
+      .slice(0, 10);
+  }
+
+  // Total leaderboard (sum av alle spill)
+  room.lobbyData.leaderboard = Object.entries(scores)
+    .map(([id, data]) => {
+      let totalScore = 0;
+      let bestScore = 0;
+      Object.values(data.games || {}).forEach(g => {
+        totalScore += g.total;
+        bestScore = Math.max(bestScore, g.best);
+      });
+      return { playerId: id, playerName: data.playerName, totalScore, bestScore };
+    })
+    .sort((a, b) => b.totalScore - a.totalScore)
+    .slice(0, 10);
 }
 
 /**
@@ -245,16 +285,7 @@ function migratePlayerId(room, oldId, newId) {
   if (room.lobbyData?.playerScores?.[oldId]) {
     room.lobbyData.playerScores[newId] = room.lobbyData.playerScores[oldId];
     delete room.lobbyData.playerScores[oldId];
-    // Rebuild leaderboard with updated IDs
-    room.lobbyData.leaderboard = Object.entries(room.lobbyData.playerScores)
-      .map(([id, data]) => ({
-        playerId: id,
-        playerName: data.playerName,
-        totalScore: data.jumperScore,
-        bestScore: data.jumperBest
-      }))
-      .sort((a, b) => b.totalScore - a.totalScore)
-      .slice(0, 10);
+    rebuildLeaderboards(room);
   }
 
   const gd = room.gameData;

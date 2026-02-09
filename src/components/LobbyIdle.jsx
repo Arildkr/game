@@ -98,7 +98,7 @@ function LobbyIdle() {
             </div>
           </section>
 
-          {/* Klassens fremgang i minispillet */}
+          {/* Klassens fremgang i minispillet - per-spill scoreboard */}
           {lobbyData.totalScore > 0 && (
             <section className="class-progress">
               <h3>Klassens poeng fra minispill</h3>
@@ -109,20 +109,54 @@ function LobbyIdle() {
                 />
                 <span className="progress-text">{lobbyData.totalScore.toLocaleString()} / 50 000</span>
               </div>
-              {lobbyData.leaderboard.length > 0 && (
-                <div className="mini-leaderboard">
-                  <h4>Topp 5</h4>
-                  <ol>
-                    {lobbyData.leaderboard.slice(0, 5).map((entry, index) => (
-                      <li key={entry.playerId}>
-                        <span className="rank">{index + 1}.</span>
-                        <span className="name">{entry.playerName}</span>
-                        <span className="score">{entry.totalScore}</span>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              )}
+              {(() => {
+                const GAME_LABELS = {
+                  jumper: { name: 'Hopp', scoreLabel: 'Beste', totalLabel: 'Totalt' },
+                  flappy: { name: 'Flappy', scoreLabel: 'Beste', totalLabel: 'Totalt' },
+                  clicker: { name: 'Klikker', scoreLabel: 'Beste klikk', totalLabel: 'Totalt' },
+                  emoji: { name: 'Emoji-Regn', scoreLabel: 'Beste', totalLabel: 'Totalt' },
+                  pattern: { name: 'Mønster', scoreLabel: 'Beste runder', totalLabel: 'Totalt' },
+                };
+                const gameId = lobbyMinigame || 'jumper';
+                const gameLabel = GAME_LABELS[gameId] || GAME_LABELS.jumper;
+                const gameBoard = lobbyData.gameLeaderboards?.[gameId] || [];
+                const totalBoard = lobbyData.leaderboard || [];
+
+                return (
+                  <>
+                    {gameBoard.length > 0 && (
+                      <div className="mini-leaderboard">
+                        <h4>{gameLabel.name} - Topp 5</h4>
+                        <ol>
+                          {gameBoard.slice(0, 5).map((entry, index) => (
+                            <li key={entry.playerId}>
+                              <span className="rank">{index + 1}.</span>
+                              <span className="name">{entry.playerName}</span>
+                              <span className="score" title={`${gameLabel.totalLabel}: ${entry.totalScore}`}>
+                                {gameLabel.scoreLabel}: {entry.bestScore}
+                              </span>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    )}
+                    {totalBoard.length > 0 && (
+                      <div className="mini-leaderboard total-leaderboard">
+                        <h4>Samlet - Topp 5</h4>
+                        <ol>
+                          {totalBoard.slice(0, 5).map((entry, index) => (
+                            <li key={entry.playerId}>
+                              <span className="rank">{index + 1}.</span>
+                              <span className="name">{entry.playerName}</span>
+                              <span className="score">{entry.totalScore}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </section>
           )}
         </main>

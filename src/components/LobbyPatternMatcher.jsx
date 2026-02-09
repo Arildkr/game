@@ -214,7 +214,7 @@ function LobbyPatternMatcher() {
 
       // Send poeng til server
       if (finalScore > 0 && submitLobbyScoreRef.current) {
-        submitLobbyScoreRef.current(finalScore);
+        submitLobbyScoreRef.current(finalScore, 'pattern');
       }
     }
   }, [extendAndShowPattern]);
@@ -257,9 +257,9 @@ function LobbyPatternMatcher() {
     if (state === 'showing') {
       ctx.fillStyle = '#f1c40f';
       ctx.font = 'bold 22px monospace';
-      ctx.fillText('Se på monsteret...', CANVAS_WIDTH / 2, 16);
+      ctx.fillText('Se på mønsteret...', CANVAS_WIDTH / 2, 16);
 
-      // Vis hvilken del av monsteret som vises
+      // Vis hvilken del av mønsteret som vises
       const total = patternRef.current.length;
       const current = showIndexRef.current;
       ctx.fillStyle = '#888';
@@ -555,7 +555,7 @@ function LobbyPatternMatcher() {
 
         {gameState === 'idle' && (
           <div className="overlay start-overlay">
-            <p className="game-title">Monstermatcher</p>
+            <p className="game-title">Mønstermatcher</p>
             <p>Trykk for å starte!</p>
           </div>
         )}

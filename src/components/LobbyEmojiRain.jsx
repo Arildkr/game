@@ -8,7 +8,7 @@ const CANVAS_HEIGHT = 300;
 
 // Spill-innstillinger
 const GAME_DURATION = 15000; // 15 sekunder
-const TARGET_CHANGE_INTERVAL = 5000; // Bytt mål-emoji hvert 5. sekund
+const TARGET_CHANGE_INTERVAL = 8000; // Bytt mål-emoji hvert 8. sekund
 const CORRECT_POINTS = 10;
 const WRONG_POINTS = -5;
 
@@ -372,17 +372,8 @@ function LobbyEmojiRain() {
 
     // --- Fallende emojis ---
     for (const emoji of fallingEmojisRef.current) {
-      const isTarget = emoji.emoji === target;
       const ecx = emoji.x + EMOJI_SIZE / 2;
       const ecy = emoji.y + EMOJI_SIZE / 2;
-
-      // Subtil glow for mål-emojis
-      if (isTarget && state === 'playing') {
-        ctx.fillStyle = `rgba(78, 205, 196, ${0.08 + Math.sin(frame * 0.1 + emoji.id) * 0.04})`;
-        ctx.beginPath();
-        ctx.arc(ecx, ecy, EMOJI_SIZE / 2 + 6, 0, Math.PI * 2);
-        ctx.fill();
-      }
 
       // Emoji
       const wobble = Math.sin(frame * 0.05 + emoji.id * 1.7) * 2;
@@ -443,8 +434,9 @@ function LobbyEmojiRain() {
       pickNewTarget();
       lastTargetChangeRef.current = now;
 
-      // Vis en liten indikator ved bytte
-      spawnFloatingText(CANVAS_WIDTH / 2, 80, 'NY!', '#fbbf24');
+      // Synlig indikator + flash ved bytte
+      spawnFloatingText(CANVAS_WIDTH / 2, 60, 'NYTT MAL!', '#fbbf24');
+      flashRef.current = 25; // Lenger flash for å gjøre det tydelig
     }
 
     // Beregn nåværende fall-hastighet basert på fremdrift
@@ -488,31 +480,36 @@ function LobbyEmojiRain() {
       });
     }
 
-    // Oppdater fallende emojis
-    fallingEmojisRef.current = fallingEmojisRef.current
-      .map(e => ({ ...e, y: e.y + e.vy }))
-      .filter(e => e.y < CANVAS_HEIGHT + EMOJI_SIZE);
+    // Oppdater fallende emojis (in-place for ytelse)
+    const emojis = fallingEmojisRef.current;
+    for (let i = emojis.length - 1; i >= 0; i--) {
+      emojis[i].y += emojis[i].vy;
+      if (emojis[i].y >= CANVAS_HEIGHT + EMOJI_SIZE) emojis.splice(i, 1);
+    }
 
     // Oppdater feedback-timers
     if (flashRef.current > 0) flashRef.current--;
     if (shakeRef.current > 0) shakeRef.current--;
 
-    // Oppdater partikler
-    particlesRef.current = particlesRef.current
-      .map(p => ({
-        ...p,
-        x: p.x + p.vx,
-        y: p.y + p.vy,
-        vy: p.vy + 0.15,
-        vx: p.vx * 0.97,
-        life: p.life - 1,
-      }))
-      .filter(p => p.life > 0);
+    // Oppdater partikler (in-place for ytelse)
+    const particles = particlesRef.current;
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.15;
+      p.vx *= 0.97;
+      p.life -= 1;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
 
-    // Oppdater flytende tekst
-    floatingTextsRef.current = floatingTextsRef.current
-      .map(ft => ({ ...ft, y: ft.y + ft.vy, life: ft.life - 1 }))
-      .filter(ft => ft.life > 0);
+    // Oppdater flytende tekst (in-place for ytelse)
+    const texts = floatingTextsRef.current;
+    for (let i = texts.length - 1; i >= 0; i--) {
+      texts[i].y += texts[i].vy;
+      texts[i].life -= 1;
+      if (texts[i].life <= 0) texts.splice(i, 1);
+    }
 
     // Sjekk om tiden er ute
     if (timeLeftRef.current <= 0) {
@@ -558,7 +555,7 @@ function LobbyEmojiRain() {
 
     // Send poeng til server
     if (finalScore > 0 && submitLobbyScoreRef.current) {
-      submitLobbyScoreRef.current(finalScore);
+      submitLobbyScoreRef.current(finalScore, 'emoji');
     }
   }, []);
 

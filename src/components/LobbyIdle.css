@@ -271,6 +271,22 @@
 .mini-leaderboard .score {
   color: #4ecdc4;
   font-weight: bold;
+  font-size: 0.85rem;
+}
+
+.mini-leaderboard.total-leaderboard {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.mini-leaderboard.total-leaderboard h4 {
+  color: #666;
+  font-size: 0.8rem;
+}
+
+.mini-leaderboard.total-leaderboard .score {
+  color: #888;
 }
 
 /* === PLAYERS SIDEBAR === */
