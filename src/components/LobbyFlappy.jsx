@@ -12,11 +12,11 @@ const BIRD_SIZE = 24;
 const BIRD_X = 120;
 
 // Fysikk
-const GRAVITY = 0.3;
-const FLAP_FORCE = -5.5;
+const GRAVITY = 0.25;
+const FLAP_FORCE = -4.5;
 const HOVER_GRAVITY_MULT = 0.12; // Gravitasjon-multiplikator ved hold
-const MAX_FALL_SPEED = 6;
-const MAX_FALL_SPEED_HOVER = 1.8; // Maks fallhastighet ved hold
+const MAX_FALL_SPEED = 5;
+const MAX_FALL_SPEED_HOVER = 1.2; // Maks fallhastighet ved hold
 
 // Rør
 const PIPE_SPEED = 2.5;

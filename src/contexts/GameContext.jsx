@@ -142,7 +142,6 @@ export const GameProvider = ({ children }) => {
 
     newSocket.on('connect_error', (err) => {
       console.error('Socket connection error:', err.message);
-      // Ikke oppdater state for hver feil - vent på reconnect_failed
     });
 
     // Room events

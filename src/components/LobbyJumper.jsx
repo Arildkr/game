@@ -10,13 +10,13 @@ const GROUND_HEIGHT = 30;
 const PLAYER_SIZE = 30;
 const OBSTACLE_WIDTH = 20;
 const OBSTACLE_MIN_HEIGHT = 20;
-const OBSTACLE_MAX_HEIGHT = 200;
+const OBSTACLE_MAX_HEIGHT = 220;
 const GRAVITY = 0.8;
 const JUMP_FORCE = -16;
-const DOUBLE_JUMP_FORCE = -13;
+const DOUBLE_JUMP_FORCE = -14;
 const INITIAL_SPEED = 5;
-const MAX_SPEED = 12;
-const SPEED_INCREMENT = 0.001;
+const MAX_SPEED = 16;
+const SPEED_INCREMENT = 0.002;
 
 // Ceiling obstacles start after this many obstacles dodged
 const CEILING_START_OBSTACLES = 15;
@@ -38,6 +38,7 @@ function LobbyJumper() {
   const gameLoopRef = useRef(null);
   const isMountedRef = useRef(true);
   const submitLobbyScoreRef = useRef(submitLobbyScore);
+  const scoreDisplayRef = useRef(null);
 
   const [gameState, setGameState] = useState('idle');
   const [score, setScore] = useState(0);
@@ -499,8 +500,9 @@ function LobbyJumper() {
         if (died) {
           handleDeath();
         } else {
-          if (frameCountRef.current % 30 === 0) {
-            setScore(scoreRef.current);
+          // Oppdater poengvisning direkte i DOM (unngår React re-render)
+          if (scoreDisplayRef.current) {
+            scoreDisplayRef.current.textContent = scoreRef.current;
           }
         }
       }
@@ -586,7 +588,7 @@ function LobbyJumper() {
       </div>
 
       <div className="jumper-stats">
-        <span className="current-score">Poeng: {score}</span>
+        <span className="current-score">Poeng: <span ref={scoreDisplayRef}>{score}</span></span>
         <span className="best-score">Best: {highScore}</span>
       </div>
     </div>
