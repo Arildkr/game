@@ -70,6 +70,7 @@ function LobbyPatternMatcher() {
   const flashWrongRef = useRef(-1);       // Feil-knapp flash
   const flashWrongTimerRef = useRef(null);
   const frameCountRef = useRef(0);
+  const deathTimeRef = useRef(0);
 
   // Sync refs
   useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
@@ -205,6 +206,7 @@ function LobbyPatternMatcher() {
       const finalScore = roundRef.current * 10;
       setGameState('dead');
       setScore(finalScore);
+      deathTimeRef.current = performance.now();
 
       // Oppdater high score
       if (finalScore > highScoreRef.current) {
@@ -488,7 +490,12 @@ function LobbyPatternMatcher() {
   const handleClick = useCallback((clientX, clientY) => {
     const state = gameStateRef.current;
 
-    if (state === 'idle' || state === 'dead') {
+    if (state === 'idle') {
+      startGame();
+      return;
+    }
+    if (state === 'dead') {
+      if (performance.now() - deathTimeRef.current < 1500) return;
       startGame();
       return;
     }
@@ -509,7 +516,12 @@ function LobbyPatternMatcher() {
       // Start/restart
       if (e.code === 'Space') {
         e.preventDefault();
-        if (state === 'idle' || state === 'dead') {
+        if (state === 'idle') {
+          startGame();
+          return;
+        }
+        if (state === 'dead') {
+          if (performance.now() - deathTimeRef.current < 1500) return;
           startGame();
           return;
         }

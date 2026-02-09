@@ -12,15 +12,17 @@ const BIRD_SIZE = 24;
 const BIRD_X = 120;
 
 // Fysikk
-const GRAVITY = 0.35;
-const FLAP_FORCE = -7;
-const HOVER_GRAVITY_MULT = 0.3; // Gravitasjon-multiplikator ved hold
+const GRAVITY = 0.3;
+const FLAP_FORCE = -5.5;
+const HOVER_GRAVITY_MULT = 0.12; // Gravitasjon-multiplikator ved hold
+const MAX_FALL_SPEED = 6;
+const MAX_FALL_SPEED_HOVER = 1.8; // Maks fallhastighet ved hold
 
 // Rør
-const PIPE_SPEED = 3;
-const PIPE_GAP = 110;
+const PIPE_SPEED = 2.5;
+const PIPE_GAP = 130;
 const PIPE_WIDTH = 50;
-const PIPE_SPAWN_INTERVAL = 100;
+const PIPE_SPAWN_INTERVAL = 110;
 
 // Dash
 const DASH_DURATION = 300;
@@ -77,6 +79,7 @@ function LobbyFlappy() {
   // Dobbelttrykk for dash
   const lastTapTimeRef = useRef(0);
   const DOUBLE_TAP_THRESHOLD = 250;
+  const deathTimeRef = useRef(0);
 
   useEffect(() => { highScoreRef.current = highScore; }, [highScore]);
   useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
@@ -337,8 +340,14 @@ function LobbyFlappy() {
     }
 
     // Gravitasjon - redusert ved hold
-    const effectiveGravity = isHoldingRef.current ? GRAVITY * HOVER_GRAVITY_MULT : GRAVITY;
+    const holding = isHoldingRef.current;
+    const effectiveGravity = holding ? GRAVITY * HOVER_GRAVITY_MULT : GRAVITY;
     bird.vy += effectiveGravity;
+
+    // Terminal velocity - mye lavere ved hold slik at fuglen svever
+    const maxFall = holding ? MAX_FALL_SPEED_HOVER : MAX_FALL_SPEED;
+    if (bird.vy > maxFall) bird.vy = maxFall;
+
     bird.y += bird.vy;
 
     // Rotasjon
@@ -448,6 +457,7 @@ function LobbyFlappy() {
 
     setGameState('dead');
     setScore(finalScore);
+    deathTimeRef.current = performance.now();
 
     if (finalScore > highScoreRef.current) {
       setHighScore(finalScore);
@@ -495,7 +505,12 @@ function LobbyFlappy() {
 
   // Ned-event (flap + start holding)
   const handleDown = useCallback(() => {
-    if (gameStateRef.current === 'idle' || gameStateRef.current === 'dead') {
+    if (gameStateRef.current === 'idle') {
+      startGame();
+      return;
+    }
+    if (gameStateRef.current === 'dead') {
+      if (performance.now() - deathTimeRef.current < 1500) return;
       startGame();
       return;
     }
@@ -568,7 +583,7 @@ function LobbyFlappy() {
           <div className="overlay start-overlay">
             <p className="game-title">Flappy</p>
             <p>Trykk for å starte!</p>
-            <p style={{ fontSize: '0.8rem', opacity: 0.6, marginTop: '0.3rem' }}>Hold inne for å sveve</p>
+            <p style={{ fontSize: '0.8rem', opacity: 0.6, marginTop: '0.3rem' }}>Hold inne for å sveve langsomt</p>
           </div>
         )}
 

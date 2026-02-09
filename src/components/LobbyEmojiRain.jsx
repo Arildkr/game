@@ -28,7 +28,7 @@ const WRONG_POINTS = -5;
 // Emoji-konfigurasjon
 const ALL_EMOJIS = ['🍎', '🍌', '🍊', '🍇', '🍓', '🌟', '⭐', '💎', '🎯', '🏆'];
 const EMOJI_SIZE = 32;
-const EMOJI_HIT_RADIUS = 28; // Treffområde for touch/klikk
+const EMOJI_HIT_RADIUS = 36; // Treffområde for touch/klikk (økt for bedre respons ved høy hastighet)
 
 // Fallende emojis: hastighet og spawn-rate
 const INITIAL_FALL_SPEED_MIN = 1.5;
@@ -68,6 +68,7 @@ function LobbyEmojiRain() {
   const timeLeftRef = useRef(GAME_DURATION);
   const highScoreRef = useRef(highScore);
   const gameStateRef = useRef(gameState);
+  const deathTimeRef = useRef(0);
 
   // Fallende emojis: { x, y, vy, emoji, id }
   const fallingEmojisRef = useRef([]);
@@ -177,12 +178,19 @@ function LobbyEmojiRain() {
     let closestDist = Infinity;
 
     // Finn nærmeste emoji innenfor treffradius
+    // Bruk interpolert posisjon (halvveis mellom nåværende og forrige frame) for å kompensere
+    // for at raske emojis har beveget seg siden spilleren siktet
     for (let i = emojis.length - 1; i >= 0; i--) {
       const e = emojis[i];
-      const dx = tapX - (e.x + EMOJI_SIZE / 2);
-      const dy = tapY - (e.y + EMOJI_SIZE / 2);
+      const ecx = e.x + EMOJI_SIZE / 2;
+      // Sjekk mot midtpunktet mellom nåværende og forrige posisjon
+      const ecy = e.y + EMOJI_SIZE / 2 - e.vy * 0.5;
+      const dx = tapX - ecx;
+      const dy = tapY - ecy;
+      // Ekstra vertikal toleranse basert på hastighet
+      const extraY = Math.min(e.vy * 2, 20);
       const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < EMOJI_HIT_RADIUS && dist < closestDist) {
+      if (dist < EMOJI_HIT_RADIUS + extraY && dist < closestDist) {
         closestDist = dist;
         closestIndex = i;
       }
@@ -559,6 +567,7 @@ function LobbyEmojiRain() {
 
     setGameState('dead');
     setDisplayScore(finalScore);
+    deathTimeRef.current = performance.now();
 
     // Oppdater high score
     if (finalScore > highScoreRef.current) {
@@ -574,7 +583,12 @@ function LobbyEmojiRain() {
 
   // Klikk-handler
   const handleClick = useCallback((e) => {
-    if (gameStateRef.current === 'idle' || gameStateRef.current === 'dead') {
+    if (gameStateRef.current === 'idle') {
+      startGame();
+      return;
+    }
+    if (gameStateRef.current === 'dead') {
+      if (performance.now() - deathTimeRef.current < 1500) return;
       startGame();
       return;
     }
@@ -590,7 +604,12 @@ function LobbyEmojiRain() {
   // Touch-handler
   const handleTouch = useCallback((e) => {
     e.preventDefault();
-    if (gameStateRef.current === 'idle' || gameStateRef.current === 'dead') {
+    if (gameStateRef.current === 'idle') {
+      startGame();
+      return;
+    }
+    if (gameStateRef.current === 'dead') {
+      if (performance.now() - deathTimeRef.current < 1500) return;
       startGame();
       return;
     }
@@ -654,7 +673,10 @@ function LobbyEmojiRain() {
     const handleKeyDown = (e) => {
       if (e.code === 'Space') {
         e.preventDefault();
-        if (gameStateRef.current === 'idle' || gameStateRef.current === 'dead') {
+        if (gameStateRef.current === 'idle') {
+          startGame();
+        } else if (gameStateRef.current === 'dead') {
+          if (performance.now() - deathTimeRef.current < 1500) return;
           startGame();
         }
       }

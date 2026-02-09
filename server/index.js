@@ -159,6 +159,10 @@ function sanitizeRoom(room) {
 // Bot manager for demo mode
 const botManager = new BotManager(io, rooms, handlePlayerAction);
 
+// Grace period for host disconnect (30 seconds before closing room)
+const HOST_DISCONNECT_GRACE_MS = 30000;
+const hostDisconnectTimers = new Map(); // roomCode → { timer, oldHostId }
+
 // Socket.io connection handling
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
@@ -267,6 +271,85 @@ io.on('connection', (socket) => {
       io.to(roomCode).emit('room:player-left', { room: sanitizeRoom(room), playerId });
       console.log(`Player ${playerId} kicked from room ${roomCode}`);
     }
+  });
+
+  // ==================
+  // REJOIN EVENTS (for reconnection after brief disconnect)
+  // ==================
+
+  socket.on('host:rejoin', ({ roomCode: code }) => {
+    if (!code) return;
+    const room = rooms[code];
+    if (!room) {
+      socket.emit('room:join-error', { message: 'Rommet finnes ikke lenger.' });
+      return;
+    }
+
+    // Cancel grace period timer if active
+    const pending = hostDisconnectTimers.get(code);
+    if (pending) {
+      clearTimeout(pending.timer);
+      hostDisconnectTimers.delete(code);
+      // Clean up old host mapping
+      socketToRoom.delete(pending.oldHostId);
+      console.log(`Host rejoin cancelled grace period for room ${code}`);
+    }
+
+    // Reassign host to new socket
+    room.hostId = socket.id;
+    socketToRoom.set(socket.id, code);
+    socket.join(code);
+
+    // Send full state sync to host
+    socket.emit('host:rejoin-success', {
+      roomCode: code,
+      room: sanitizeRoom(room),
+      lobbyData: room.lobbyData,
+      lobbyMinigame: room.lobbyMinigame || 'jumper'
+    });
+
+    console.log(`Host ${socket.id} rejoined room ${code}`);
+  });
+
+  socket.on('player:rejoin', ({ roomCode: code, playerName: name }) => {
+    if (!code || !name) return;
+    const room = rooms[code];
+    if (!room) {
+      socket.emit('room:join-error', { message: 'Rommet finnes ikke lenger.' });
+      return;
+    }
+
+    // Find existing player by name (may have disconnected)
+    const existingPlayer = room.players.find(p => p.name === name && !p.isConnected);
+    if (existingPlayer) {
+      // Reassociate the existing player entry with the new socket
+      socketToRoom.delete(existingPlayer.id);
+      existingPlayer.id = socket.id;
+      existingPlayer.isConnected = true;
+      socketToRoom.set(socket.id, code);
+      socket.join(code);
+
+      console.log(`Player ${name} (${socket.id}) rejoined room ${code}`);
+    } else {
+      // Player not found - try joining as new player
+      const result = joinRoom(code, socket.id, name);
+      if (!result) {
+        socket.emit('room:join-error', { message: 'Kunne ikke bli med i rommet.' });
+        return;
+      }
+      socket.join(code);
+      console.log(`Player ${name} (${socket.id}) joined room ${code} as new player`);
+    }
+
+    // Sync full state to the reconnected player
+    socket.emit('game:state-sync', { room: sanitizeRoom(room) });
+
+    // Notify all players of the updated player list
+    io.to(code).emit('room:player-joined', {
+      playerId: socket.id,
+      playerName: name,
+      room: sanitizeRoom(room)
+    });
   });
 
   // ==================
@@ -429,33 +512,65 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
     const roomCode = socketToRoom.get(socket.id);
-    const result = removePlayer(socket.id);
+    if (!roomCode) return;
 
-    if (result) {
-      if (result.hostLeft) {
-        // Clean up bots when host disconnects
-        if (roomCode) botManager.cleanup(roomCode);
-        io.to(result.room.code).emit('room:closed');
-        console.log(`Host ${socket.id} disconnected, room ${result.room.code} closed`);
-      } else {
-        io.to(result.room.code).emit('room:player-left', {
-          room: sanitizeRoom(result.room),
-          playerId: socket.id
-        });
-        console.log(`Player ${socket.id} left room ${result.room.code}`);
+    const room = rooms[roomCode];
+    if (!room) {
+      socketToRoom.delete(socket.id);
+      return;
+    }
+
+    // Check if this is the host
+    if (room.hostId === socket.id) {
+      // Don't close room immediately - start grace period
+      console.log(`Host ${socket.id} disconnected from room ${roomCode}, starting ${HOST_DISCONNECT_GRACE_MS / 1000}s grace period`);
+
+      const timer = setTimeout(() => {
+        hostDisconnectTimers.delete(roomCode);
+        // Grace period expired - now actually close the room
+        const stillRoom = rooms[roomCode];
+        if (stillRoom && stillRoom.hostId === socket.id) {
+          // Host never reconnected - close room
+          botManager.cleanup(roomCode);
+          socketToRoom.delete(socket.id);
+          stillRoom.players.forEach(p => socketToRoom.delete(p.id));
+          delete rooms[roomCode];
+          io.to(roomCode).emit('room:closed');
+          console.log(`Grace period expired, room ${roomCode} closed`);
+        }
+      }, HOST_DISCONNECT_GRACE_MS);
+
+      hostDisconnectTimers.set(roomCode, { timer, oldHostId: socket.id });
+    } else {
+      // Regular player disconnect - just mark as disconnected, don't remove
+      const player = room.players.find(p => p.id === socket.id);
+      if (player) {
+        player.isConnected = false;
       }
+      // Don't delete socketToRoom here - leave it for potential rejoin
+      // But do notify other players
+      io.to(roomCode).emit('room:player-left', {
+        room: sanitizeRoom(room),
+        playerId: socket.id
+      });
+      console.log(`Player ${socket.id} disconnected from room ${roomCode} (marked offline)`);
     }
   });
 });
 
 // Cleanup old rooms every 30 minutes
 setInterval(() => {
-  // Clean up bot timers for rooms that will be removed
+  // Clean up bot timers and grace timers for rooms that will be removed
   for (const code in rooms) {
     const room = rooms[code];
     const lastActive = room.lastActivity || room.createdAt.getTime();
     if (Date.now() - lastActive > 3 * 3600000) {
       botManager.cleanup(code);
+      const pending = hostDisconnectTimers.get(code);
+      if (pending) {
+        clearTimeout(pending.timer);
+        hostDisconnectTimers.delete(code);
+      }
     }
   }
   cleanupOldRooms();

@@ -42,11 +42,13 @@ export const GameProvider = ({ children }) => {
   const [isDemoActive, setIsDemoActive] = useState(false);
   const [botIds, setBotIds] = useState([]);
 
-  // Ref for å unngå stale closures i socket handlers
+  // Refs for å unngå stale closures i socket handlers
   const roomCodeRef = useRef(roomCode);
-  useEffect(() => {
-    roomCodeRef.current = roomCode;
-  }, [roomCode]);
+  const isHostRef = useRef(isHost);
+  const playerNameRef = useRef(playerName);
+  useEffect(() => { roomCodeRef.current = roomCode; }, [roomCode]);
+  useEffect(() => { isHostRef.current = isHost; }, [isHost]);
+  useEffect(() => { playerNameRef.current = playerName; }, [playerName]);
 
   // Funksjon for å nullstille state (definert før useEffect)
   const doResetGameState = useCallback(() => {
@@ -119,6 +121,18 @@ export const GameProvider = ({ children }) => {
     newSocket.on('reconnect', () => {
       console.log('Reconnected to socket server');
       setIsConnecting(false);
+
+      // Auto-rejoin room if we were in one
+      const code = roomCodeRef.current;
+      if (code) {
+        if (isHostRef.current) {
+          console.log(`Auto-rejoining room ${code} as host`);
+          newSocket.emit('host:rejoin', { roomCode: code });
+        } else if (playerNameRef.current) {
+          console.log(`Auto-rejoining room ${code} as player ${playerNameRef.current}`);
+          newSocket.emit('player:rejoin', { roomCode: code, playerName: playerNameRef.current });
+        }
+      }
     });
 
     newSocket.on('reconnect_failed', () => {
@@ -278,6 +292,23 @@ export const GameProvider = ({ children }) => {
       setCurrentGame(room.game);
       setGameData(room.gameData);
       setPlayers(room.players);
+      if (room.lobbyMinigame) setLobbyMinigame(room.lobbyMinigame);
+    });
+
+    // Host rejoin success - sync full state after reconnection
+    newSocket.on('host:rejoin-success', ({ roomCode: code, room, lobbyData: lData, lobbyMinigame: mg }) => {
+      console.log('Host rejoin success for room', code);
+      setRoomCode(code);
+      setIsHost(true);
+      setMyPlayerId(newSocket.id);
+      if (room) {
+        setPlayers(room.players || []);
+        setGameState(room.gameState || 'LOBBY_IDLE');
+        setCurrentGame(room.game || null);
+        setGameData(room.gameData || null);
+      }
+      if (lData) setLobbyData(lData);
+      if (mg) setLobbyMinigame(mg);
     });
 
     // Demo mode events

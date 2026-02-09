@@ -68,6 +68,7 @@ function LobbyJumper() {
   const frameCountRef = useRef(0);
   const highScoreRef = useRef(highScore);
   const gameStateRef = useRef(gameState);
+  const deathTimeRef = useRef(0);
 
   useEffect(() => { highScoreRef.current = highScore; }, [highScore]);
   useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
@@ -458,6 +459,7 @@ function LobbyJumper() {
 
     setGameState('dead');
     setScore(finalScore);
+    deathTimeRef.current = performance.now();
 
     if (finalScore > highScoreRef.current) {
       setHighScore(finalScore);
@@ -514,7 +516,10 @@ function LobbyJumper() {
     const handleKeyDown = (e) => {
       if (e.code === 'Space' || e.code === 'ArrowUp') {
         e.preventDefault();
-        if (gameStateRef.current === 'idle' || gameStateRef.current === 'dead') {
+        if (gameStateRef.current === 'idle') {
+          startGame();
+        } else if (gameStateRef.current === 'dead') {
+          if (performance.now() - deathTimeRef.current < 1500) return;
           startGame();
         } else if (gameStateRef.current === 'playing') {
           jump();
@@ -528,7 +533,10 @@ function LobbyJumper() {
 
   // Touch/klikk
   const handleInteraction = useCallback(() => {
-    if (gameStateRef.current === 'idle' || gameStateRef.current === 'dead') {
+    if (gameStateRef.current === 'idle') {
+      startGame();
+    } else if (gameStateRef.current === 'dead') {
+      if (performance.now() - deathTimeRef.current < 1500) return;
       startGame();
     } else if (gameStateRef.current === 'playing') {
       jump();
