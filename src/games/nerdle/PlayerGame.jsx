@@ -12,7 +12,7 @@ const KEYBOARD_LAYOUT = [
 function PlayerGame() {
   const { socket, playerName, leaveRoom } = useGame();
 
-  const [phase, setPhase] = useState('waiting'); // waiting, playing, solved, results
+  const [phase, setPhase] = useState('waiting'); // waiting, playing, solved, failed, results
   const [currentGuess, setCurrentGuess] = useState('');
   const [guesses, setGuesses] = useState([]);
   const [maxAttempts, setMaxAttempts] = useState(6);
@@ -39,9 +39,10 @@ function PlayerGame() {
       setCurrentGuess('');
       setError(null);
 
-      // Check if guess was correct
-      const isCorrect = result.every(r => r === 'correct');
-      if (!isCorrect) {
+      // Check if all attempts exhausted
+      if (attemptsLeft === 0) {
+        setPhase('failed');
+      } else {
         setWrongGuessMessage('Ikke riktig - prøv igjen!');
         setTimeout(() => setWrongGuessMessage(null), 2000);
       }
@@ -234,6 +235,26 @@ function PlayerGame() {
             <div className="solved-icon">🎉</div>
             <h2>Du løste det!</h2>
             <p>på {guesses.length} forsøk</p>
+            <div className="guess-grid small">
+              {guesses.map((g, i) => (
+                <div key={i} className="guess-row">
+                  {g.guess.split('').map((char, j) => (
+                    <div key={j} className={`guess-cell ${g.result[j]}`}>
+                      {char}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+            <p className="waiting-text">Venter på at runden avsluttes...</p>
+          </div>
+        )}
+
+        {/* Failed phase */}
+        {phase === 'failed' && (
+          <div className="failed-phase">
+            <div className="failed-icon">😔</div>
+            <h2>Ingen flere forsøk</h2>
             <div className="guess-grid small">
               {guesses.map((g, i) => (
                 <div key={i} className="guess-row">

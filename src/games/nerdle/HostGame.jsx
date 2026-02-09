@@ -10,6 +10,7 @@ function HostGame() {
   const [phase, setPhase] = useState('waiting'); // waiting, playing, results
   const [currentEquation, setCurrentEquation] = useState(null);
   const [solvedPlayers, setSolvedPlayers] = useState([]);
+  const [failedPlayers, setFailedPlayers] = useState([]);
   const [roundNumber, setRoundNumber] = useState(1);
   const [results, setResults] = useState(null);
 
@@ -20,16 +21,22 @@ function HostGame() {
       setSolvedPlayers(prev => [...prev, { playerId, playerName, attempts }]);
     };
 
+    const handlePlayerFailed = ({ playerId, playerName, attempts }) => {
+      setFailedPlayers(prev => [...prev, { playerId, playerName, attempts }]);
+    };
+
     const handleRoundEnded = ({ targetEquation, results: roundResults, leaderboard }) => {
       setResults({ targetEquation, results: roundResults, leaderboard });
       setPhase('results');
     };
 
     socket.on('game:player-solved', handlePlayerSolved);
+    socket.on('game:player-failed', handlePlayerFailed);
     socket.on('game:round-ended', handleRoundEnded);
 
     return () => {
       socket.off('game:player-solved', handlePlayerSolved);
+      socket.off('game:player-failed', handlePlayerFailed);
       socket.off('game:round-ended', handleRoundEnded);
     };
   }, [socket]);
@@ -40,6 +47,7 @@ function HostGame() {
     const equation = getRandomEquation();
     setCurrentEquation(equation);
     setSolvedPlayers([]);
+    setFailedPlayers([]);
     setPhase('playing');
 
     sendGameAction('start-round', { equation });
@@ -102,13 +110,20 @@ function HostGame() {
             </div>
 
             <div className="solved-status">
-              <h3>Løst ({solvedPlayers.length}/{connectedPlayers.length})</h3>
+              <h3>Løst ({solvedPlayers.length}/{connectedPlayers.length}){failedPlayers.length > 0 && ` · Feilet: ${failedPlayers.length}`}</h3>
               <ul className="solved-list">
                 {solvedPlayers.map((sp, i) => (
                   <li key={sp.playerId} className="solved-item">
                     <span className="rank">#{i + 1}</span>
                     <span className="name">{sp.playerName}</span>
                     <span className="attempts">{sp.attempts} forsøk</span>
+                  </li>
+                ))}
+                {failedPlayers.map((fp) => (
+                  <li key={fp.playerId} className="solved-item failed">
+                    <span className="rank">✗</span>
+                    <span className="name">{fp.playerName}</span>
+                    <span className="attempts">Brukte alle forsøk</span>
                   </li>
                 ))}
               </ul>

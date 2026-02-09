@@ -24,6 +24,10 @@
   cursor: cell;
 }
 
+.drawing-canvas.eraser-cursor {
+  cursor: grab;
+}
+
 .drawing-tools {
   display: flex;
   gap: 1rem;

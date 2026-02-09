@@ -215,6 +215,14 @@ export const GameProvider = ({ children }) => {
       setError(message);
     });
 
+    // Rejoin failed - room no longer exists on server after reconnect
+    newSocket.on('room:rejoin-failed', ({ message }) => {
+      console.warn('Rejoin failed:', message);
+      doResetGameState();
+      setPlayerName('');
+      setError(message || 'Mistet forbindelsen til rommet. Opprett eller bli med i et nytt rom.');
+    });
+
     newSocket.on('room:closed', () => {
       setError('Rommet ble stengt av verten.');
       setRoomCode(null);

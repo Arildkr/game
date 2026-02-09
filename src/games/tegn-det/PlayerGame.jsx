@@ -20,6 +20,7 @@ function PlayerGame() {
 
   const inputRef = useRef(null);
   const lockoutTimerRef = useRef(null);
+  const isDrawerRef = useRef(false);
 
   useEffect(() => {
     if (!socket) return;
@@ -33,11 +34,11 @@ function PlayerGame() {
       setIsLockedOut(false);
 
       if (drawerId === socket.id) {
-        // I am the drawer - wait for word options via separate event
+        isDrawerRef.current = true;
         setIsDrawer(true);
         setPhase('selectWord');
       } else {
-        // I am a guesser - wait for round to start
+        isDrawerRef.current = false;
         setIsDrawer(false);
         setWord('');
         setPhase('waiting');
@@ -57,13 +58,14 @@ function PlayerGame() {
       setIsLockedOut(false);
 
       if (drawerId === socket.id) {
+        isDrawerRef.current = true;
         setIsDrawer(true);
         setPhase('drawing');
       } else {
+        isDrawerRef.current = false;
         setIsDrawer(false);
         setWord('');
         setPhase('guessing');
-        // Focus input after a short delay
         setTimeout(() => inputRef.current?.focus(), 300);
       }
     };
@@ -74,11 +76,21 @@ function PlayerGame() {
     };
 
     const handleDrawingUpdate = ({ stroke }) => {
+      // Drawer already added the stroke locally - skip server echo
+      if (isDrawerRef.current) return;
       setStrokes(prev => [...prev, stroke]);
     };
 
     const handleCanvasCleared = () => {
+      // Drawer already cleared locally - skip server echo
+      if (isDrawerRef.current) return;
       setStrokes([]);
+    };
+
+    const handleStrokeUndone = () => {
+      // Drawer already undid locally - skip server echo
+      if (isDrawerRef.current) return;
+      setStrokes(prev => prev.slice(0, -1));
     };
 
     const handleCorrectGuess = ({ playerId, playerName: winner, word: correctWord, guesserPoints }) => {
@@ -126,6 +138,7 @@ function PlayerGame() {
     socket.on('game:your-word', handleYourWord);
     socket.on('game:drawing-update', handleDrawingUpdate);
     socket.on('game:canvas-cleared', handleCanvasCleared);
+    socket.on('game:stroke-undone', handleStrokeUndone);
     socket.on('game:correct-guess', handleCorrectGuess);
     socket.on('game:wrong-guess', handleWrongGuess);
     socket.on('game:round-ended', handleRoundEnded);
@@ -137,6 +150,7 @@ function PlayerGame() {
       socket.off('game:your-word', handleYourWord);
       socket.off('game:drawing-update', handleDrawingUpdate);
       socket.off('game:canvas-cleared', handleCanvasCleared);
+      socket.off('game:stroke-undone', handleStrokeUndone);
       socket.off('game:correct-guess', handleCorrectGuess);
       socket.off('game:wrong-guess', handleWrongGuess);
       socket.off('game:round-ended', handleRoundEnded);
@@ -153,13 +167,28 @@ function PlayerGame() {
   };
 
   const handleStroke = (stroke) => {
+    // Add stroke to local state immediately (no server delay for drawer)
+    setStrokes(prev => [...prev, stroke]);
+    // Send to server for other players
     socket.emit('player:game-action', {
       action: 'draw-stroke',
       data: { stroke }
     });
   };
 
+  const handleUndo = () => {
+    // Remove last stroke locally immediately
+    setStrokes(prev => prev.slice(0, -1));
+    // Send to server for other players
+    socket.emit('player:game-action', {
+      action: 'undo-stroke',
+      data: {}
+    });
+  };
+
   const clearCanvas = () => {
+    // Clear locally immediately
+    setStrokes([]);
     socket.emit('player:game-action', {
       action: 'clear-canvas',
       data: {}
@@ -232,6 +261,7 @@ function PlayerGame() {
             <DrawingCanvas
               isDrawer={true}
               onStroke={handleStroke}
+              onUndo={handleUndo}
               strokes={strokes}
               width={500}
               height={400}

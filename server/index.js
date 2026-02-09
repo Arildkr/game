@@ -160,7 +160,7 @@ function sanitizeRoom(room) {
 const botManager = new BotManager(io, rooms, handlePlayerAction);
 
 // Grace period for host disconnect (30 seconds before closing room)
-const HOST_DISCONNECT_GRACE_MS = 30000;
+const HOST_DISCONNECT_GRACE_MS = 60000;
 const hostDisconnectTimers = new Map(); // roomCode → { timer, oldHostId }
 
 // Socket.io connection handling
@@ -282,7 +282,7 @@ io.on('connection', (socket) => {
     const upperCode = code.toUpperCase();
     const room = rooms[upperCode];
     if (!room) {
-      socket.emit('room:join-error', { message: 'Rommet finnes ikke lenger.' });
+      socket.emit('room:rejoin-failed', { message: 'Rommet finnes ikke lenger.' });
       return;
     }
 
@@ -291,9 +291,14 @@ io.on('connection', (socket) => {
     if (pending) {
       clearTimeout(pending.timer);
       hostDisconnectTimers.delete(upperCode);
-      // Clean up old host mapping
       socketToRoom.delete(pending.oldHostId);
       console.log(`Host rejoin cancelled grace period for room ${upperCode}`);
+    }
+
+    // Always clean up old host socket mapping (handles race where disconnect hasn't fired yet)
+    const oldHostId = room.hostId;
+    if (oldHostId && oldHostId !== socket.id) {
+      socketToRoom.delete(oldHostId);
     }
 
     // Reassign host to new socket
@@ -317,15 +322,21 @@ io.on('connection', (socket) => {
     const upperCode = code.toUpperCase();
     const room = rooms[upperCode];
     if (!room) {
-      socket.emit('room:join-error', { message: 'Rommet finnes ikke lenger.' });
+      socket.emit('room:rejoin-failed', { message: 'Rommet finnes ikke lenger.' });
       return;
     }
 
-    // Find existing player by name (may have disconnected)
-    const existingPlayer = room.players.find(p => p.name === name && !p.isConnected);
+    // Find existing player by name (case-insensitive)
+    // Don't require !isConnected - the old disconnect may not have been processed yet (race condition)
+    const existingPlayer = room.players.find(p =>
+      p.name.toLowerCase() === name.toLowerCase()
+    );
+
     if (existingPlayer) {
-      // Reassociate the existing player entry with the new socket
-      socketToRoom.delete(existingPlayer.id);
+      // Clean up old socket mapping
+      if (existingPlayer.id !== socket.id) {
+        socketToRoom.delete(existingPlayer.id);
+      }
       existingPlayer.id = socket.id;
       existingPlayer.isConnected = true;
       socketToRoom.set(socket.id, upperCode);
@@ -333,10 +344,10 @@ io.on('connection', (socket) => {
 
       console.log(`Player ${name} (${socket.id}) rejoined room ${upperCode}`);
     } else {
-      // Player not found - try joining as new player
+      // Player not found by name - join as new player
       const result = joinRoom(upperCode, socket.id, name);
       if (!result) {
-        socket.emit('room:join-error', { message: 'Kunne ikke bli med i rommet.' });
+        socket.emit('room:rejoin-failed', { message: 'Kunne ikke bli med i rommet.' });
         return;
       }
       socket.join(upperCode);
@@ -349,7 +360,7 @@ io.on('connection', (socket) => {
     // Notify all players of the updated player list
     io.to(upperCode).emit('room:player-joined', {
       playerId: socket.id,
-      playerName: name,
+      playerName: existingPlayer?.name || name,
       room: sanitizeRoom(room)
     });
   });
@@ -526,6 +537,13 @@ io.on('connection', (socket) => {
     if (room.hostId === socket.id) {
       // Don't close room immediately - start grace period
       console.log(`Host ${socket.id} disconnected from room ${roomCode}, starting ${HOST_DISCONNECT_GRACE_MS / 1000}s grace period`);
+
+      // Clear any existing grace timer for this room (prevents orphaned timers)
+      const existingTimer = hostDisconnectTimers.get(roomCode);
+      if (existingTimer) {
+        clearTimeout(existingTimer.timer);
+        hostDisconnectTimers.delete(roomCode);
+      }
 
       const timer = setTimeout(() => {
         hostDisconnectTimers.delete(roomCode);

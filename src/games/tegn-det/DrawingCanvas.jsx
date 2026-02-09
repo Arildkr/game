@@ -64,6 +64,7 @@ function floodFillCanvas(ctx, startX, startY, fillColorHex, canvasWidth, canvasH
 function DrawingCanvas({
   isDrawer = false,
   onStroke,
+  onUndo,
   strokes = [],
   width = 400,
   height = 300,
@@ -74,8 +75,12 @@ function DrawingCanvas({
   const [currentStroke, setCurrentStroke] = useState([]);
   const [color, setColor] = useState('#000000');
   const [lineWidth, setLineWidth] = useState(4);
-  const [tool, setTool] = useState('pen'); // 'pen' or 'fill'
+  const [tool, setTool] = useState('pen'); // 'pen', 'fill', or 'eraser'
   const lastPointRef = useRef(null);
+
+  // Active drawing properties based on tool
+  const activeColor = tool === 'eraser' ? backgroundColor : color;
+  const activeWidth = tool === 'eraser' ? Math.max(lineWidth * 3, 12) : lineWidth;
 
   // Colors palette
   const colors = [
@@ -114,8 +119,8 @@ function DrawingCanvas({
     // Draw current stroke (while drawing)
     if (currentStroke.length > 1) {
       ctx.beginPath();
-      ctx.strokeStyle = color;
-      ctx.lineWidth = lineWidth;
+      ctx.strokeStyle = activeColor;
+      ctx.lineWidth = activeWidth;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
 
@@ -125,7 +130,7 @@ function DrawingCanvas({
       }
       ctx.stroke();
     }
-  }, [strokes, currentStroke, color, lineWidth, backgroundColor]);
+  }, [strokes, currentStroke, activeColor, activeWidth, backgroundColor]);
 
   // Redraw when strokes change
   useEffect(() => {
@@ -211,8 +216,8 @@ function DrawingCanvas({
     if (currentStroke.length > 1 && onStroke) {
       onStroke({
         points: currentStroke,
-        color,
-        width: lineWidth
+        color: activeColor,
+        width: activeWidth
       });
     }
 
@@ -227,7 +232,7 @@ function DrawingCanvas({
         ref={canvasRef}
         width={width}
         height={height}
-        className={`drawing-canvas ${tool === 'fill' ? 'fill-cursor' : ''}`}
+        className={`drawing-canvas ${tool === 'fill' ? 'fill-cursor' : ''} ${tool === 'eraser' ? 'eraser-cursor' : ''}`}
         onMouseDown={startDrawing}
         onMouseMove={draw}
         onMouseUp={stopDrawing}
@@ -249,12 +254,24 @@ function DrawingCanvas({
               ✏️
             </button>
             <button
+              className={`tool-btn ${tool === 'eraser' ? 'selected' : ''}`}
+              onClick={() => setTool('eraser')}
+              title="Viskelær"
+            >
+              🧹
+            </button>
+            <button
               className={`tool-btn ${tool === 'fill' ? 'selected' : ''}`}
               onClick={() => setTool('fill')}
               title="Fyll"
             >
               🪣
             </button>
+            {onUndo && (
+              <button className="tool-btn" onClick={onUndo} title="Angre">
+                ↩️
+              </button>
+            )}
           </div>
           <div className="color-picker">
             {colors.map(c => (
@@ -266,7 +283,7 @@ function DrawingCanvas({
               />
             ))}
           </div>
-          {tool === 'pen' && (
+          {tool !== 'fill' && (
             <div className="size-picker">
               <button
                 className={`size-btn ${lineWidth === 2 ? 'selected' : ''}`}

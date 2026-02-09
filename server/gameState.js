@@ -2250,15 +2250,25 @@ function handleNerdlePlayerAction(room, playerId, action, data) {
         };
       }
 
+      const attemptsLeft = gd.maxAttempts - attempts.guesses.length;
+
+      // If all attempts used, also broadcast failure to host
+      if (attemptsLeft === 0) {
+        return {
+          toPlayer: true,
+          playerEvent: 'game:guess-result',
+          playerData: { guess, result, attemptsLeft: 0 },
+          broadcast: true,
+          event: 'game:player-failed',
+          data: { playerId, playerName: player.name, attempts: attempts.guesses.length }
+        };
+      }
+
       return {
         toPlayer: true,
         playerId,
         playerEvent: 'game:guess-result',
-        playerData: {
-          guess,
-          result,
-          attemptsLeft: gd.maxAttempts - attempts.guesses.length
-        }
+        playerData: { guess, result, attemptsLeft }
       };
     }
 
@@ -2614,6 +2624,19 @@ function handleTegnDetPlayerAction(room, playerId, action, data) {
         broadcast: true,
         event: 'game:drawing-update',
         data: { stroke }
+      };
+    }
+
+    case 'undo-stroke': {
+      if (playerId !== gd.drawerId) return null;
+      if (gd.drawingData.length === 0) return null;
+
+      gd.drawingData.pop();
+
+      return {
+        broadcast: true,
+        event: 'game:stroke-undone',
+        data: {}
       };
     }
 
