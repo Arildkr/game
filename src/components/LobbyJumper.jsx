@@ -15,8 +15,8 @@ const GRAVITY = 0.8;
 const JUMP_FORCE = -16;
 const DOUBLE_JUMP_FORCE = -13;
 const INITIAL_SPEED = 5;
-const MAX_SPEED = 16;
-const SPEED_INCREMENT = 0.002;
+const MAX_SPEED = 12;
+const SPEED_INCREMENT = 0.001;
 
 // Ceiling obstacles start after this many obstacles dodged
 const CEILING_START_OBSTACLES = 15;
@@ -41,6 +41,7 @@ function LobbyJumper() {
 
   const [gameState, setGameState] = useState('idle');
   const [score, setScore] = useState(0);
+  const [countdown, setCountdown] = useState(0);
   const [highScore, setHighScore] = useState(() => {
     const saved = localStorage.getItem('lobbyJumperHiV2');
     return saved ? parseInt(saved, 10) : 0;
@@ -72,6 +73,14 @@ function LobbyJumper() {
 
   useEffect(() => { highScoreRef.current = highScore; }, [highScore]);
   useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
+
+  // Nedtelling ved tap
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -460,6 +469,7 @@ function LobbyJumper() {
     setGameState('dead');
     setScore(finalScore);
     deathTimeRef.current = performance.now();
+    setCountdown(3);
 
     if (finalScore > highScoreRef.current) {
       setHighScore(finalScore);
@@ -566,7 +576,11 @@ function LobbyJumper() {
         {gameState === 'dead' && (
           <div className="overlay death-overlay">
             <p className="final-score">{score}</p>
-            <p className="retry-text">Trykk for å prøve igjen</p>
+            {countdown > 0 ? (
+              <p className="countdown-text">{countdown}</p>
+            ) : (
+              <p className="retry-text">Trykk for å prøve igjen</p>
+            )}
           </div>
         )}
       </div>

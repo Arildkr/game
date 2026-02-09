@@ -48,6 +48,7 @@ function LobbyFlappy() {
 
   const [gameState, setGameState] = useState('idle');
   const [score, setScore] = useState(0);
+  const [countdown, setCountdown] = useState(0);
   const [highScore, setHighScore] = useState(() => {
     const saved = localStorage.getItem('lobbyFlappyHighScore');
     return saved ? parseInt(saved, 10) : 0;
@@ -83,6 +84,14 @@ function LobbyFlappy() {
 
   useEffect(() => { highScoreRef.current = highScore; }, [highScore]);
   useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
+
+  // Nedtelling ved tap
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -458,6 +467,7 @@ function LobbyFlappy() {
     setGameState('dead');
     setScore(finalScore);
     deathTimeRef.current = performance.now();
+    setCountdown(3);
 
     if (finalScore > highScoreRef.current) {
       setHighScore(finalScore);
@@ -590,7 +600,11 @@ function LobbyFlappy() {
         {gameState === 'dead' && (
           <div className="overlay death-overlay">
             <p className="final-score">{score}</p>
-            <p className="retry-text">Trykk for å prøve igjen</p>
+            {countdown > 0 ? (
+              <p className="countdown-text">{countdown}</p>
+            ) : (
+              <p className="retry-text">Trykk for å prøve igjen</p>
+            )}
           </div>
         )}
       </div>

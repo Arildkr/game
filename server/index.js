@@ -279,41 +279,43 @@ io.on('connection', (socket) => {
 
   socket.on('host:rejoin', ({ roomCode: code }) => {
     if (!code) return;
-    const room = rooms[code];
+    const upperCode = code.toUpperCase();
+    const room = rooms[upperCode];
     if (!room) {
       socket.emit('room:join-error', { message: 'Rommet finnes ikke lenger.' });
       return;
     }
 
     // Cancel grace period timer if active
-    const pending = hostDisconnectTimers.get(code);
+    const pending = hostDisconnectTimers.get(upperCode);
     if (pending) {
       clearTimeout(pending.timer);
-      hostDisconnectTimers.delete(code);
+      hostDisconnectTimers.delete(upperCode);
       // Clean up old host mapping
       socketToRoom.delete(pending.oldHostId);
-      console.log(`Host rejoin cancelled grace period for room ${code}`);
+      console.log(`Host rejoin cancelled grace period for room ${upperCode}`);
     }
 
     // Reassign host to new socket
     room.hostId = socket.id;
-    socketToRoom.set(socket.id, code);
-    socket.join(code);
+    socketToRoom.set(socket.id, upperCode);
+    socket.join(upperCode);
 
     // Send full state sync to host
     socket.emit('host:rejoin-success', {
-      roomCode: code,
+      roomCode: upperCode,
       room: sanitizeRoom(room),
       lobbyData: room.lobbyData,
       lobbyMinigame: room.lobbyMinigame || 'jumper'
     });
 
-    console.log(`Host ${socket.id} rejoined room ${code}`);
+    console.log(`Host ${socket.id} rejoined room ${upperCode}`);
   });
 
   socket.on('player:rejoin', ({ roomCode: code, playerName: name }) => {
     if (!code || !name) return;
-    const room = rooms[code];
+    const upperCode = code.toUpperCase();
+    const room = rooms[upperCode];
     if (!room) {
       socket.emit('room:join-error', { message: 'Rommet finnes ikke lenger.' });
       return;
@@ -326,26 +328,26 @@ io.on('connection', (socket) => {
       socketToRoom.delete(existingPlayer.id);
       existingPlayer.id = socket.id;
       existingPlayer.isConnected = true;
-      socketToRoom.set(socket.id, code);
-      socket.join(code);
+      socketToRoom.set(socket.id, upperCode);
+      socket.join(upperCode);
 
-      console.log(`Player ${name} (${socket.id}) rejoined room ${code}`);
+      console.log(`Player ${name} (${socket.id}) rejoined room ${upperCode}`);
     } else {
       // Player not found - try joining as new player
-      const result = joinRoom(code, socket.id, name);
+      const result = joinRoom(upperCode, socket.id, name);
       if (!result) {
         socket.emit('room:join-error', { message: 'Kunne ikke bli med i rommet.' });
         return;
       }
-      socket.join(code);
-      console.log(`Player ${name} (${socket.id}) joined room ${code} as new player`);
+      socket.join(upperCode);
+      console.log(`Player ${name} (${socket.id}) joined room ${upperCode} as new player`);
     }
 
     // Sync full state to the reconnected player
     socket.emit('game:state-sync', { room: sanitizeRoom(room) });
 
     // Notify all players of the updated player list
-    io.to(code).emit('room:player-joined', {
+    io.to(upperCode).emit('room:player-joined', {
       playerId: socket.id,
       playerName: name,
       room: sanitizeRoom(room)
@@ -542,13 +544,14 @@ io.on('connection', (socket) => {
 
       hostDisconnectTimers.set(roomCode, { timer, oldHostId: socket.id });
     } else {
-      // Regular player disconnect - just mark as disconnected, don't remove
+      // Regular player disconnect - mark as disconnected
       const player = room.players.find(p => p.id === socket.id);
       if (player) {
         player.isConnected = false;
       }
-      // Don't delete socketToRoom here - leave it for potential rejoin
-      // But do notify other players
+      // Clean up stale socket mapping (new socket will get new mapping on rejoin)
+      socketToRoom.delete(socket.id);
+      // Notify other players
       io.to(roomCode).emit('room:player-left', {
         room: sanitizeRoom(room),
         playerId: socket.id

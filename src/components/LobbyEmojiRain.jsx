@@ -51,6 +51,7 @@ function LobbyEmojiRain() {
 
   const [gameState, setGameState] = useState('idle'); // idle, playing, dead
   const [displayScore, setDisplayScore] = useState(0);
+  const [countdown, setCountdown] = useState(0);
   const [highScore, setHighScore] = useState(() => {
     const saved = localStorage.getItem('lobbyEmojiRainHighScore');
     return saved ? parseInt(saved, 10) : 0;
@@ -93,13 +94,16 @@ function LobbyEmojiRain() {
   const streakRef = useRef(0);
 
   // Sync refs med state
-  useEffect(() => {
-    highScoreRef.current = highScore;
-  }, [highScore]);
+  useEffect(() => { highScoreRef.current = highScore; }, [highScore]);
+  useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
 
+  // Nedtelling ved tap
   useEffect(() => {
-    gameStateRef.current = gameState;
-  }, [gameState]);
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown]);
 
   // Cleanup ved unmount
   useEffect(() => {
@@ -568,6 +572,7 @@ function LobbyEmojiRain() {
     setGameState('dead');
     setDisplayScore(finalScore);
     deathTimeRef.current = performance.now();
+    setCountdown(3);
 
     // Oppdater high score
     if (finalScore > highScoreRef.current) {
@@ -707,7 +712,11 @@ function LobbyEmojiRain() {
         {gameState === 'dead' && (
           <div className="overlay death-overlay">
             <p className="final-score">{displayScore}</p>
-            <p className="retry-text">Trykk for å prøve igjen</p>
+            {countdown > 0 ? (
+              <p className="countdown-text">{countdown}</p>
+            ) : (
+              <p className="retry-text">Trykk for å prøve igjen</p>
+            )}
           </div>
         )}
       </div>

@@ -105,9 +105,9 @@ function LobbyIdle() {
               <div className="progress-bar-container">
                 <div
                   className="progress-bar-fill"
-                  style={{ width: `${Math.min(100, (lobbyData.totalScore / 50000) * 100)}%` }}
+                  style={{ width: `${Math.min(100, (lobbyData.totalScore / 5000) * 100)}%` }}
                 />
-                <span className="progress-text">{lobbyData.totalScore.toLocaleString()} / 50 000</span>
+                <span className="progress-text">{lobbyData.totalScore.toLocaleString()} / 5 000</span>
               </div>
               {(() => {
                 const GAME_LABELS = {

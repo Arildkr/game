@@ -45,6 +45,7 @@ function LobbyPatternMatcher() {
 
   const [gameState, setGameState] = useState('idle'); // idle, showing, input, dead
   const [score, setScore] = useState(0);
+  const [countdown, setCountdown] = useState(0);
   const [highScore, setHighScore] = useState(() => {
     const saved = localStorage.getItem('lobbyPatternHighScore');
     return saved ? parseInt(saved, 10) : 0;
@@ -75,6 +76,14 @@ function LobbyPatternMatcher() {
   // Sync refs
   useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
   useEffect(() => { highScoreRef.current = highScore; }, [highScore]);
+
+  // Nedtelling ved tap
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown]);
 
   // Cleanup
   useEffect(() => {
@@ -207,6 +216,7 @@ function LobbyPatternMatcher() {
       setGameState('dead');
       setScore(finalScore);
       deathTimeRef.current = performance.now();
+      setCountdown(3);
 
       // Oppdater high score
       if (finalScore > highScoreRef.current) {
@@ -576,7 +586,11 @@ function LobbyPatternMatcher() {
           <div className="overlay death-overlay">
             <p className="final-score">{score}</p>
             <p className="retry-text">poeng</p>
-            <p className="retry-text">Trykk for å prøve igjen</p>
+            {countdown > 0 ? (
+              <p className="countdown-text">{countdown}</p>
+            ) : (
+              <p className="retry-text">Trykk for å prøve igjen</p>
+            )}
           </div>
         )}
       </div>

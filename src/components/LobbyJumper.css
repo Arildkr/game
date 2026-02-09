@@ -62,6 +62,19 @@
   margin-top: 0.5rem;
 }
 
+.lobby-jumper .death-overlay .countdown-text {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #f59e0b;
+  margin-top: 0.3rem;
+  animation: jumperCountdownPulse 0.5s ease-in-out;
+}
+
+@keyframes jumperCountdownPulse {
+  0% { transform: scale(1.4); opacity: 0.5; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
 @keyframes jumperPulse {
   0%, 100% {
     opacity: 1;

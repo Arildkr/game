@@ -90,52 +90,51 @@ export const GameProvider = ({ children }) => {
 
     setSocket(newSocket);
 
+    // Track om vi har hatt minst én vellykket tilkobling (for å skille reconnect fra first-connect)
+    let hasConnectedBefore = false;
+
     newSocket.on('connect', () => {
-      console.log('Connected to socket server');
+      console.log('Connected to socket server, id:', newSocket.id);
       setIsConnected(true);
       setIsConnecting(false);
       setShowWakeUpMessage(false);
       setConnectionError(null);
       setMyPlayerId(newSocket.id);
+
+      // Auto-rejoin ved reconnect (ikke first-connect)
+      if (hasConnectedBefore) {
+        const code = roomCodeRef.current;
+        if (code) {
+          if (isHostRef.current) {
+            console.log(`Auto-rejoining room ${code} as host`);
+            newSocket.emit('host:rejoin', { roomCode: code });
+          } else if (playerNameRef.current) {
+            console.log(`Auto-rejoining room ${code} as player ${playerNameRef.current}`);
+            newSocket.emit('player:rejoin', { roomCode: code, playerName: playerNameRef.current });
+          }
+        }
+      }
+      hasConnectedBefore = true;
     });
 
     newSocket.on('disconnect', (reason) => {
       console.log('Disconnected from socket server:', reason);
       setIsConnected(false);
-      // Ikke kall connect() manuelt - socket.io håndterer reconnection automatisk
-      // Dette forhindrer uendelig loop
+      // socket.io håndterer reconnection automatisk
       if (reason === 'io server disconnect') {
-        // Server avsluttet tilkoblingen med vilje - ikke reconnect automatisk
         console.log('Server closed connection intentionally');
       }
     });
 
-    newSocket.on('reconnect_attempt', (attempt) => {
+    // Manager-events (socket.io v4: reconnect-events er på Manager, ikke Socket)
+    newSocket.io.on('reconnect_attempt', (attempt) => {
       console.log(`Reconnection attempt ${attempt}`);
-      // Bare oppdater UI ved første forsøk for å unngå flimring
       if (attempt === 1) {
         setIsConnecting(true);
       }
     });
 
-    newSocket.on('reconnect', () => {
-      console.log('Reconnected to socket server');
-      setIsConnecting(false);
-
-      // Auto-rejoin room if we were in one
-      const code = roomCodeRef.current;
-      if (code) {
-        if (isHostRef.current) {
-          console.log(`Auto-rejoining room ${code} as host`);
-          newSocket.emit('host:rejoin', { roomCode: code });
-        } else if (playerNameRef.current) {
-          console.log(`Auto-rejoining room ${code} as player ${playerNameRef.current}`);
-          newSocket.emit('player:rejoin', { roomCode: code, playerName: playerNameRef.current });
-        }
-      }
-    });
-
-    newSocket.on('reconnect_failed', () => {
+    newSocket.io.on('reconnect_failed', () => {
       console.log('Reconnection failed after all attempts');
       setIsConnecting(false);
       setConnectionError('Kunne ikke koble til serveren. Prøv å laste siden på nytt.');
@@ -144,7 +143,6 @@ export const GameProvider = ({ children }) => {
     newSocket.on('connect_error', (err) => {
       console.error('Socket connection error:', err.message);
       // Ikke oppdater state for hver feil - vent på reconnect_failed
-      // Dette forhindrer uendelig re-render loop
     });
 
     // Room events
