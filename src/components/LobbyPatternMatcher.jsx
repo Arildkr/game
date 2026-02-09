@@ -563,14 +563,14 @@ function LobbyPatternMatcher() {
         {gameState === 'dead' && (
           <div className="overlay death-overlay">
             <p className="final-score">{score}</p>
-            <p className="retry-text">Runder fullført</p>
+            <p className="retry-text">poeng</p>
             <p className="retry-text">Trykk for å prøve igjen</p>
           </div>
         )}
       </div>
 
       <div className="game-stats">
-        <span className="current-score">Runde: {gameState === 'showing' || gameState === 'input' ? roundRef.current + 1 : score}</span>
+        <span className="current-score">Poeng: {score}</span>
         <span className="best-score">Best: {highScore}</span>
       </div>
     </div>

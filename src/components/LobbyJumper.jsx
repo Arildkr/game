@@ -3,15 +3,14 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import { useGame } from '../contexts/GameContext';
 import './LobbyJumper.css';
 
-// Canvas: 2x bredere og høyere enn originalen for skarp visning
-// Elementstørrelser er UENDRET fra originalen (ikke skalert)
+// Canvas
 const CANVAS_WIDTH = 720;
 const CANVAS_HEIGHT = 400;
 const GROUND_HEIGHT = 30;
 const PLAYER_SIZE = 30;
 const OBSTACLE_WIDTH = 20;
-const OBSTACLE_MIN_HEIGHT = 30;
-const OBSTACLE_MAX_HEIGHT = 70;
+const OBSTACLE_MIN_HEIGHT = 20;
+const OBSTACLE_MAX_HEIGHT = 200;
 const GRAVITY = 0.8;
 const JUMP_FORCE = -16;
 const DOUBLE_JUMP_FORCE = -13;
@@ -19,12 +18,19 @@ const INITIAL_SPEED = 5;
 const MAX_SPEED = 16;
 const SPEED_INCREMENT = 0.002;
 
-// Takhindre
-const CEILING_OBSTACLE_START_SCORE = 500;
+// Ceiling obstacles start after this many obstacles dodged
+const CEILING_START_OBSTACLES = 15;
 
 // Star powerup
 const STAR_SIZE = 18;
 const STAR_SPAWN_CHANCE = 0.06;
+
+// Dynamic ceiling Y based on obstacles dodged
+function getCeilingY(score) {
+  if (score < CEILING_START_OBSTACLES) return 0;
+  const progress = Math.min(1, (score - CEILING_START_OBSTACLES) / 35);
+  return 15 + progress * 30; // 15 → 45
+}
 
 function LobbyJumper() {
   const { submitLobbyScore } = useGame();
@@ -33,19 +39,18 @@ function LobbyJumper() {
   const isMountedRef = useRef(true);
   const submitLobbyScoreRef = useRef(submitLobbyScore);
 
-  const [gameState, setGameState] = useState('idle'); // idle, playing, dead
+  const [gameState, setGameState] = useState('idle');
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(() => {
-    const saved = localStorage.getItem('lobbyJumperHighScore');
+    const saved = localStorage.getItem('lobbyJumperHiV2');
     return saved ? parseInt(saved, 10) : 0;
   });
 
-  // Hold submitLobbyScore ref oppdatert
   useEffect(() => {
     submitLobbyScoreRef.current = submitLobbyScore;
   }, [submitLobbyScore]);
 
-  // Spilltilstand - alt i refs for å unngå re-renders under spilling
+  // Spilltilstand i refs
   const playerRef = useRef({
     x: 50,
     y: CANVAS_HEIGHT - GROUND_HEIGHT - PLAYER_SIZE,
@@ -64,16 +69,9 @@ function LobbyJumper() {
   const highScoreRef = useRef(highScore);
   const gameStateRef = useRef(gameState);
 
-  // Sync refs med state
-  useEffect(() => {
-    highScoreRef.current = highScore;
-  }, [highScore]);
+  useEffect(() => { highScoreRef.current = highScore; }, [highScore]);
+  useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
 
-  useEffect(() => {
-    gameStateRef.current = gameState;
-  }, [gameState]);
-
-  // Cleanup ved unmount
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -89,16 +87,17 @@ function LobbyJumper() {
   const draw = useCallback((ctx) => {
     const currentScore = scoreRef.current;
     const currentHighScore = highScoreRef.current;
+    const ceilingY = getCeilingY(currentScore);
 
-    // Clear canvas
+    // Bakgrunn
     ctx.fillStyle = '#0f0f23';
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    // Tegn bakken
+    // Bakken
     ctx.fillStyle = '#2d4059';
     ctx.fillRect(0, CANVAS_HEIGHT - GROUND_HEIGHT, CANVAS_WIDTH, GROUND_HEIGHT);
 
-    // Tegn streker på bakken (scrolling effekt)
+    // Bakkestreker
     ctx.strokeStyle = '#3d5a80';
     ctx.lineWidth = 2;
     for (let i = 0; i < CANVAS_WIDTH + 30; i += 30) {
@@ -109,33 +108,31 @@ function LobbyJumper() {
       ctx.stroke();
     }
 
-    // Tegn taket hvis takhindre er aktive
-    if (currentScore >= CEILING_OBSTACLE_START_SCORE) {
+    // Dynamisk tak
+    if (ceilingY > 0) {
       ctx.fillStyle = '#2d4059';
-      ctx.fillRect(0, 0, CANVAS_WIDTH, 15);
+      ctx.fillRect(0, 0, CANVAS_WIDTH, ceilingY);
       ctx.strokeStyle = '#3d5a80';
       for (let i = 0; i < CANVAS_WIDTH + 30; i += 30) {
         const offset = (frameCountRef.current * speedRef.current) % 30;
         ctx.beginPath();
-        ctx.moveTo(i - offset, 15);
-        ctx.lineTo(i - offset + 15, 15);
+        ctx.moveTo(i - offset, ceilingY);
+        ctx.lineTo(i - offset + 15, ceilingY);
         ctx.stroke();
       }
     }
 
-    // Tegn stjerner (powerups)
+    // Stjerner
     for (const star of starsRef.current) {
       const cx = star.x + STAR_SIZE / 2;
       const cy = star.y + STAR_SIZE / 2;
       const pulse = 1 + Math.sin(frameCountRef.current * 0.1) * 0.1;
 
-      // Glow
       ctx.fillStyle = 'rgba(255, 215, 0, 0.2)';
       ctx.beginPath();
       ctx.arc(cx, cy, STAR_SIZE * pulse, 0, Math.PI * 2);
       ctx.fill();
 
-      // Stjerne
       ctx.fillStyle = '#ffd700';
       ctx.font = `${Math.round(STAR_SIZE * pulse)}px sans-serif`;
       ctx.textAlign = 'center';
@@ -143,20 +140,18 @@ function LobbyJumper() {
       ctx.fillText('⭐', cx, cy);
     }
 
-    // Tegn spilleren
+    // Spilleren
     const player = playerRef.current;
     const pcx = player.x + PLAYER_SIZE / 2;
     const pcy = player.y + PLAYER_SIZE / 2;
 
-    // Skjold-effekt
+    // Skjold
     if (player.hasShield) {
       ctx.strokeStyle = '#ffd700';
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.arc(pcx, pcy, PLAYER_SIZE / 2 + 4, 0, Math.PI * 2);
       ctx.stroke();
-
-      // Glow
       ctx.strokeStyle = 'rgba(255, 215, 0, 0.3)';
       ctx.lineWidth = 4;
       ctx.beginPath();
@@ -164,7 +159,6 @@ function LobbyJumper() {
       ctx.stroke();
     }
 
-    // Shield break flash
     if (player.shieldFlash > 0) {
       ctx.fillStyle = `rgba(255, 215, 0, ${player.shieldFlash * 0.3})`;
       ctx.beginPath();
@@ -188,7 +182,7 @@ function LobbyJumper() {
     ctx.arc(player.x + PLAYER_SIZE * 0.65, player.y + PLAYER_SIZE * 0.35, 2, 0, Math.PI * 2);
     ctx.fill();
 
-    // Dobbelthopp-indikator (liten prikk under spilleren)
+    // Dobbelthopp-indikator
     if (player.isJumping && player.jumpsRemaining > 0) {
       ctx.fillStyle = 'rgba(78, 205, 196, 0.6)';
       ctx.beginPath();
@@ -196,7 +190,7 @@ function LobbyJumper() {
       ctx.fill();
     }
 
-    // Tegn gulvhindringer (trekanter)
+    // Gulvhindringer (trekanter)
     ctx.fillStyle = '#e74c3c';
     for (const obstacle of obstaclesRef.current) {
       ctx.beginPath();
@@ -207,30 +201,30 @@ function LobbyJumper() {
       ctx.fill();
     }
 
-    // Tegn takhindringer (inverterte trekanter)
+    // Takhindringer (inverterte trekanter fra dynamisk tak)
     ctx.fillStyle = '#9b59b6';
     for (const obstacle of ceilingObstaclesRef.current) {
+      const drawCeiling = ceilingY || 15;
       ctx.beginPath();
       ctx.moveTo(obstacle.x + OBSTACLE_WIDTH / 2, obstacle.height);
-      ctx.lineTo(obstacle.x + OBSTACLE_WIDTH, 15);
-      ctx.lineTo(obstacle.x, 15);
+      ctx.lineTo(obstacle.x + OBSTACLE_WIDTH, drawCeiling);
+      ctx.lineTo(obstacle.x, drawCeiling);
       ctx.closePath();
       ctx.fill();
     }
 
-    // Tegn poengsum
+    // Poengsum
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 16px monospace';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'top';
-    ctx.fillText(`${Math.floor(currentScore)}`, CANVAS_WIDTH - 10, 20);
+    ctx.fillText(`${currentScore}`, CANVAS_WIDTH - 10, 20);
 
-    // High score
     ctx.fillStyle = '#888';
     ctx.font = '12px monospace';
     ctx.fillText(`HI: ${currentHighScore}`, CANVAS_WIDTH - 10, 38);
 
-    // Vis vanskelighetsindikator
+    // Vanskelighetsindikator
     const difficulty = Math.min(10, Math.floor(speedRef.current - INITIAL_SPEED));
     if (difficulty > 0) {
       ctx.fillStyle = `hsl(${120 - difficulty * 12}, 70%, 50%)`;
@@ -251,21 +245,20 @@ function LobbyJumper() {
   const update = useCallback(() => {
     const player = playerRef.current;
     const groundY = CANVAS_HEIGHT - GROUND_HEIGHT - PLAYER_SIZE;
-    const currentScore = scoreRef.current;
 
-    // Oppdater hastighet (gradvis vanskeligere)
+    // Hastighet
     speedRef.current = Math.min(MAX_SPEED, speedRef.current + SPEED_INCREMENT);
 
     // Gravitasjon
     player.vy += GRAVITY;
     player.y += player.vy;
 
-    // Shield flash nedtelling
+    // Shield flash
     if (player.shieldFlash > 0) {
       player.shieldFlash -= 0.05;
     }
 
-    // Kollisjon med bakken
+    // Bakkekollisjon
     if (player.y >= groundY) {
       player.y = groundY;
       player.vy = 0;
@@ -273,79 +266,95 @@ function LobbyJumper() {
       player.jumpsRemaining = 2;
     }
 
-    // Begrens spilleren til å ikke gå over toppen av skjermen
+    // Toppgrense
     if (player.y < 0) {
       player.y = 0;
       player.vy = Math.abs(player.vy) * 0.3;
     }
 
-    // Ekstra begrensning for takhindre-sonen
-    if (currentScore >= CEILING_OBSTACLE_START_SCORE && player.y < 15) {
-      player.y = 15;
+    // Dynamisk tak-grense
+    const currentCeilingY = getCeilingY(scoreRef.current);
+    if (currentCeilingY > 0 && player.y < currentCeilingY) {
+      player.y = currentCeilingY;
       player.vy = Math.abs(player.vy) * 0.5;
     }
 
-    // Oppdater gulvhindringer (in-place for ytelse)
+    // Flytt gulvhindringer + poengberegning
     const obstacles = obstaclesRef.current;
     for (let i = obstacles.length - 1; i >= 0; i--) {
       obstacles[i].x -= speedRef.current;
+      if (!obstacles[i].passed && obstacles[i].x + OBSTACLE_WIDTH < player.x) {
+        obstacles[i].passed = true;
+        scoreRef.current++;
+      }
       if (obstacles[i].x <= -OBSTACLE_WIDTH) obstacles.splice(i, 1);
     }
 
-    // Oppdater takhindringer (in-place for ytelse)
+    // Flytt takhindringer + poengberegning
     const ceilingObs = ceilingObstaclesRef.current;
     for (let i = ceilingObs.length - 1; i >= 0; i--) {
       ceilingObs[i].x -= speedRef.current;
+      if (!ceilingObs[i].passed && ceilingObs[i].x + OBSTACLE_WIDTH < player.x) {
+        ceilingObs[i].passed = true;
+        scoreRef.current++;
+      }
       if (ceilingObs[i].x <= -OBSTACLE_WIDTH) ceilingObs.splice(i, 1);
     }
 
-    // Oppdater stjerner (in-place for ytelse)
+    // Flytt stjerner
     const stars = starsRef.current;
     for (let i = stars.length - 1; i >= 0; i--) {
       stars[i].x -= speedRef.current;
       if (stars[i].x <= -STAR_SIZE) stars.splice(i, 1);
     }
 
-    // Spawn gulvhindringer
+    // Spawn hindringer
     frameCountRef.current++;
     const spawnRate = Math.max(50, 90 - (speedRef.current - INITIAL_SPEED) * 3);
 
     if (frameCountRef.current % Math.floor(spawnRate) === 0) {
       if (Math.random() < 0.7) {
-        const difficultyFactor = (speedRef.current - INITIAL_SPEED) / (MAX_SPEED - INITIAL_SPEED);
-        const maxHeight = OBSTACLE_MIN_HEIGHT + difficultyFactor * (OBSTACLE_MAX_HEIGHT - OBSTACLE_MIN_HEIGHT);
-        const height = OBSTACLE_MIN_HEIGHT + Math.random() * (maxHeight - OBSTACLE_MIN_HEIGHT);
+        // Progressiv høydevariasjon basert på antall hindringer dodget
+        const difficultyFactor = Math.min(1, scoreRef.current / 50);
+        const minH = OBSTACLE_MIN_HEIGHT + difficultyFactor * 40;  // 20 → 60
+        const maxH = 50 + difficultyFactor * (OBSTACLE_MAX_HEIGHT - 50); // 50 → 200
+        // 25% sjanse for en kort hindring for variasjon
+        const useShort = Math.random() < 0.25;
+        const height = useShort
+          ? OBSTACLE_MIN_HEIGHT + Math.random() * 30
+          : minH + Math.random() * (maxH - minH);
 
-        obstaclesRef.current.push({
+        obstacles.push({
           x: CANVAS_WIDTH,
-          height: height
+          height: height,
+          passed: false
         });
       }
 
-      // Spawn stjerner (sjelden)
+      // Spawn stjerner
       if (Math.random() < STAR_SPAWN_CHANCE && !player.hasShield) {
         const starY = 50 + Math.random() * (CANVAS_HEIGHT - GROUND_HEIGHT - 100);
-        starsRef.current.push({
-          x: CANVAS_WIDTH,
-          y: starY
-        });
+        starsRef.current.push({ x: CANVAS_WIDTH, y: starY });
       }
     }
 
-    // Spawn takhindringer etter viss score
-    if (currentScore >= CEILING_OBSTACLE_START_SCORE) {
+    // Spawn takhindringer
+    const ceilingY = getCeilingY(scoreRef.current);
+    if (ceilingY > 0) {
       if (frameCountRef.current % Math.floor(spawnRate * 1.5) === 0) {
         if (Math.random() < 0.5) {
-          const height = 15 + 20 + Math.random() * 40;
+          const ceilingProgress = Math.min(1, (scoreRef.current - CEILING_START_OBSTACLES) / 35);
+          const height = ceilingY + 20 + Math.random() * (40 + ceilingProgress * 40);
           ceilingObstaclesRef.current.push({
             x: CANVAS_WIDTH,
-            height: height
+            height: height,
+            passed: false
           });
         }
       }
     }
 
-    // Stjerne-kollisjon (pickup)
+    // Stjerne-kollisjon
     for (let i = starsRef.current.length - 1; i >= 0; i--) {
       const star = starsRef.current[i];
       const dx = (player.x + PLAYER_SIZE / 2) - (star.x + STAR_SIZE / 2);
@@ -359,7 +368,7 @@ function LobbyJumper() {
       }
     }
 
-    // Kollisjondeteksjon - gulvhindre
+    // Kollisjon - gulvhindringer
     for (let i = obstaclesRef.current.length - 1; i >= 0; i--) {
       const obstacle = obstaclesRef.current[i];
       const playerRight = player.x + PLAYER_SIZE - 8;
@@ -378,11 +387,11 @@ function LobbyJumper() {
           if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
           continue;
         }
-        return true; // Kollisjon!
+        return true;
       }
     }
 
-    // Kollisjondeteksjon - takhindre
+    // Kollisjon - takhindringer
     for (let i = ceilingObstaclesRef.current.length - 1; i >= 0; i--) {
       const obstacle = ceilingObstaclesRef.current[i];
       const playerRight = player.x + PLAYER_SIZE - 8;
@@ -400,17 +409,15 @@ function LobbyJumper() {
           if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
           continue;
         }
-        return true; // Kollisjon!
+        return true;
       }
     }
 
-    // Oppdater poengsum
-    scoreRef.current += speedRef.current * 0.15;
-
+    // Poeng oppdateres via obstacle passing (over), ikke per frame
     return false;
   }, []);
 
-  // Hopp (med dobbelthopp)
+  // Hopp
   const jump = useCallback(() => {
     const player = playerRef.current;
     if (player.jumpsRemaining > 0) {
@@ -443,22 +450,20 @@ function LobbyJumper() {
     setGameState('playing');
   }, []);
 
-  // Håndter død
+  // Død
   const handleDeath = useCallback(() => {
     if (!isMountedRef.current) return;
 
-    const finalScore = Math.floor(scoreRef.current);
+    const finalScore = scoreRef.current;
 
     setGameState('dead');
     setScore(finalScore);
 
-    // Oppdater high score
     if (finalScore > highScoreRef.current) {
       setHighScore(finalScore);
-      localStorage.setItem('lobbyJumperHighScore', finalScore.toString());
+      localStorage.setItem('lobbyJumperHiV2', finalScore.toString());
     }
 
-    // Send poeng til server
     if (finalScore > 0 && submitLobbyScoreRef.current) {
       submitLobbyScoreRef.current(finalScore, 'jumper');
     }
@@ -483,7 +488,7 @@ function LobbyJumper() {
           handleDeath();
         } else {
           if (frameCountRef.current % 30 === 0) {
-            setScore(Math.floor(scoreRef.current));
+            setScore(scoreRef.current);
           }
         }
       }
@@ -504,7 +509,7 @@ function LobbyJumper() {
     };
   }, [update, draw, handleDeath]);
 
-  // Inputhåndtering - keyboard
+  // Keyboard
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.code === 'Space' || e.code === 'ArrowUp') {
@@ -521,7 +526,7 @@ function LobbyJumper() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [startGame, jump]);
 
-  // Touch/klikk-håndtering
+  // Touch/klikk
   const handleInteraction = useCallback(() => {
     if (gameStateRef.current === 'idle' || gameStateRef.current === 'dead') {
       startGame();

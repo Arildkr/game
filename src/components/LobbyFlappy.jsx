@@ -5,29 +5,31 @@ import './LobbyMinigames.css';
 
 // Canvas
 const CANVAS_WIDTH = 720;
-const CANVAS_HEIGHT = 300;
+const CANVAS_HEIGHT = 400;
 
 // Fuglen
 const BIRD_SIZE = 24;
 const BIRD_X = 120;
 
 // Fysikk
-const GRAVITY = 0.5;
+const GRAVITY = 0.35;
 const FLAP_FORCE = -7;
+const HOVER_GRAVITY_MULT = 0.3; // Gravitasjon-multiplikator ved hold
 
 // Rør
 const PIPE_SPEED = 3;
-const PIPE_GAP = 100;
+const PIPE_GAP = 110;
 const PIPE_WIDTH = 50;
-const PIPE_SPAWN_INTERVAL = 100; // frames mellom hvert rør
+const PIPE_SPAWN_INTERVAL = 100;
 
 // Dash
-const DASH_DURATION = 300;   // ms
-const DASH_COOLDOWN = 3000;  // ms
+const DASH_DURATION = 300;
+const DASH_COOLDOWN = 3000;
 const DASH_SPEED_BOOST = 6;
 
 // Farger
 const BIRD_COLOR = '#4ecdc4';
+const GHOST_COLOR = '#ff8c42';
 const PIPE_COLOR = '#2ecc71';
 const PIPE_BORDER_COLOR = '#27ae60';
 const BG_COLOR = '#0f0f23';
@@ -49,50 +51,36 @@ function LobbyFlappy() {
     return saved ? parseInt(saved, 10) : 0;
   });
 
-  // Hold submitLobbyScore ref oppdatert
   useEffect(() => {
     submitLobbyScoreRef.current = submitLobbyScore;
   }, [submitLobbyScore]);
 
-  // Spilltilstand i refs for ytelse
-  const birdRef = useRef({
-    y: CANVAS_HEIGHT / 2,
-    vy: 0,
-    rotation: 0
-  });
-
+  // Spilltilstand i refs
+  const birdRef = useRef({ y: CANVAS_HEIGHT / 2, vy: 0, rotation: 0 });
   const pipesRef = useRef([]);
   const scoreRef = useRef(0);
-  const pipeCountRef = useRef(0);       // neste rør sin verdi
+  const pipeCountRef = useRef(0);
   const frameCountRef = useRef(0);
   const highScoreRef = useRef(0);
   const gameStateRef = useRef('idle');
 
-  // Dash-tilstand
-  const dashRef = useRef({
-    active: false,
-    startTime: 0,
-    lastDashTime: 0
-  });
+  // Dash
+  const dashRef = useRef({ active: false, startTime: 0, lastDashTime: 0 });
 
-  // Ghost-tilstand
-  const ghostRecordingRef = useRef([]);   // nåværende opptak (bird Y per frame)
-  const ghostReplayRef = useRef(null);    // forrige kjøring sitt opptak
+  // Ghost
+  const ghostRecordingRef = useRef([]);
+  const ghostReplayRef = useRef(null);
 
-  // Dobbelttrykk-deteksjon for dash
+  // Hold-to-hover
+  const isHoldingRef = useRef(false);
+
+  // Dobbelttrykk for dash
   const lastTapTimeRef = useRef(0);
-  const DOUBLE_TAP_THRESHOLD = 250; // ms
+  const DOUBLE_TAP_THRESHOLD = 250;
 
-  // Sync refs med state
-  useEffect(() => {
-    highScoreRef.current = highScore;
-  }, [highScore]);
+  useEffect(() => { highScoreRef.current = highScore; }, [highScore]);
+  useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
 
-  useEffect(() => {
-    gameStateRef.current = gameState;
-  }, [gameState]);
-
-  // Cleanup ved unmount
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -104,7 +92,7 @@ function LobbyFlappy() {
     };
   }, []);
 
-  // Generer rør med tilfeldig gap-posisjon
+  // Generer rør
   const spawnPipe = useCallback(() => {
     const minGapY = PIPE_GAP / 2 + 30;
     const maxGapY = CANVAS_HEIGHT - GROUND_HEIGHT - PIPE_GAP / 2 - 30;
@@ -121,14 +109,12 @@ function LobbyFlappy() {
   const activateDash = useCallback(() => {
     const now = Date.now();
     const dash = dashRef.current;
-
     if (dash.active) return false;
     if (now - dash.lastDashTime < DASH_COOLDOWN) return false;
 
     dash.active = true;
     dash.startTime = now;
     dash.lastDashTime = now;
-
     if (navigator.vibrate) navigator.vibrate([20, 10, 20]);
     return true;
   }, []);
@@ -140,80 +126,72 @@ function LobbyFlappy() {
     const bird = birdRef.current;
     const dash = dashRef.current;
 
-    // Clear canvas
+    // Bakgrunn
     ctx.fillStyle = BG_COLOR;
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    // Bakgrunnsstjerner (subtilt)
+    // Bakgrunnsstjerner
     ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 25; i++) {
       const sx = ((i * 137 + frameCountRef.current * 0.3) % (CANVAS_WIDTH + 10));
       const sy = (i * 89) % (CANVAS_HEIGHT - GROUND_HEIGHT - 20) + 10;
       ctx.fillRect(sx, sy, 1.5, 1.5);
     }
 
-    // Tegn ghost (fra forrige kjøring)
+    // Ghost (forrige kjøring) - tydelig annerledes enn spillerens fugl
     if (ghostReplayRef.current && gameStateRef.current === 'playing') {
       const gf = frameCountRef.current;
       if (gf < ghostReplayRef.current.length) {
         const ghostY = ghostReplayRef.current[gf];
 
-        // Translucent ghost bird
-        ctx.globalAlpha = 0.25;
-
-        // Ghost kropp
-        ctx.fillStyle = '#4ecdc4';
+        // Ghost med tydelig annerledes farge (oransje) og stiplet omriss
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = GHOST_COLOR;
         ctx.beginPath();
         ctx.arc(BIRD_X, ghostY, BIRD_SIZE / 2, 0, Math.PI * 2);
         ctx.fill();
 
-        // Ghost øye
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        // Stiplet omriss for ekstra visuell distinksjon
+        ctx.strokeStyle = GHOST_COLOR;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
         ctx.beginPath();
-        ctx.arc(BIRD_X + BIRD_SIZE * 0.22, ghostY - BIRD_SIZE * 0.1, 4, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.arc(BIRD_X, ghostY, BIRD_SIZE / 2 + 4, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
 
         ctx.globalAlpha = 1.0;
       }
     }
 
-    // Tegn rør
+    // Rør
     for (const pipe of pipesRef.current) {
-      // Topp-rør
       const topPipeBottom = pipe.gapCenterY - PIPE_GAP / 2;
-      // Bunn-rør
       const bottomPipeTop = pipe.gapCenterY + PIPE_GAP / 2;
 
-      // Topp-rør kropp
       ctx.fillStyle = PIPE_COLOR;
       ctx.fillRect(pipe.x, 0, PIPE_WIDTH, topPipeBottom);
 
-      // Topp-rør kant (lip)
       ctx.fillStyle = PIPE_BORDER_COLOR;
       ctx.fillRect(pipe.x - 3, topPipeBottom - 20, PIPE_WIDTH + 6, 20);
 
-      // Topp-rør highlight
       ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
       ctx.fillRect(pipe.x + 4, 0, 8, topPipeBottom - 20);
 
-      // Bunn-rør kropp
       ctx.fillStyle = PIPE_COLOR;
       ctx.fillRect(pipe.x, bottomPipeTop, PIPE_WIDTH, CANVAS_HEIGHT - GROUND_HEIGHT - bottomPipeTop);
 
-      // Bunn-rør kant (lip)
       ctx.fillStyle = PIPE_BORDER_COLOR;
       ctx.fillRect(pipe.x - 3, bottomPipeTop, PIPE_WIDTH + 6, 20);
 
-      // Bunn-rør highlight
       ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
       ctx.fillRect(pipe.x + 4, bottomPipeTop + 20, 8, CANVAS_HEIGHT - GROUND_HEIGHT - bottomPipeTop - 20);
     }
 
-    // Tegn bakken
+    // Bakken
     ctx.fillStyle = GROUND_COLOR;
     ctx.fillRect(0, CANVAS_HEIGHT - GROUND_HEIGHT, CANVAS_WIDTH, GROUND_HEIGHT);
 
-    // Bakkemønster (scrolling)
     ctx.strokeStyle = GROUND_LINE_COLOR;
     ctx.lineWidth = 2;
     for (let i = 0; i < CANVAS_WIDTH + 30; i += 30) {
@@ -224,7 +202,7 @@ function LobbyFlappy() {
       ctx.stroke();
     }
 
-    // Dash-effekt (speed lines) mens dash er aktiv
+    // Dash-effekt
     if (dash.active) {
       ctx.strokeStyle = 'rgba(78, 205, 196, 0.4)';
       ctx.lineWidth = 2;
@@ -238,15 +216,11 @@ function LobbyFlappy() {
       }
     }
 
-    // Tegn fuglen
-    const birdCx = BIRD_X;
-    const birdCy = bird.y;
-
+    // Fuglen
     ctx.save();
-    ctx.translate(birdCx, birdCy);
+    ctx.translate(BIRD_X, bird.y);
     ctx.rotate(bird.rotation);
 
-    // Dash usynlighetseffekt (glow)
     if (dash.active) {
       ctx.shadowColor = '#4ecdc4';
       ctx.shadowBlur = 15;
@@ -258,13 +232,21 @@ function LobbyFlappy() {
       ctx.shadowBlur = 0;
     }
 
+    // Hover-indikator (svak glow under fuglen ved hold)
+    if (isHoldingRef.current && gameStateRef.current === 'playing' && !dash.active) {
+      ctx.fillStyle = 'rgba(78, 205, 196, 0.15)';
+      ctx.beginPath();
+      ctx.arc(0, 0, BIRD_SIZE / 2 + 8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
     // Fuglekropp
     ctx.fillStyle = BIRD_COLOR;
     ctx.beginPath();
     ctx.arc(0, 0, BIRD_SIZE / 2, 0, Math.PI * 2);
     ctx.fill();
 
-    // Vinge (liten bue som flapper)
+    // Vinge
     const wingAngle = Math.sin(frameCountRef.current * 0.3) * 0.4;
     ctx.fillStyle = '#3dbdb5';
     ctx.beginPath();
@@ -277,7 +259,6 @@ function LobbyFlappy() {
     ctx.arc(BIRD_SIZE * 0.22, -BIRD_SIZE * 0.1, 5, 0, Math.PI * 2);
     ctx.fill();
 
-    // Pupill
     ctx.fillStyle = '#0f0f23';
     ctx.beginPath();
     ctx.arc(BIRD_SIZE * 0.28, -BIRD_SIZE * 0.1, 2.5, 0, Math.PI * 2);
@@ -294,25 +275,21 @@ function LobbyFlappy() {
 
     ctx.restore();
 
-    // HUD - poengsum
-    ctx.fillStyle = '#fff';
+    // HUD
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
     ctx.font = 'bold 24px monospace';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-
-    // Skygge for lesbarhet
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
     ctx.fillText(`${currentScore}`, CANVAS_WIDTH / 2 + 1, 17);
     ctx.fillStyle = '#fff';
     ctx.fillText(`${currentScore}`, CANVAS_WIDTH / 2, 16);
 
-    // High score (oppe til høyre)
     ctx.fillStyle = '#888';
     ctx.font = '14px monospace';
     ctx.textAlign = 'right';
     ctx.fillText(`HI: ${currentHighScore}`, CANVAS_WIDTH - 14, 16);
 
-    // Dash cooldown indikator
+    // Dash cooldown
     const now = Date.now();
     const timeSinceDash = now - dash.lastDashTime;
     const dashReady = timeSinceDash >= DASH_COOLDOWN;
@@ -329,7 +306,6 @@ function LobbyFlappy() {
         ctx.fillStyle = '#666';
         ctx.fillText(`DASH ${remaining}s`, 14, 16);
 
-        // Cooldown bar
         const progress = timeSinceDash / DASH_COOLDOWN;
         ctx.fillStyle = 'rgba(78, 205, 196, 0.2)';
         ctx.fillRect(14, 32, 60, 4);
@@ -338,7 +314,7 @@ function LobbyFlappy() {
       }
     }
 
-    // Progressiv poeng-visning (neste rør sin verdi)
+    // Neste rør-verdi
     if (gameStateRef.current === 'playing' && pipeCountRef.current > 0) {
       ctx.textAlign = 'center';
       ctx.font = '11px monospace';
@@ -360,30 +336,31 @@ function LobbyFlappy() {
       dash.active = false;
     }
 
-    // Gravitasjon
-    bird.vy += GRAVITY;
+    // Gravitasjon - redusert ved hold
+    const effectiveGravity = isHoldingRef.current ? GRAVITY * HOVER_GRAVITY_MULT : GRAVITY;
+    bird.vy += effectiveGravity;
     bird.y += bird.vy;
 
-    // Rotasjon basert på hastighet
+    // Rotasjon
     const targetRotation = Math.min(Math.max(bird.vy * 0.06, -0.5), Math.PI / 2.5);
     bird.rotation += (targetRotation - bird.rotation) * 0.15;
 
-    // Tak-kollisjon
+    // Tak
     if (bird.y - BIRD_SIZE / 2 < 0) {
       bird.y = BIRD_SIZE / 2;
       bird.vy = 0;
     }
 
-    // Bakke-kollisjon = død
+    // Bakke = død
     if (bird.y + BIRD_SIZE / 2 >= CANVAS_HEIGHT - GROUND_HEIGHT) {
       bird.y = CANVAS_HEIGHT - GROUND_HEIGHT - BIRD_SIZE / 2;
-      return true; // døde
+      return true;
     }
 
-    // Beregn effektiv rørhastighet (dash gir boost)
+    // Rørhastighet
     const currentPipeSpeed = dash.active ? PIPE_SPEED + DASH_SPEED_BOOST : PIPE_SPEED;
 
-    // Flytt rør (in-place for ytelse)
+    // Flytt rør
     const pipes = pipesRef.current;
     for (let i = pipes.length - 1; i >= 0; i--) {
       pipes[i].x -= currentPipeSpeed;
@@ -395,23 +372,20 @@ function LobbyFlappy() {
       spawnPipe();
     }
 
-    // Poengberegning og kollisjon
+    // Poeng og kollisjon
     for (const pipe of pipesRef.current) {
-      // Sjekk om fuglen har passert røret
       if (!pipe.passed && pipe.x + PIPE_WIDTH < BIRD_X - BIRD_SIZE / 2) {
         pipe.passed = true;
         pipeCountRef.current++;
-        // Progressiv poeng: rør n gir n poeng
         scoreRef.current += pipeCountRef.current;
         setScore(scoreRef.current);
-
         if (navigator.vibrate) navigator.vibrate(10);
       }
 
-      // Kollisjon (skip hvis dash er aktiv - invincibility)
+      // Kollisjon (skip ved dash)
       if (dash.active) continue;
 
-      const birdLeft = BIRD_X - BIRD_SIZE / 2 + 3;   // litt innover for fair hitbox
+      const birdLeft = BIRD_X - BIRD_SIZE / 2 + 3;
       const birdRight = BIRD_X + BIRD_SIZE / 2 - 3;
       const birdTop = bird.y - BIRD_SIZE / 2 + 3;
       const birdBottom = bird.y + BIRD_SIZE / 2 - 3;
@@ -421,20 +395,13 @@ function LobbyFlappy() {
       const gapTop = pipe.gapCenterY - PIPE_GAP / 2;
       const gapBottom = pipe.gapCenterY + PIPE_GAP / 2;
 
-      // Er fuglen innenfor rør-bredden?
       if (birdRight > pipeLeft && birdLeft < pipeRight) {
-        // Treffer topp-røret?
-        if (birdTop < gapTop) {
-          return true; // døde
-        }
-        // Treffer bunn-røret?
-        if (birdBottom > gapBottom) {
-          return true; // døde
-        }
+        if (birdTop < gapTop) return true;
+        if (birdBottom > gapBottom) return true;
       }
     }
 
-    // Ta opp ghost-data (fuglen sin Y-posisjon per frame, maks 10 min)
+    // Ghost-opptak (maks 10 min)
     if (ghostRecordingRef.current.length < 36000) {
       ghostRecordingRef.current.push(bird.y);
     }
@@ -442,21 +409,18 @@ function LobbyFlappy() {
     return false;
   }, [spawnPipe]);
 
-  // Flap (hopp)
+  // Flap
   const flap = useCallback(() => {
-    const bird = birdRef.current;
-    bird.vy = FLAP_FORCE;
+    birdRef.current.vy = FLAP_FORCE;
     if (navigator.vibrate) navigator.vibrate(10);
   }, []);
 
   // Start spill
   const startGame = useCallback(() => {
-    // Lagre forrige kjøring som ghost
     if (ghostRecordingRef.current.length > 0) {
       ghostReplayRef.current = [...ghostRecordingRef.current];
     }
 
-    // Reset alt - gi fuglen en liten oppadgående fart så den ikke faller rett ned
     birdRef.current = {
       y: CANVAS_HEIGHT / 2,
       vy: FLAP_FORCE * 0.5,
@@ -467,33 +431,29 @@ function LobbyFlappy() {
     pipeCountRef.current = 0;
     frameCountRef.current = 0;
     ghostRecordingRef.current = [];
-    dashRef.current = {
-      active: false,
-      startTime: 0,
-      lastDashTime: 0
-    };
+    dashRef.current = { active: false, startTime: 0, lastDashTime: 0 };
     lastTapTimeRef.current = 0;
+    isHoldingRef.current = false;
 
     setScore(0);
     setGameState('playing');
   }, []);
 
-  // Håndter død
+  // Død
   const handleDeath = useCallback(() => {
     if (!isMountedRef.current) return;
 
+    isHoldingRef.current = false;
     const finalScore = scoreRef.current;
 
     setGameState('dead');
     setScore(finalScore);
 
-    // Oppdater high score
     if (finalScore > highScoreRef.current) {
       setHighScore(finalScore);
       localStorage.setItem('lobbyFlappyHighScore', finalScore.toString());
     }
 
-    // Send poeng til server
     if (finalScore > 0 && submitLobbyScoreRef.current) {
       submitLobbyScoreRef.current(finalScore, 'flappy');
     }
@@ -528,15 +488,13 @@ function LobbyFlappy() {
     gameLoopRef.current = animationId;
 
     return () => {
-      if (animationId) {
-        cancelAnimationFrame(animationId);
-      }
+      if (animationId) cancelAnimationFrame(animationId);
       gameLoopRef.current = null;
     };
   }, [update, draw, handleDeath]);
 
-  // Håndter interaksjon (flap + dobbelttrykk for dash)
-  const handleAction = useCallback(() => {
+  // Ned-event (flap + start holding)
+  const handleDown = useCallback(() => {
     if (gameStateRef.current === 'idle' || gameStateRef.current === 'dead') {
       startGame();
       return;
@@ -548,31 +506,46 @@ function LobbyFlappy() {
     const timeSinceLastTap = now - lastTapTimeRef.current;
 
     if (timeSinceLastTap < DOUBLE_TAP_THRESHOLD && timeSinceLastTap > 30) {
-      // Dobbelttrykk - prøv dash
       const dashActivated = activateDash();
       if (dashActivated) {
-        lastTapTimeRef.current = 0; // reset slik at neste tap er en vanlig flap
+        lastTapTimeRef.current = 0;
         return;
       }
     }
 
-    // Vanlig flap
     flap();
+    isHoldingRef.current = true;
     lastTapTimeRef.current = now;
   }, [startGame, flap, activateDash]);
 
-  // Keyboard input
+  // Opp-event (stopp holding)
+  const handleUp = useCallback(() => {
+    isHoldingRef.current = false;
+  }, []);
+
+  // Keyboard
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.code === 'Space' || e.code === 'ArrowUp') {
         e.preventDefault();
-        handleAction();
+        if (e.repeat) return; // Ignorer key repeat
+        handleDown();
+      }
+    };
+
+    const handleKeyUp = (e) => {
+      if (e.code === 'Space' || e.code === 'ArrowUp') {
+        isHoldingRef.current = false;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleAction]);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [handleDown]);
 
   return (
     <div className="lobby-minigame">
@@ -581,17 +554,21 @@ function LobbyFlappy() {
           ref={canvasRef}
           width={CANVAS_WIDTH}
           height={CANVAS_HEIGHT}
-          onClick={handleAction}
+          onMouseDown={handleDown}
+          onMouseUp={handleUp}
+          onMouseLeave={handleUp}
           onTouchStart={(e) => {
             e.preventDefault();
-            handleAction();
+            handleDown();
           }}
+          onTouchEnd={handleUp}
         />
 
         {gameState === 'idle' && (
           <div className="overlay start-overlay">
             <p className="game-title">Flappy</p>
             <p>Trykk for å starte!</p>
+            <p style={{ fontSize: '0.8rem', opacity: 0.6, marginTop: '0.3rem' }}>Hold inne for å sveve</p>
           </div>
         )}
 

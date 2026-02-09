@@ -113,9 +113,9 @@ function LobbyIdle() {
                 const GAME_LABELS = {
                   jumper: { name: 'Hopp', scoreLabel: 'Beste', totalLabel: 'Totalt' },
                   flappy: { name: 'Flappy', scoreLabel: 'Beste', totalLabel: 'Totalt' },
-                  clicker: { name: 'Klikker', scoreLabel: 'Beste klikk', totalLabel: 'Totalt' },
+                  clicker: { name: 'Klikker', scoreLabel: 'Beste', totalLabel: 'Totalt' },
                   emoji: { name: 'Emoji-Regn', scoreLabel: 'Beste', totalLabel: 'Totalt' },
-                  pattern: { name: 'Mønster', scoreLabel: 'Beste runder', totalLabel: 'Totalt' },
+                  pattern: { name: 'Mønster', scoreLabel: 'Beste', totalLabel: 'Totalt' },
                 };
                 const gameId = lobbyMinigame || 'jumper';
                 const gameLabel = GAME_LABELS[gameId] || GAME_LABELS.jumper;
