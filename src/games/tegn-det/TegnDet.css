@@ -660,6 +660,24 @@
   margin-bottom: 1rem;
 }
 
+/* Word selection timer */
+.word-select-timer {
+  font-size: 2rem;
+  font-weight: bold;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.5rem 1.5rem;
+  border-radius: 10px;
+  min-width: 60px;
+  text-align: center;
+  margin: 0.5rem auto;
+  display: inline-block;
+}
+
+.word-select-timer.warning {
+  background: rgba(239, 68, 68, 0.5);
+  animation: pulse 1s infinite;
+}
+
 /* Select word phase (for drawer) */
 .tegndet-player .select-word-phase {
   text-align: center;

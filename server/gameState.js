@@ -715,11 +715,14 @@ function handleStemningssjekkHostAction(room, action, data) {
     case 'start-round':
       gd.started = true;
       gd.votes = {};
-      return { broadcast: true, event: 'game:round-started', data: {} };
+      return { broadcast: true, event: 'game:round-started', data: { timeLimit: data?.timeLimit || 30 } };
 
     case 'reset-votes':
       gd.votes = {};
-      return { broadcast: true, event: 'game:reset-votes', data: {} };
+      return { broadcast: true, event: 'game:reset-votes', data: { timeLimit: data?.timeLimit || 30 } };
+
+    case 'time-up':
+      return { broadcast: true, event: 'game:time-up', data: {} };
 
     default:
       return null;
@@ -2504,7 +2507,7 @@ function handleTegnDetHostAction(room, action, data) {
 
   switch (action) {
     case 'select-drawer': {
-      const { drawerId, drawerName, wordOptions } = data;
+      const { drawerId, drawerName, wordOptions, wordSelectTime } = data;
 
       gd.drawerId = drawerId;
       gd.drawerName = drawerName;
@@ -2519,12 +2522,13 @@ function handleTegnDetHostAction(room, action, data) {
         event: 'game:drawer-selected',
         data: {
           drawerId,
-          drawerName
+          drawerName,
+          wordSelectTime
         },
         // Send word options only to the drawer
         toPlayer: drawerId,
         playerEvent: 'game:word-options',
-        playerData: { wordOptions }
+        playerData: { wordOptions, wordSelectTime }
       };
     }
 

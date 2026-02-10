@@ -25,7 +25,29 @@ function HostGame() {
   const [timeLeft, setTimeLeft] = useState(0);
   const timerRef = useRef(null);
 
+  // Word selection timer
+  const WORD_SELECT_TIME = 12;
+  const [wordSelectTimeLeft, setWordSelectTimeLeft] = useState(0);
+  const wordSelectTimerRef = useRef(null);
+
   const connectedPlayers = players.filter(p => p.isConnected);
+
+  // Word selection timer effect
+  useEffect(() => {
+    if (phase === 'waitingForWord' && wordSelectTimeLeft > 0) {
+      wordSelectTimerRef.current = setTimeout(() => {
+        setWordSelectTimeLeft(prev => prev - 1);
+      }, 1000);
+    } else if (phase === 'waitingForWord' && wordSelectTimeLeft === 0 && wordSelectTimerRef.current !== null) {
+      // Time's up - skip this drawer, move to next
+      sendGameAction('end-round');
+      nextRound();
+    }
+
+    return () => {
+      if (wordSelectTimerRef.current) clearTimeout(wordSelectTimerRef.current);
+    };
+  }, [wordSelectTimeLeft, phase]);
 
   // Timer effect
   useEffect(() => {
@@ -85,6 +107,8 @@ function HostGame() {
 
     // When drawer selects a word and round starts
     const handleRoundStarted = ({ drawerId, drawerName }) => {
+      if (wordSelectTimerRef.current) clearTimeout(wordSelectTimerRef.current);
+      setWordSelectTimeLeft(0);
       setStrokes([]);
       setLastResult(null);
       setPhase('drawing');
@@ -137,6 +161,7 @@ function HostGame() {
     setDrawer(nextDrawer);
     setPlayersWhoHaveDrawn(prev => newCycle ? [nextDrawer.id] : [...prev, nextDrawer.id]);
     setPhase('waitingForWord');
+    setWordSelectTimeLeft(WORD_SELECT_TIME);
 
     // Send word options to the drawer (student)
     const wordOptions = getRandomWords(3, difficulty);
@@ -144,7 +169,8 @@ function HostGame() {
       drawerId: nextDrawer.id,
       drawerName: nextDrawer.name,
       wordOptions,
-      timeLimit
+      timeLimit,
+      wordSelectTime: WORD_SELECT_TIME
     });
   };
 
@@ -257,6 +283,9 @@ function HostGame() {
           <div className="waiting-word-phase">
             <div className="setup-icon">🎨</div>
             <h2>{drawer.name} velger ord...</h2>
+            <div className={`timer ${wordSelectTimeLeft <= 5 ? 'warning' : ''}`}>
+              {wordSelectTimeLeft}
+            </div>
             <p className="description">Venter på at {drawer.name} skal velge et ord å tegne</p>
           </div>
         )}

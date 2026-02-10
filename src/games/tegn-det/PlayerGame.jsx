@@ -17,21 +17,38 @@ function PlayerGame() {
   const [lastResult, setLastResult] = useState(null);
   const [isLockedOut, setIsLockedOut] = useState(false);
   const [lockoutTime, setLockoutTime] = useState(0);
+  const [wordSelectTimeLeft, setWordSelectTimeLeft] = useState(0);
 
   const inputRef = useRef(null);
   const lockoutTimerRef = useRef(null);
   const isDrawerRef = useRef(false);
+  const wordSelectTimerRef = useRef(null);
 
   useEffect(() => {
     if (!socket) return;
 
     // When drawer is selected
-    const handleDrawerSelected = ({ drawerId, drawerName: name }) => {
+    const handleDrawerSelected = ({ drawerId, drawerName: name, wordSelectTime }) => {
       setDrawerName(name);
       setStrokes([]);
       setGuess('');
       setLastResult(null);
       setIsLockedOut(false);
+
+      // Start word selection countdown for all players
+      if (wordSelectTime) {
+        setWordSelectTimeLeft(wordSelectTime);
+        if (wordSelectTimerRef.current) clearInterval(wordSelectTimerRef.current);
+        wordSelectTimerRef.current = setInterval(() => {
+          setWordSelectTimeLeft(prev => {
+            if (prev <= 1) {
+              clearInterval(wordSelectTimerRef.current);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
 
       if (drawerId === socket.id) {
         isDrawerRef.current = true;
@@ -46,8 +63,22 @@ function PlayerGame() {
     };
 
     // Word options sent separately only to the drawer
-    const handleWordOptions = ({ wordOptions: options }) => {
+    const handleWordOptions = ({ wordOptions: options, wordSelectTime }) => {
       setWordOptions(options);
+      // Start word selection countdown
+      if (wordSelectTime) {
+        setWordSelectTimeLeft(wordSelectTime);
+        if (wordSelectTimerRef.current) clearInterval(wordSelectTimerRef.current);
+        wordSelectTimerRef.current = setInterval(() => {
+          setWordSelectTimeLeft(prev => {
+            if (prev <= 1) {
+              clearInterval(wordSelectTimerRef.current);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
     };
 
     const handleRoundStarted = ({ drawerId, drawerName: name }) => {
@@ -56,6 +87,8 @@ function PlayerGame() {
       setGuess('');
       setLastResult(null);
       setIsLockedOut(false);
+      setWordSelectTimeLeft(0);
+      if (wordSelectTimerRef.current) clearInterval(wordSelectTimerRef.current);
 
       if (drawerId === socket.id) {
         isDrawerRef.current = true;
@@ -155,6 +188,7 @@ function PlayerGame() {
       socket.off('game:wrong-guess', handleWrongGuess);
       socket.off('game:round-ended', handleRoundEnded);
       if (lockoutTimerRef.current) clearInterval(lockoutTimerRef.current);
+      if (wordSelectTimerRef.current) clearInterval(wordSelectTimerRef.current);
     };
   }, [socket]);
 
@@ -229,6 +263,11 @@ function PlayerGame() {
             <div className="waiting-icon">🎨</div>
             <h2>Venter på neste runde...</h2>
             {drawerName && <p>{drawerName} velger ord...</p>}
+            {wordSelectTimeLeft > 0 && (
+              <div className={`word-select-timer ${wordSelectTimeLeft <= 5 ? 'warning' : ''}`}>
+                {wordSelectTimeLeft}
+              </div>
+            )}
           </div>
         )}
 
@@ -236,6 +275,11 @@ function PlayerGame() {
         {phase === 'selectWord' && isDrawer && (
           <div className="select-word-phase">
             <h2>Du skal tegne!</h2>
+            {wordSelectTimeLeft > 0 && (
+              <div className={`word-select-timer ${wordSelectTimeLeft <= 5 ? 'warning' : ''}`}>
+                {wordSelectTimeLeft}
+              </div>
+            )}
             <p>Velg et ord:</p>
             <div className="word-options">
               {wordOptions.map((w, i) => (

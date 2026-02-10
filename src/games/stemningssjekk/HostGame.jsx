@@ -3,15 +3,19 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useGame } from '../../contexts/GameContext';
 import './Stemningssjekk.css';
 
+const ROUND_TIME = 30; // seconds
+
 function HostGame() {
   const { socket, players, endGame, sendGameAction, roomCode, kickPlayer } = useGame();
 
   const [started, setStarted] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(0);
   const [floatingEmojis, setFloatingEmojis] = useState([]);
   const [emojiCounts, setEmojiCounts] = useState({}); // emoji -> count
   const [respondedPlayers, setRespondedPlayers] = useState(new Set());
   const nextIdRef = useRef(0);
   const mainRef = useRef(null);
+  const timerRef = useRef(null);
 
   useEffect(() => {
     if (!socket) return;
@@ -60,21 +64,39 @@ function HostGame() {
     };
   }, [socket]);
 
+  // Timer countdown
+  useEffect(() => {
+    if (started && timeLeft > 0) {
+      timerRef.current = setTimeout(() => {
+        setTimeLeft(prev => prev - 1);
+      }, 1000);
+    } else if (started && timeLeft === 0 && timerRef.current !== null) {
+      // Time's up - send time-up event to players
+      sendGameAction('time-up');
+    }
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [timeLeft, started, sendGameAction]);
+
   const connectedPlayers = players.filter(p => p.isConnected);
 
   const startSession = () => {
     setStarted(true);
+    setTimeLeft(ROUND_TIME);
     setEmojiCounts({});
     setRespondedPlayers(new Set());
     setFloatingEmojis([]);
-    sendGameAction('start-round');
+    sendGameAction('start-round', { timeLimit: ROUND_TIME });
   };
 
   const resetVotes = () => {
+    setTimeLeft(ROUND_TIME);
     setEmojiCounts({});
     setRespondedPlayers(new Set());
     setFloatingEmojis([]);
-    sendGameAction('reset-votes');
+    sendGameAction('reset-votes', { timeLimit: ROUND_TIME });
   };
 
   // Top 3 emojis
@@ -98,7 +120,7 @@ function HostGame() {
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           {started && (
             <button className="btn-end" style={{ background: '#f59e0b' }} onClick={resetVotes}>
-              Nullstill
+              Ny runde
             </button>
           )}
           <button className="btn-end" onClick={() => endGame()}>Avslutt</button>
@@ -123,6 +145,18 @@ function HostGame() {
               {connectedPlayers.length} {connectedPlayers.length === 1 ? 'elev' : 'elever'} er klare
             </p>
           </div>
+        )}
+
+        {/* Timer */}
+        {started && timeLeft > 0 && (
+          <div className={`stemning-timer ${timeLeft <= 10 ? 'warning' : ''}`}>
+            {timeLeft}
+          </div>
+        )}
+
+        {/* Time's up message */}
+        {started && timeLeft === 0 && (
+          <div className="time-up-message">Tiden er ute!</div>
         )}
 
         {/* Floating emojis */}

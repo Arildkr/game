@@ -311,6 +311,7 @@ export const GameProvider = ({ children }) => {
     // Game events
     newSocket.on('game:started', ({ room, gameData: data }) => {
       setGameState('PLAYING');
+      if (room.game) setCurrentGame(room.game);
       setGameData(data);
       setPlayers(room.players);
     });

@@ -225,6 +225,9 @@ export class BotManager {
       case 'squiggle-story':
         this.handleSquiggleStoryBots(roomCode, event, data, activeBots);
         break;
+      case 'stemningssjekk':
+        this.handleStemningssjekkBots(roomCode, event, data, activeBots);
+        break;
     }
   }
 
@@ -517,6 +520,20 @@ export class BotManager {
           this.scheduleAction(roomCode, botId, 'submit-votes', { votedFor }, 3000, 8000);
         }
       }
+    }
+  }
+
+  // ==================
+  // STEMNINGSSJEKK
+  // ==================
+  handleStemningssjekkBots(roomCode, event, data, botIds) {
+    if (event !== 'game:round-started' && event !== 'game:reset-votes') return;
+
+    const EMOJIS = ['😊', '😄', '🥰', '😎', '🤔', '😐', '😴', '🤷', '😢', '😤', '😰', '🤯', '🔥', '💪', '👍', '❤️'];
+
+    for (const botId of botIds) {
+      const emoji = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
+      this.scheduleAction(roomCode, botId, 'pick-emoji', { emoji }, 2000, 8000);
     }
   }
 
