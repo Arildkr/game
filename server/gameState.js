@@ -1,47 +1,7 @@
 // Klassespill Server - Game State Management
 
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
 import { checkAnswer, startsWithLetter, getLastLetter } from './answerChecker.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// ==================
-// ORDJAKT - Word list cache
-// ==================
-const ordjaktWordCache = {}; // 'nob' -> { all: Set, eightLetter: string[] }
-
-function loadOrdjaktWordList(variant) {
-  if (ordjaktWordCache[variant]) return ordjaktWordCache[variant];
-
-  const filename = variant === 'nno'
-    ? 'wordlist_20220201_norsk_ordbank_nno_2012.txt'
-    : 'wordlist_20220201_norsk_ordbank_nob_2005.txt';
-
-  const filePath = join(__dirname, 'data', filename);
-  const content = readFileSync(filePath, 'utf-8');
-  const lines = content.split(/\r?\n/).map(w => w.trim().toLowerCase());
-
-  // Only pure alphabetic words (Norwegian chars) between 3-8 chars
-  const validWordRegex = /^[a-zæøåéèêóòâ]{3,8}$/;
-  const all = new Set();
-  const eightLetter = [];
-
-  for (const word of lines) {
-    if (validWordRegex.test(word)) {
-      all.add(word);
-      if (word.length === 8) {
-        eightLetter.push(word);
-      }
-    }
-  }
-
-  console.log(`Ordjakt: Loaded ${variant} - ${all.size} words (${eightLetter.length} with 8 letters)`);
-  ordjaktWordCache[variant] = { all, eightLetter };
-  return ordjaktWordCache[variant];
-}
+import { getOrdjaktWordList } from './ordjaktWords.js';
 
 /**
  * Safely evaluates a simple arithmetic expression.
@@ -636,7 +596,7 @@ function initializeGameData(game, players, config) {
 
     case 'ordjakt': {
       const variant = config?.variant === 'nno' ? 'nno' : 'nob';
-      const wordList = loadOrdjaktWordList(variant);
+      const wordList = getOrdjaktWordList(variant);
 
       // Pick random 8-letter word and shuffle its letters
       const sourceWord = wordList.eightLetter[Math.floor(Math.random() * wordList.eightLetter.length)];
@@ -846,7 +806,7 @@ function handleOrdjaktHostAction(room, action, data) {
 
     case 'new-round': {
       // Generate new letters
-      const wordList = loadOrdjaktWordList(gd.variant);
+      const wordList = getOrdjaktWordList(gd.variant);
       const sourceWord = wordList.eightLetter[Math.floor(Math.random() * wordList.eightLetter.length)];
       const letters = sourceWord.split('').sort(() => Math.random() - 0.5);
 
@@ -926,7 +886,7 @@ function handleOrdjaktPlayerAction(room, playerId, action, data) {
       }
 
       // Validate: exists in dictionary
-      const wordList = loadOrdjaktWordList(gd.variant);
+      const wordList = getOrdjaktWordList(gd.variant);
       if (!wordList.all.has(word)) {
         return {
           toPlayer: playerId,
