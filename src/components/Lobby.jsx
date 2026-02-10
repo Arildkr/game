@@ -16,7 +16,8 @@ const GAME_NAMES = {
   'nerdle': { name: 'Nerdle', icon: '🧮' },
   'hva-mangler': { name: 'Hva mangler?', icon: '👁️' },
   'tegn-det': { name: 'Tegn det!', icon: '🎨' },
-  'squiggle-story': { name: 'Krusedull', icon: '〰️' }
+  'squiggle-story': { name: 'Krusedull', icon: '〰️' },
+  'stemningssjekk': { name: 'Stemningssjekk', icon: '🎭' }
 };
 
 const SLANGE_CATEGORIES = [

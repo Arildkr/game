@@ -69,23 +69,22 @@ export const GameProvider = ({ children }) => {
     const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_SERVER_URL || 'https://game-p2u5.onrender.com';
 
     const newSocket = io(SOCKET_SERVER_URL, {
-      // Bruk websocket først - polling kan ha CORS-problemer
+      // Bruk websocket først - polling som fallback
       transports: ['websocket', 'polling'],
       // Øk timeout for trege cold starts
       timeout: 120000,
-      // Øk reconnection-forsøk for bedre stabilitet
-      reconnectionAttempts: 20,
+      // Gi aldri opp reconnection
+      reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       // Randomisering for å unngå thundering herd
       randomizationFactor: 0.3,
-      // Ikke lag ny socket ved hver reconnect
       forceNew: false,
       autoConnect: true,
-      // Viktig: withCredentials for CORS
       withCredentials: true,
-      // Øk ack timeout for bedre stabilitet
-      ackTimeout: 30000
+      ackTimeout: 30000,
+      // Upgrade til websocket fra polling (gir raskere recovery)
+      upgrade: true
     });
 
     setSocket(newSocket);
@@ -98,6 +97,21 @@ export const GameProvider = ({ children }) => {
     const MAX_PLAYER_REJOIN_RETRIES = 5;
     const PLAYER_REJOIN_DELAY_MS = 2000;
 
+    // Client-side keep-alive: send tiny ping every 15s to prevent
+    // proxy/load-balancer idle-timeout disconnects (Render, Cloudflare, etc.)
+    let keepAliveInterval = null;
+    const startKeepAlive = () => {
+      if (keepAliveInterval) clearInterval(keepAliveInterval);
+      keepAliveInterval = setInterval(() => {
+        if (newSocket.connected) {
+          newSocket.volatile.emit('ping-keepalive');
+        }
+      }, 15000);
+    };
+
+    // Track consecutive websocket failures to temporarily use polling
+    let wsFailCount = 0;
+
     newSocket.on('connect', () => {
       console.log('Connected to socket server, id:', newSocket.id);
       setIsConnected(true);
@@ -105,6 +119,8 @@ export const GameProvider = ({ children }) => {
       setShowWakeUpMessage(false);
       setConnectionError(null);
       setMyPlayerId(newSocket.id);
+      wsFailCount = 0;
+      startKeepAlive();
 
       // Auto-rejoin ved reconnect (ikke first-connect)
       if (hasConnectedBefore) {
@@ -126,9 +142,11 @@ export const GameProvider = ({ children }) => {
     newSocket.on('disconnect', (reason) => {
       console.log('Disconnected from socket server:', reason);
       setIsConnected(false);
-      // socket.io håndterer reconnection automatisk
+      if (keepAliveInterval) clearInterval(keepAliveInterval);
+      // Hvis serveren aktivt lukket tilkoblingen, koble til på nytt manuelt
       if (reason === 'io server disconnect') {
-        console.log('Server closed connection intentionally');
+        console.log('Server closed connection, reconnecting...');
+        newSocket.connect();
       }
     });
 
@@ -141,13 +159,20 @@ export const GameProvider = ({ children }) => {
     });
 
     newSocket.io.on('reconnect_failed', () => {
-      console.log('Reconnection failed after all attempts');
-      setIsConnecting(false);
-      setConnectionError('Kunne ikke koble til serveren. Prøv å laste siden på nytt.');
+      // Bør ikke skje med Infinity attempts, men håndter det likevel
+      console.log('Reconnection paused, retrying...');
+      setTimeout(() => newSocket.connect(), 3000);
     });
 
     newSocket.on('connect_error', (err) => {
       console.error('Socket connection error:', err.message);
+      wsFailCount++;
+      // Etter 3 mislykkede WebSocket-forsøk, prøv polling midlertidig
+      if (wsFailCount >= 3 && newSocket.io.opts.transports[0] === 'websocket') {
+        console.log('WebSocket failing, temporarily trying polling first...');
+        newSocket.io.opts.transports = ['polling', 'websocket'];
+      }
+      // Gjenopprett WebSocket-prioritet etter vellykket tilkobling (håndteres i connect)
     });
 
     // Room events
@@ -370,6 +395,7 @@ export const GameProvider = ({ children }) => {
     // Cleanup ved unmount
     return () => {
       if (playerRejoinTimer) clearTimeout(playerRejoinTimer);
+      if (keepAliveInterval) clearInterval(keepAliveInterval);
       newSocket.disconnect();
     };
   }, []); // Tom dependency array - kjører kun én gang
@@ -385,16 +411,7 @@ export const GameProvider = ({ children }) => {
     return () => clearTimeout(timer);
   }, [isConnecting, isConnected]);
 
-  // Heartbeat for å holde Render-serveren våken
-  useEffect(() => {
-    if (!socket || !isConnected) return;
-
-    const heartbeat = setInterval(() => {
-      socket.emit('ping');
-    }, 25000);
-
-    return () => clearInterval(heartbeat);
-  }, [socket, isConnected]);
+  // Keep-alive håndteres nå direkte i socket-oppkoblingen (ping-keepalive)
 
   // resetGameState bruker den allerede definerte doResetGameState
   const resetGameState = doResetGameState;

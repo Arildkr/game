@@ -1,0 +1,375 @@
+/* game/src/games/stemningssjekk/Stemningssjekk.css */
+
+/* ==================
+   HOST STYLES
+   ================== */
+
+.stemning-host {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+  background: linear-gradient(135deg, #4c1d95 0%, #1e1b4b 100%);
+  color: white;
+  overflow: hidden;
+}
+
+.stemning-host .game-header {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stemning-host .game-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.stemning-host .game-badge {
+  background: #8b5cf6;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+.stemning-host .room-code {
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.stemning-host .btn-end {
+  background: #ef4444;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+/* Main area - emoji animation zone */
+.stemning-host .game-main {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Floating emojis */
+.stemning-host .floating-emoji {
+  position: absolute;
+  font-size: 3rem;
+  animation: floatUp 4s ease-out forwards;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes floatUp {
+  0% {
+    opacity: 1;
+    transform: scale(0.3) translateY(0);
+  }
+  15% {
+    opacity: 1;
+    transform: scale(1.2) translateY(-30px);
+  }
+  30% {
+    transform: scale(1) translateY(-80px);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.8) translateY(-500px);
+  }
+}
+
+/* Waiting state */
+.stemning-host .waiting-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  z-index: 2;
+  position: relative;
+}
+
+.stemning-host .waiting-icon {
+  font-size: 5rem;
+  margin-bottom: 1rem;
+}
+
+.stemning-host .waiting-state h2 {
+  margin-bottom: 0.5rem;
+}
+
+.stemning-host .waiting-state p {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Top 3 box */
+.stemning-host .top-emojis {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  z-index: 10;
+  min-width: 120px;
+}
+
+.stemning-host .top-emojis h4 {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.stemning-host .top-emoji-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+}
+
+.stemning-host .top-emoji-icon {
+  font-size: 1.5rem;
+}
+
+.stemning-host .top-emoji-count {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 600;
+}
+
+.stemning-host .top-emoji-bar {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.stemning-host .top-emoji-bar-fill {
+  height: 100%;
+  background: #8b5cf6;
+  border-radius: 2px;
+  transition: width 0.3s;
+}
+
+/* Response count */
+.stemning-host .response-count {
+  position: absolute;
+  bottom: 1rem;
+  left: 1rem;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  z-index: 10;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Players sidebar */
+.stemning-host .players-sidebar {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.stemning-host .players-sidebar h3 {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.stemning-host .players-list {
+  list-style: none;
+  padding: 0;
+}
+
+.stemning-host .player-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.stemning-host .player-item.has-voted {
+  background: rgba(139, 92, 246, 0.2);
+}
+
+.stemning-host .player-name {
+  flex: 1;
+}
+
+.stemning-host .player-status {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.stemning-host .player-item.has-voted .player-status {
+  color: #a78bfa;
+}
+
+.stemning-host .btn-kick {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0.2rem 0.4rem;
+}
+
+/* ==================
+   PLAYER STYLES
+   ================== */
+
+.stemning-player {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #4c1d95 0%, #1e1b4b 100%);
+  color: white;
+  display: flex;
+  flex-direction: column;
+}
+
+.stemning-player .player-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  gap: 0.5rem;
+}
+
+.stemning-player .btn-back {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: white;
+  font-size: 1.2rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.stemning-player .player-name {
+  flex: 1;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.stemning-player .game-badge {
+  background: #8b5cf6;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+}
+
+.stemning-player .player-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+/* Waiting */
+.stemning-player .waiting-phase {
+  text-align: center;
+}
+
+.stemning-player .waiting-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+/* Emoji grid */
+.stemning-player .emoji-phase {
+  text-align: center;
+  width: 100%;
+  max-width: 360px;
+}
+
+.stemning-player .emoji-phase h2 {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.stemning-player .emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.stemning-player .emoji-btn {
+  aspect-ratio: 1;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  font-size: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.stemning-player .emoji-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(1.05);
+}
+
+.stemning-player .emoji-btn:active {
+  transform: scale(0.95);
+}
+
+.stemning-player .emoji-btn.selected {
+  border-color: #a78bfa;
+  background: rgba(139, 92, 246, 0.3);
+  transform: scale(1.1);
+}
+
+.stemning-player .selected-feedback {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* ==================
+   RESPONSIVE
+   ================== */
+
+@media (max-width: 768px) {
+  .stemning-host {
+    grid-template-columns: 1fr;
+  }
+
+  .stemning-host .players-sidebar {
+    display: none;
+  }
+
+  .stemning-player .emoji-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.4rem;
+  }
+
+  .stemning-player .emoji-btn {
+    font-size: 1.8rem;
+  }
+}

@@ -587,6 +587,12 @@ function initializeGameData(game, players, config) {
         voteCount: 0
       };
 
+    case 'stemningssjekk':
+      return {
+        votes: {},   // playerId -> emoji
+        started: false
+      };
+
     default:
       return {};
   }
@@ -652,6 +658,8 @@ export function handleGameAction(roomCode, action, data) {
       return handleTegnDetHostAction(room, action, data);
     case 'squiggle-story':
       return handleSquiggleStoryHostAction(room, action, data);
+    case 'stemningssjekk':
+      return handleStemningssjekkHostAction(room, action, data);
     default:
       return null;
   }
@@ -690,6 +698,54 @@ export function handlePlayerAction(roomCode, playerId, action, data) {
       return handleTegnDetPlayerAction(room, playerId, action, data);
     case 'squiggle-story':
       return handleSquiggleStoryPlayerAction(room, playerId, action, data);
+    case 'stemningssjekk':
+      return handleStemningssjekkPlayerAction(room, playerId, action, data);
+    default:
+      return null;
+  }
+}
+
+// ==================
+// STEMNINGSSJEKK
+// ==================
+
+function handleStemningssjekkHostAction(room, action, data) {
+  const gd = room.gameData;
+  switch (action) {
+    case 'start-round':
+      gd.started = true;
+      gd.votes = {};
+      return { broadcast: true, event: 'game:round-started', data: {} };
+
+    case 'reset-votes':
+      gd.votes = {};
+      return { broadcast: true, event: 'game:reset-votes', data: {} };
+
+    default:
+      return null;
+  }
+}
+
+function handleStemningssjekkPlayerAction(room, playerId, action, data) {
+  const gd = room.gameData;
+  if (!gd.started) return null;
+
+  switch (action) {
+    case 'pick-emoji': {
+      const { emoji } = data;
+      if (!emoji) return null;
+
+      const previousEmoji = gd.votes[playerId] || null;
+      gd.votes[playerId] = emoji;
+
+      // Broadcast to host only (anonymous)
+      return {
+        toHost: true,
+        hostEvent: 'game:emoji-picked',
+        hostData: { playerId, emoji, previousEmoji }
+      };
+    }
+
     default:
       return null;
   }

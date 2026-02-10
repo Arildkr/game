@@ -49,9 +49,9 @@ const io = new Server(server, {
     methods: ['GET', 'POST'],
     credentials: true
   },
-  // Stabilitet for Render cold starts - økt for bedre stabilitet
-  pingTimeout: 120000,
-  pingInterval: 25000,
+  // Stabilitet: lang timeout + kort interval for å oppdage brudd raskt
+  pingTimeout: 60000,
+  pingInterval: 20000,
   // Bruk websocket primært, med polling som fallback
   transports: ['websocket', 'polling'],
   allowUpgrades: true,
@@ -166,6 +166,14 @@ const hostDisconnectTimers = new Map(); // roomCode → { timer, oldHostId }
 // Socket.io connection handling
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
+
+  // Keep-alive fra klient - oppdater lastActivity for å forhindre rom-cleanup
+  socket.on('ping-keepalive', () => {
+    const roomCode = socketToRoom.get(socket.id);
+    if (roomCode && rooms[roomCode]) {
+      rooms[roomCode].lastActivity = Date.now();
+    }
+  });
 
   // ==================
   // HOST EVENTS

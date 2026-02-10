@@ -40,12 +40,6 @@ const GAMES = [
     description: 'Svar riktig eller bli eliminert - siste elev igjen vinner!'
   },
   {
-    id: 'vil-du-heller',
-    name: 'Vil du heller?',
-    icon: '🤔',
-    description: 'Stem på dilemmaer og se resultatene i sanntid'
-  },
-  {
     id: 'nerdle',
     name: 'Nerdle',
     icon: '🧮',
@@ -68,6 +62,18 @@ const GAMES = [
     name: 'Krusedull',
     icon: '〰️',
     description: 'Lag kunst fra en tilfeldig krusedull'
+  },
+  {
+    id: 'vil-du-heller',
+    name: 'Vil du heller?',
+    icon: '🤔',
+    description: 'Stem på dilemmaer og se resultatene i sanntid'
+  },
+  {
+    id: 'stemningssjekk',
+    name: 'Stemningssjekk',
+    icon: '🎭',
+    description: 'Elevene velger en emoji - se stemningen i klassen'
   }
 ];
 

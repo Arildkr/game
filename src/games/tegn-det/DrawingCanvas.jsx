@@ -245,46 +245,37 @@ function DrawingCanvas({
 
       {isDrawer && (
         <div className="drawing-tools">
-          <div className="tool-picker">
-            <button
-              className={`tool-btn ${tool === 'pen' ? 'selected' : ''}`}
-              onClick={() => setTool('pen')}
-              title="Penn"
-            >
-              ✏️
-            </button>
-            <button
-              className={`tool-btn ${tool === 'eraser' ? 'selected' : ''}`}
-              onClick={() => setTool('eraser')}
-              title="Viskelær"
-            >
-              🧹
-            </button>
-            <button
-              className={`tool-btn ${tool === 'fill' ? 'selected' : ''}`}
-              onClick={() => setTool('fill')}
-              title="Fyll"
-            >
-              🪣
-            </button>
-            {onUndo && (
-              <button className="tool-btn" onClick={onUndo} title="Angre">
-                ↩️
-              </button>
-            )}
-          </div>
-          <div className="color-picker">
-            {colors.map(c => (
+          {/* Row 1: Tools + Sizes */}
+          <div className="tools-row">
+            <div className="tool-picker">
               <button
-                key={c}
-                className={`color-btn ${color === c ? 'selected' : ''}`}
-                style={{ backgroundColor: c, border: c === '#ffffff' ? '2px solid rgba(255,255,255,0.4)' : undefined }}
-                onClick={() => setColor(c)}
-              />
-            ))}
-          </div>
-          {tool !== 'fill' && (
-            <div className="size-picker">
+                className={`tool-btn ${tool === 'pen' ? 'selected' : ''}`}
+                onClick={() => setTool('pen')}
+                title="Penn"
+              >
+                ✏️
+              </button>
+              <button
+                className={`tool-btn ${tool === 'eraser' ? 'selected' : ''}`}
+                onClick={() => setTool('eraser')}
+                title="Viskelær"
+              >
+                <span className="eraser-icon" />
+              </button>
+              <button
+                className={`tool-btn ${tool === 'fill' ? 'selected' : ''}`}
+                onClick={() => setTool('fill')}
+                title="Fyll"
+              >
+                🪣
+              </button>
+              {onUndo && (
+                <button className="tool-btn" onClick={onUndo} title="Angre">
+                  ↩️
+                </button>
+              )}
+            </div>
+            <div className={`size-picker ${tool === 'fill' ? 'invisible' : ''}`}>
               <button
                 className={`size-btn ${lineWidth === 2 ? 'selected' : ''}`}
                 onClick={() => setLineWidth(2)}
@@ -304,7 +295,18 @@ function DrawingCanvas({
                 <span className="size-dot large" />
               </button>
             </div>
-          )}
+          </div>
+          {/* Row 2: Colors */}
+          <div className="color-picker">
+            {colors.map(c => (
+              <button
+                key={c}
+                className={`color-btn ${color === c ? 'selected' : ''}`}
+                style={{ backgroundColor: c, border: c === '#ffffff' ? '2px solid rgba(255,255,255,0.4)' : undefined }}
+                onClick={() => setColor(c)}
+              />
+            ))}
+          </div>
         </div>
       )}
     </div>
