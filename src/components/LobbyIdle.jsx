@@ -14,6 +14,7 @@ const AVAILABLE_GAMES = [
   { id: 'hva-mangler', name: 'Hva mangler?', icon: '👁️', description: 'Husk og finn det som forsvant' },
   { id: 'tegn-det', name: 'Tegn det!', icon: '🎨', description: 'Tegn og gjett' },
   { id: 'squiggle-story', name: 'Krusedull', icon: '〰️', description: 'Lag kunst fra en krusedull' },
+  { id: 'ordjakt', name: 'Ordjakt', icon: '🔍', description: 'Finn ord med 8 bokstaver' },
   { id: 'vil-du-heller', name: 'Vil du heller?', icon: '🤔', description: 'Stem på dilemmaer' },
   { id: 'stemningssjekk', name: 'Stemningssjekk', icon: '🎭', description: 'Se stemningen i klassen' }
 ];

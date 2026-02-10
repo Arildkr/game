@@ -64,6 +64,12 @@ const GAMES = [
     description: 'Lag kunst fra en tilfeldig krusedull'
   },
   {
+    id: 'ordjakt',
+    name: 'Ordjakt',
+    icon: '🔍',
+    description: 'Finn flest mulig ord med 8 bokstaver - 2 minutter!'
+  },
+  {
     id: 'vil-du-heller',
     name: 'Vil du heller?',
     icon: '🤔',

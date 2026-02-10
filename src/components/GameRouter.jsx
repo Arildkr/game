@@ -27,6 +27,8 @@ import SquiggleStoryHost from '../games/squiggle-story/HostGame';
 import SquiggleStoryPlayer from '../games/squiggle-story/PlayerGame';
 import StemningssjekkHost from '../games/stemningssjekk/HostGame';
 import StemningssjekkPlayer from '../games/stemningssjekk/PlayerGame';
+import OrdjaktHost from '../games/ordjakt/HostGame';
+import OrdjaktPlayer from '../games/ordjakt/PlayerGame';
 
 const GAME_COMPONENTS = {
   'gjett-bildet': { host: GjettBildetHost, player: GjettBildetPlayer },
@@ -40,7 +42,8 @@ const GAME_COMPONENTS = {
   'hva-mangler': { host: HvaManglerHost, player: HvaManglerPlayer },
   'tegn-det': { host: TegnDetHost, player: TegnDetPlayer },
   'squiggle-story': { host: SquiggleStoryHost, player: SquiggleStoryPlayer },
-  'stemningssjekk': { host: StemningssjekkHost, player: StemningssjekkPlayer }
+  'stemningssjekk': { host: StemningssjekkHost, player: StemningssjekkPlayer },
+  'ordjakt': { host: OrdjaktHost, player: OrdjaktPlayer }
 };
 
 function GameRouter() {

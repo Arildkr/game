@@ -1,0 +1,545 @@
+/* game/src/games/ordjakt/Ordjakt.css */
+
+/* ==================
+   HOST STYLES
+   ================== */
+
+.ordjakt-host {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+  background: linear-gradient(135deg, #065f46 0%, #064e3b 50%, #022c22 100%);
+  color: white;
+}
+
+.ordjakt-host .game-header {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ordjakt-host .game-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.ordjakt-host .game-badge {
+  background: #10b981;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+.ordjakt-host .room-code {
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.ordjakt-host .btn-end {
+  background: #ef4444;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+/* Main */
+.ordjakt-host .game-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+/* Waiting state */
+.ordjakt-host .waiting-state {
+  text-align: center;
+}
+
+.ordjakt-host .waiting-icon {
+  font-size: 5rem;
+  margin-bottom: 1rem;
+}
+
+.ordjakt-host .btn-start {
+  background: #10b981;
+  color: white;
+  padding: 1.2rem 2.5rem;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.3rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 1.5rem;
+  transition: transform 0.2s;
+}
+
+.ordjakt-host .btn-start:hover {
+  transform: scale(1.05);
+}
+
+.ordjakt-host .hint {
+  margin-top: 1rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Round content */
+.ordjakt-host .round-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 700px;
+}
+
+/* Letters display */
+.letters-display {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.letter-tile {
+  width: 70px;
+  height: 70px;
+  background: linear-gradient(145deg, #fbbf24, #f59e0b);
+  color: #1f2937;
+  font-size: 2rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  box-shadow: 0 4px 0 #b45309, 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Timer */
+.ordjakt-timer {
+  font-size: 3rem;
+  font-weight: bold;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.5rem 2rem;
+  border-radius: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ordjakt-timer.warning {
+  background: rgba(239, 68, 68, 0.4);
+  animation: ordjaktPulse 1s infinite;
+}
+
+.ordjakt-timer.finished {
+  background: rgba(239, 68, 68, 0.6);
+  animation: none;
+  font-size: 2rem;
+}
+
+@keyframes ordjaktPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+/* Stats */
+.stats-area {
+  width: 100%;
+}
+
+.titles-row {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.title-card {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  text-align: center;
+}
+
+.title-card.ordkongen {
+  border: 2px solid rgba(251, 191, 36, 0.4);
+}
+
+.title-card.ordmaskinen {
+  border: 2px solid rgba(139, 92, 246, 0.4);
+}
+
+.title-label {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 0.5rem;
+}
+
+.title-name {
+  font-weight: 700;
+  font-size: 1.3rem;
+}
+
+.title-detail {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.words-stats {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+}
+
+.words-stats h3 {
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.no-words {
+  color: rgba(255, 255, 255, 0.4);
+  font-style: italic;
+}
+
+.length-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.length-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.length-label {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+  min-width: 100px;
+  text-align: right;
+}
+
+.length-bar {
+  flex: 1;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.length-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #34d399);
+  border-radius: 4px;
+  transition: width 0.3s;
+  min-width: 4px;
+}
+
+.length-count {
+  font-weight: 600;
+  min-width: 30px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Players sidebar */
+.ordjakt-host .players-sidebar {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.ordjakt-host .players-sidebar h3 {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.ordjakt-host .players-list {
+  list-style: none;
+  padding: 0;
+}
+
+.ordjakt-host .player-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.ordjakt-host .player-name {
+  flex: 1;
+}
+
+.ordjakt-host .player-score {
+  color: #34d399;
+  font-weight: 600;
+}
+
+.ordjakt-host .btn-kick {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0.2rem 0.4rem;
+}
+
+/* ==================
+   PLAYER STYLES
+   ================== */
+
+.ordjakt-player {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #065f46 0%, #064e3b 50%, #022c22 100%);
+  color: white;
+  display: flex;
+  flex-direction: column;
+}
+
+.ordjakt-player .player-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  gap: 0.5rem;
+}
+
+.ordjakt-player .btn-back {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: white;
+  font-size: 1.2rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.ordjakt-player .player-name {
+  flex: 1;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.ordjakt-player .game-badge {
+  background: #10b981;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+}
+
+.ordjakt-player .player-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 1rem;
+}
+
+/* Waiting */
+.ordjakt-player .waiting-phase {
+  text-align: center;
+  margin-top: 3rem;
+}
+
+.ordjakt-player .waiting-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+/* Play area */
+.play-area {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Player timer */
+.player-timer {
+  font-size: 1.5rem;
+  font-weight: bold;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.3rem 1rem;
+  border-radius: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.player-timer.warning {
+  background: rgba(239, 68, 68, 0.4);
+  animation: ordjaktPulse 1s infinite;
+}
+
+.player-timer.finished {
+  background: rgba(239, 68, 68, 0.6);
+  animation: none;
+}
+
+/* Player letters */
+.player-letters {
+  display: flex;
+  gap: 0.4rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.player-letter-tile {
+  width: 42px;
+  height: 42px;
+  background: linear-gradient(145deg, #fbbf24, #f59e0b);
+  color: #1f2937;
+  font-size: 1.3rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  box-shadow: 0 3px 0 #b45309;
+}
+
+.letters-hint {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Input */
+.input-area {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.word-input {
+  flex: 1;
+  padding: 0.85rem 1rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  background: rgba(255, 255, 255, 0.9);
+  color: #1f2937;
+}
+
+.word-input::placeholder {
+  color: #9ca3af;
+}
+
+.btn-submit {
+  background: #10b981;
+  color: white;
+  padding: 0.85rem 1.5rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-submit:active {
+  transform: scale(0.97);
+}
+
+/* Feedback */
+.word-feedback {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: center;
+  width: 100%;
+  animation: feedbackAppear 0.2s ease-out;
+}
+
+.word-feedback.success {
+  background: rgba(16, 185, 129, 0.3);
+  color: #6ee7b7;
+}
+
+.word-feedback.error {
+  background: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+@keyframes feedbackAppear {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* My words */
+.my-words {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+}
+
+.my-words h3 {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 0.5rem;
+}
+
+.word-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.found-word {
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.no-words-yet {
+  color: rgba(255, 255, 255, 0.4);
+  font-style: italic;
+  font-size: 0.85rem;
+}
+
+/* ==================
+   RESPONSIVE
+   ================== */
+
+@media (max-width: 768px) {
+  .ordjakt-host {
+    grid-template-columns: 1fr;
+  }
+
+  .ordjakt-host .players-sidebar {
+    display: none;
+  }
+
+  .letter-tile {
+    width: 55px;
+    height: 55px;
+    font-size: 1.6rem;
+  }
+
+  .titles-row {
+    flex-direction: column;
+  }
+}

@@ -228,6 +228,9 @@ export class BotManager {
       case 'stemningssjekk':
         this.handleStemningssjekkBots(roomCode, event, data, activeBots);
         break;
+      case 'ordjakt':
+        this.handleOrdjaktBots(roomCode, event, data, activeBots);
+        break;
     }
   }
 
@@ -535,6 +538,36 @@ export class BotManager {
       const emoji = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
       this.scheduleAction(roomCode, botId, 'pick-emoji', { emoji }, 2000, 8000);
     }
+  }
+
+  // ==================
+  // ORDJAKT
+  // ==================
+  handleOrdjaktBots(roomCode, event, data, botIds) {
+    if (event !== 'game:round-started') return;
+
+    const room = this.rooms[roomCode];
+    if (!room || !room.gameData) return;
+
+    const letters = room.gameData.letters || [];
+    if (letters.length === 0) return;
+
+    // Simple word generation: try 2-4 letter combos from available letters
+    for (const botId of botIds) {
+      const wordCount = 2 + Math.floor(Math.random() * 4); // 2-5 words
+      for (let i = 0; i < wordCount; i++) {
+        const word = this._makeOrdjaktWord(letters);
+        const delay = (i + 1) * (3000 + Math.random() * 8000);
+        this.scheduleAction(roomCode, botId, 'submit-word', { word }, delay, delay + 2000);
+      }
+    }
+  }
+
+  _makeOrdjaktWord(letters) {
+    // Shuffle letters and take 3-6 of them to form a "word" attempt
+    const shuffled = [...letters].sort(() => Math.random() - 0.5);
+    const len = 3 + Math.floor(Math.random() * 4); // 3-6 letters
+    return shuffled.slice(0, Math.min(len, shuffled.length)).join('');
   }
 
   _createPlaceholderDrawing() {

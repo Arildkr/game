@@ -1,6 +1,47 @@
 // Klassespill Server - Game State Management
 
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { checkAnswer, startsWithLetter, getLastLetter } from './answerChecker.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// ==================
+// ORDJAKT - Word list cache
+// ==================
+const ordjaktWordCache = {}; // 'nob' -> { all: Set, eightLetter: string[] }
+
+function loadOrdjaktWordList(variant) {
+  if (ordjaktWordCache[variant]) return ordjaktWordCache[variant];
+
+  const filename = variant === 'nno'
+    ? 'wordlist_20220201_norsk_ordbank_nno_2012.txt'
+    : 'wordlist_20220201_norsk_ordbank_nob_2005.txt';
+
+  const filePath = join(__dirname, '..', 'src', 'games', 'ordjakt', filename);
+  const content = readFileSync(filePath, 'utf-8');
+  const lines = content.split(/\r?\n/).map(w => w.trim().toLowerCase());
+
+  // Only pure alphabetic words (Norwegian chars) between 3-8 chars
+  const validWordRegex = /^[a-zæøåéèêóòâ]{3,8}$/;
+  const all = new Set();
+  const eightLetter = [];
+
+  for (const word of lines) {
+    if (validWordRegex.test(word)) {
+      all.add(word);
+      if (word.length === 8) {
+        eightLetter.push(word);
+      }
+    }
+  }
+
+  console.log(`Ordjakt: Loaded ${variant} - ${all.size} words (${eightLetter.length} with 8 letters)`);
+  ordjaktWordCache[variant] = { all, eightLetter };
+  return ordjaktWordCache[variant];
+}
 
 /**
  * Safely evaluates a simple arithmetic expression.
@@ -593,6 +634,28 @@ function initializeGameData(game, players, config) {
         started: false
       };
 
+    case 'ordjakt': {
+      const variant = config?.variant === 'nno' ? 'nno' : 'nob';
+      const wordList = loadOrdjaktWordList(variant);
+
+      // Pick random 8-letter word and shuffle its letters
+      const sourceWord = wordList.eightLetter[Math.floor(Math.random() * wordList.eightLetter.length)];
+      const letters = sourceWord.split('').sort(() => Math.random() - 0.5);
+
+      return {
+        variant,
+        letters,         // 8 shuffled letters
+        sourceWord,       // the original 8-letter word (for debug/reference)
+        playerWords: {},  // playerId -> [words]
+        allUniqueWords: {},  // word -> { playerId, playerName, length }
+        wordsByLength: {},   // length -> count
+        ordkongen: null,     // { word, playerName }
+        ordmaskinen: null,   // { count, playerName }
+        started: false,
+        timeLimit: 120
+      };
+    }
+
     default:
       return {};
   }
@@ -660,6 +723,8 @@ export function handleGameAction(roomCode, action, data) {
       return handleSquiggleStoryHostAction(room, action, data);
     case 'stemningssjekk':
       return handleStemningssjekkHostAction(room, action, data);
+    case 'ordjakt':
+      return handleOrdjaktHostAction(room, action, data);
     default:
       return null;
   }
@@ -700,6 +765,8 @@ export function handlePlayerAction(roomCode, playerId, action, data) {
       return handleSquiggleStoryPlayerAction(room, playerId, action, data);
     case 'stemningssjekk':
       return handleStemningssjekkPlayerAction(room, playerId, action, data);
+    case 'ordjakt':
+      return handleOrdjaktPlayerAction(room, playerId, action, data);
     default:
       return null;
   }
@@ -746,6 +813,166 @@ function handleStemningssjekkPlayerAction(room, playerId, action, data) {
         toHost: true,
         hostEvent: 'game:emoji-picked',
         hostData: { playerId, emoji, previousEmoji }
+      };
+    }
+
+    default:
+      return null;
+  }
+}
+
+// ==================
+// ORDJAKT
+// ==================
+
+function handleOrdjaktHostAction(room, action, data) {
+  const gd = room.gameData;
+
+  switch (action) {
+    case 'start-round': {
+      gd.started = true;
+      return {
+        broadcast: true,
+        event: 'game:round-started',
+        data: {
+          letters: gd.letters,
+          timeLimit: gd.timeLimit
+        }
+      };
+    }
+
+    case 'time-up':
+      return { broadcast: true, event: 'game:time-up', data: {} };
+
+    case 'new-round': {
+      // Generate new letters
+      const wordList = loadOrdjaktWordList(gd.variant);
+      const sourceWord = wordList.eightLetter[Math.floor(Math.random() * wordList.eightLetter.length)];
+      const letters = sourceWord.split('').sort(() => Math.random() - 0.5);
+
+      gd.letters = letters;
+      gd.sourceWord = sourceWord;
+      gd.playerWords = {};
+      gd.allUniqueWords = {};
+      gd.wordsByLength = {};
+      gd.ordkongen = null;
+      gd.ordmaskinen = null;
+      gd.started = true;
+
+      return {
+        broadcast: true,
+        event: 'game:round-started',
+        data: {
+          letters: gd.letters,
+          timeLimit: gd.timeLimit
+        }
+      };
+    }
+
+    default:
+      return null;
+  }
+}
+
+function ordjaktGetLetterCounts(str) {
+  const counts = {};
+  for (const ch of str.toLowerCase()) {
+    counts[ch] = (counts[ch] || 0) + 1;
+  }
+  return counts;
+}
+
+function handleOrdjaktPlayerAction(room, playerId, action, data) {
+  const gd = room.gameData;
+  if (!gd.started) return null;
+
+  switch (action) {
+    case 'submit-word': {
+      const player = room.players.find(p => p.id === playerId);
+      if (!player) return null;
+
+      const word = (data?.word || '').trim().toLowerCase();
+
+      // Validate: minimum 3 letters
+      if (word.length < 3) {
+        return {
+          toPlayer: playerId,
+          playerEvent: 'game:word-result',
+          playerData: { accepted: false, word, reason: 'Ordet må ha minst 3 bokstaver' }
+        };
+      }
+
+      // Validate: only uses available letters (correct counts)
+      const availableCounts = ordjaktGetLetterCounts(gd.letters.join(''));
+      const wordCounts = ordjaktGetLetterCounts(word);
+      for (const [ch, count] of Object.entries(wordCounts)) {
+        if (!availableCounts[ch] || count > availableCounts[ch]) {
+          return {
+            toPlayer: playerId,
+            playerEvent: 'game:word-result',
+            playerData: { accepted: false, word, reason: 'Ordet bruker bokstaver som ikke er tilgjengelige' }
+          };
+        }
+      }
+
+      // Validate: not already submitted by this player
+      if (!gd.playerWords[playerId]) gd.playerWords[playerId] = [];
+      if (gd.playerWords[playerId].includes(word)) {
+        return {
+          toPlayer: playerId,
+          playerEvent: 'game:word-result',
+          playerData: { accepted: false, word, reason: 'Du har allerede funnet dette ordet' }
+        };
+      }
+
+      // Validate: exists in dictionary
+      const wordList = loadOrdjaktWordList(gd.variant);
+      if (!wordList.all.has(word)) {
+        return {
+          toPlayer: playerId,
+          playerEvent: 'game:word-result',
+          playerData: { accepted: false, word, reason: 'Ordet finnes ikke i ordboka' }
+        };
+      }
+
+      // Word is valid!
+      gd.playerWords[playerId].push(word);
+      const playerWordCount = gd.playerWords[playerId].length;
+
+      // Track class-wide unique words
+      if (!gd.allUniqueWords[word]) {
+        gd.allUniqueWords[word] = { playerId, playerName: player.name, length: word.length };
+        gd.wordsByLength[word.length] = (gd.wordsByLength[word.length] || 0) + 1;
+      }
+
+      // Update scoring
+      player.score = (player.score || 0) + word.length;
+
+      // Update Ordkongen (longest word)
+      if (!gd.ordkongen || word.length > gd.ordkongen.word.length) {
+        gd.ordkongen = { word, playerName: player.name };
+      }
+
+      // Update Ordmaskinen (most words)
+      if (!gd.ordmaskinen || playerWordCount > gd.ordmaskinen.count) {
+        gd.ordmaskinen = { count: playerWordCount, playerName: player.name };
+      }
+
+      // Send result to player + update to host
+      return {
+        toPlayer: playerId,
+        playerEvent: 'game:word-result',
+        playerData: { accepted: true, word, wordCount: playerWordCount, score: player.score },
+        toHost: true,
+        hostEvent: 'game:ordjakt-update',
+        hostData: {
+          wordsByLength: { ...gd.wordsByLength },
+          totalUniqueWords: Object.keys(gd.allUniqueWords).length,
+          ordkongen: gd.ordkongen,
+          ordmaskinen: gd.ordmaskinen,
+          playerName: player.name,
+          playerWordCount
+        }
       };
     }
 

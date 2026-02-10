@@ -17,7 +17,8 @@ const GAME_NAMES = {
   'hva-mangler': { name: 'Hva mangler?', icon: '👁️' },
   'tegn-det': { name: 'Tegn det!', icon: '🎨' },
   'squiggle-story': { name: 'Krusedull', icon: '〰️' },
-  'stemningssjekk': { name: 'Stemningssjekk', icon: '🎭' }
+  'stemningssjekk': { name: 'Stemningssjekk', icon: '🎭' },
+  'ordjakt': { name: 'Ordjakt', icon: '🔍' }
 };
 
 const SLANGE_CATEGORIES = [
@@ -59,6 +60,9 @@ function Lobby() {
   // Tidslinje-konfigurasjon
   const [tidslinjeCategory, setTidslinjeCategory] = useState('blanding');
 
+  // Ordjakt-konfigurasjon
+  const [ordjaktVariant, setOrdjaktVariant] = useState('nob');
+
   const gameInfo = GAME_NAMES[currentGame] || { name: currentGame, icon: '🎮' };
   const joinUrl = import.meta.env.VITE_APP_URL || 'game.ak-kreativ.no';
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://${joinUrl}`;
@@ -68,6 +72,8 @@ function Lobby() {
       startGame({ category: slangeCategory, mode: slangeMode });
     } else if (currentGame === 'tidslinje') {
       startGame({ category: tidslinjeCategory });
+    } else if (currentGame === 'ordjakt') {
+      startGame({ variant: ordjaktVariant });
     } else {
       startGame();
     }
@@ -175,6 +181,23 @@ function Lobby() {
                         {cat.icon} {cat.name}
                       </option>
                     ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* Ordjakt-konfigurasjon */}
+            {currentGame === 'ordjakt' && (
+              <div className="slange-config">
+                <div className="config-group">
+                  <label>Målform:</label>
+                  <select
+                    value={ordjaktVariant}
+                    onChange={(e) => setOrdjaktVariant(e.target.value)}
+                    className="config-select"
+                  >
+                    <option value="nob">Bokmål</option>
+                    <option value="nno">Nynorsk</option>
                   </select>
                 </div>
               </div>
