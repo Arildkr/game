@@ -1,5 +1,5 @@
 // game/src/games/nerdle/PlayerGame.jsx
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useGame } from '../../contexts/GameContext';
 import './Nerdle.css';
 
@@ -21,6 +21,9 @@ function PlayerGame() {
   const [keyStatus, setKeyStatus] = useState({}); // Track key colors
   const [wrongGuessMessage, setWrongGuessMessage] = useState(null);
 
+  // Ref for keyStatus to avoid stale closure in socket handlers
+  const keyStatusRef = useRef({});
+
   useEffect(() => {
     if (!socket) return;
 
@@ -30,6 +33,7 @@ function PlayerGame() {
       setGuesses([]);
       setMaxAttempts(max);
       setError(null);
+      keyStatusRef.current = {};
       setKeyStatus({});
       setWrongGuessMessage(null);
     };
@@ -47,8 +51,8 @@ function PlayerGame() {
         setTimeout(() => setWrongGuessMessage(null), 2000);
       }
 
-      // Update key status
-      const newKeyStatus = { ...keyStatus };
+      // Update key status via ref (avoids stale closure)
+      const newKeyStatus = { ...keyStatusRef.current };
       guess.split('').forEach((char, i) => {
         const status = result[i];
         // Only upgrade status (absent -> present -> correct)
@@ -58,6 +62,7 @@ function PlayerGame() {
           newKeyStatus[char] = status;
         }
       });
+      keyStatusRef.current = newKeyStatus;
       setKeyStatus(newKeyStatus);
     };
 
@@ -89,7 +94,7 @@ function PlayerGame() {
       socket.off('game:player-solved', handlePlayerSolved);
       socket.off('game:round-ended', handleRoundEnded);
     };
-  }, [socket, keyStatus]);
+  }, [socket]);
 
   const handleKeyPress = useCallback((key) => {
     if (phase !== 'playing') return;
@@ -208,8 +213,10 @@ function PlayerGame() {
               {renderGrid()}
             </div>
 
-            {error && <div className="error-message">{error}</div>}
-            {wrongGuessMessage && <div className="wrong-guess-message">{wrongGuessMessage}</div>}
+            <div className="message-area">
+              {error && <div className="error-message">{error}</div>}
+              {wrongGuessMessage && !error && <div className="wrong-guess-message">{wrongGuessMessage}</div>}
+            </div>
 
             <div className="keyboard">
               {KEYBOARD_LAYOUT.map((row, rowIndex) => (

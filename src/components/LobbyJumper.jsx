@@ -15,8 +15,8 @@ const GRAVITY = 0.8;
 const JUMP_FORCE = -16;
 const DOUBLE_JUMP_FORCE = -14;
 const INITIAL_SPEED = 5;
-const MAX_SPEED = 16;
-const SPEED_INCREMENT = 0.002;
+const MAX_SPEED = 18;
+const SPEED_INCREMENT = 0.003;
 
 // Ceiling obstacles start after this many obstacles dodged
 const CEILING_START_OBSTACLES = 15;
@@ -290,13 +290,16 @@ function LobbyJumper() {
       player.vy = Math.abs(player.vy) * 0.5;
     }
 
+    // Progressive poeng: mer poeng ved høyere hastighet
+    const pointsPerObstacle = speedRef.current >= 13 ? 3 : speedRef.current >= 9 ? 2 : 1;
+
     // Flytt gulvhindringer + poengberegning
     const obstacles = obstaclesRef.current;
     for (let i = obstacles.length - 1; i >= 0; i--) {
       obstacles[i].x -= speedRef.current;
       if (!obstacles[i].passed && obstacles[i].x + OBSTACLE_WIDTH < player.x) {
         obstacles[i].passed = true;
-        scoreRef.current++;
+        scoreRef.current += pointsPerObstacle;
       }
       if (obstacles[i].x <= -OBSTACLE_WIDTH) obstacles.splice(i, 1);
     }
@@ -307,7 +310,7 @@ function LobbyJumper() {
       ceilingObs[i].x -= speedRef.current;
       if (!ceilingObs[i].passed && ceilingObs[i].x + OBSTACLE_WIDTH < player.x) {
         ceilingObs[i].passed = true;
-        scoreRef.current++;
+        scoreRef.current += pointsPerObstacle;
       }
       if (ceilingObs[i].x <= -OBSTACLE_WIDTH) ceilingObs.splice(i, 1);
     }
@@ -321,7 +324,7 @@ function LobbyJumper() {
 
     // Spawn hindringer
     frameCountRef.current++;
-    const spawnRate = Math.max(50, 90 - (speedRef.current - INITIAL_SPEED) * 3);
+    const spawnRate = Math.max(40, 90 - (speedRef.current - INITIAL_SPEED) * 3);
 
     if (frameCountRef.current % Math.floor(spawnRate) === 0) {
       if (Math.random() < 0.7) {
