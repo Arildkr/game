@@ -233,16 +233,22 @@ io.on('connection', (socket) => {
   });
 
   socket.on('host:start-game', (config = {}) => {
-    const roomCode = socketToRoom.get(socket.id);
-    const room = startGame(roomCode, config);
-    if (room) {
-      io.to(roomCode).emit('game:started', {
-        room: sanitizeRoom(room),
-        gameData: room.gameData
-      });
-      console.log(`Game started in room ${roomCode}`);
-      // Trigger bot responses for game start
-      botManager.onGameEvent(roomCode, 'game:started', room.gameData);
+    try {
+      const roomCode = socketToRoom.get(socket.id);
+      if (!roomCode) return;
+      const room = startGame(roomCode, config);
+      if (room) {
+        io.to(roomCode).emit('game:started', {
+          room: sanitizeRoom(room),
+          gameData: room.gameData
+        });
+        console.log(`Game started in room ${roomCode}`);
+        // Trigger bot responses for game start
+        botManager.onGameEvent(roomCode, 'game:started', room.gameData);
+      }
+    } catch (err) {
+      console.error('Error in host:start-game:', err);
+      socket.emit('game:error', { message: 'Kunne ikke starte spillet' });
     }
   });
 

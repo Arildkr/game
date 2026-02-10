@@ -20,7 +20,7 @@ function loadOrdjaktWordList(variant) {
     ? 'wordlist_20220201_norsk_ordbank_nno_2012.txt'
     : 'wordlist_20220201_norsk_ordbank_nob_2005.txt';
 
-  const filePath = join(__dirname, '..', 'src', 'games', 'ordjakt', filename);
+  const filePath = join(__dirname, 'data', filename);
   const content = readFileSync(filePath, 'utf-8');
   const lines = content.split(/\r?\n/).map(w => w.trim().toLowerCase());
 

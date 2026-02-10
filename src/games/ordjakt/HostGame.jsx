@@ -8,7 +8,7 @@ const ROUND_TIME = 120;
 function HostGame() {
   const { socket, players, endGame, sendGameAction, roomCode, kickPlayer, gameData } = useGame();
 
-  const [phase, setPhase] = useState('setup'); // setup, playing, finished
+  const [phase, setPhase] = useState('starting'); // starting, playing, finished
   const [letters, setLetters] = useState([]);
   const [timeLeft, setTimeLeft] = useState(ROUND_TIME);
   const [wordsByLength, setWordsByLength] = useState({});
@@ -18,6 +18,20 @@ function HostGame() {
   const timerRef = useRef(null);
 
   const connectedPlayers = players.filter(p => p.isConnected);
+
+  // Auto-start round when component mounts
+  const hasStarted = useRef(false);
+  useEffect(() => {
+    if (!hasStarted.current && socket) {
+      hasStarted.current = true;
+      setPhase('playing');
+      setTimeLeft(ROUND_TIME);
+      sendGameAction('start-round');
+      if (gameData?.letters) {
+        setLetters(gameData.letters);
+      }
+    }
+  }, [socket, sendGameAction, gameData]);
 
   // Timer
   useEffect(() => {
@@ -114,20 +128,10 @@ function HostGame() {
       </header>
 
       <main className="game-main">
-        {phase === 'setup' && (
+        {phase === 'starting' && (
           <div className="waiting-state">
             <div className="waiting-icon">🔍</div>
-            <h2>Ordjakt</h2>
-            <p>Elevene skal finne så mange ord som mulig med 8 bokstaver</p>
-            <button
-              className="btn-start"
-              onClick={startRound}
-            >
-              Start runde
-            </button>
-            <p className="hint">
-              {connectedPlayers.length} {connectedPlayers.length === 1 ? 'elev' : 'elever'} er klare
-            </p>
+            <h2>Starter Ordjakt...</h2>
           </div>
         )}
 
