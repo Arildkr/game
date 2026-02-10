@@ -1,5 +1,5 @@
 // game/src/games/ordjakt/PlayerGame.jsx
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useGame } from '../../contexts/GameContext';
 import './Ordjakt.css';
 
@@ -12,9 +12,34 @@ function PlayerGame() {
   const [input, setInput] = useState('');
   const [myWords, setMyWords] = useState([]);
   const [feedback, setFeedback] = useState(null);
+  const [sourceWord, setSourceWord] = useState('');
   const inputRef = useRef(null);
   const timerRef = useRef(null);
   const feedbackTimerRef = useRef(null);
+
+  // Track which letters are "used" in the current input (for visual dimming)
+  const getUsedLetterIndices = useCallback(() => {
+    const used = [];
+    const remaining = [...letters];
+    for (const ch of input.toLowerCase()) {
+      const idx = remaining.findIndex((l, i) => l.toLowerCase() === ch && !used.includes(i));
+      if (idx !== -1) {
+        // Find original index
+        let originalIdx = -1;
+        let count = 0;
+        for (let i = 0; i < letters.length; i++) {
+          if (letters[i].toLowerCase() === ch && !used.includes(i)) {
+            if (count === 0) { originalIdx = i; break; }
+            count++;
+          }
+        }
+        if (originalIdx !== -1) used.push(originalIdx);
+      }
+    }
+    return used;
+  }, [input, letters]);
+
+  const usedIndices = getUsedLetterIndices();
 
   useEffect(() => {
     if (!socket) return;
@@ -25,6 +50,7 @@ function PlayerGame() {
       setMyWords([]);
       setInput('');
       setFeedback(null);
+      setSourceWord('');
       if (timeLimit) {
         setTimeLeft(timeLimit);
         if (timerRef.current) clearInterval(timerRef.current);
@@ -41,24 +67,24 @@ function PlayerGame() {
       setTimeout(() => inputRef.current?.focus(), 300);
     };
 
-    const handleWordResult = ({ accepted, word, reason, wordCount, score }) => {
+    const handleWordResult = ({ accepted, word, reason }) => {
       if (accepted) {
         setMyWords(prev => [word, ...prev]);
-        setFeedback({ type: 'success', text: `✓ ${word.toUpperCase()}` });
+        setFeedback({ type: 'success', text: `\u2713 ${word.toUpperCase()}` });
       } else {
         setFeedback({ type: 'error', text: reason });
       }
       setInput('');
       inputRef.current?.focus();
 
-      // Clear feedback after 2.5 seconds
       if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
       feedbackTimerRef.current = setTimeout(() => setFeedback(null), 2500);
     };
 
-    const handleTimeUp = () => {
+    const handleTimeUp = ({ sourceWord: sw }) => {
       setPhase('finished');
       setTimeLeft(0);
+      if (sw) setSourceWord(sw);
       if (timerRef.current) clearInterval(timerRef.current);
     };
 
@@ -91,6 +117,20 @@ function PlayerGame() {
     }
   };
 
+  // Tap letter to add to input
+  const tapLetter = (letter, index) => {
+    if (phase !== 'playing') return;
+    if (usedIndices.includes(index)) return; // Already used
+    setInput(prev => prev + letter.toLowerCase());
+    inputRef.current?.focus();
+  };
+
+  // Clear input
+  const clearInput = () => {
+    setInput('');
+    inputRef.current?.focus();
+  };
+
   const formatTime = (s) => {
     const mins = Math.floor(s / 60);
     const secs = s % 60;
@@ -100,7 +140,7 @@ function PlayerGame() {
   return (
     <div className="ordjakt-player">
       <header className="player-header">
-        <button className="btn-back" onClick={leaveRoom}>←</button>
+        <button className="btn-back" onClick={leaveRoom}>&larr;</button>
         <span className="player-name">{playerName}</span>
         <span className="game-badge">Ordjakt</span>
       </header>
@@ -118,18 +158,25 @@ function PlayerGame() {
         {(phase === 'playing' || phase === 'finished') && (
           <div className="play-area">
             {/* Timer */}
-            <div className={`player-timer ${timeLeft <= 30 ? 'warning' : ''} ${phase === 'finished' ? 'finished' : ''}`}>
+            <div className={`player-timer ${timeLeft <= 30 && phase === 'playing' ? 'warning' : ''} ${phase === 'finished' ? 'finished' : ''}`}>
               {phase === 'finished' ? 'Tiden er ute!' : formatTime(timeLeft)}
             </div>
 
-            {/* Letters */}
+            {/* Letters - tappable */}
             <div className="player-letters">
               {letters.map((letter, i) => (
-                <div key={i} className="player-letter-tile">{letter.toUpperCase()}</div>
+                <button
+                  key={i}
+                  className={`player-letter-tile ${usedIndices.includes(i) ? 'used' : ''}`}
+                  onClick={() => tapLetter(letter, i)}
+                  disabled={phase !== 'playing'}
+                >
+                  {letter.toUpperCase()}
+                </button>
               ))}
             </div>
 
-            <p className="letters-hint">Ordene må være minst 3 bokstaver lange</p>
+            <p className="letters-hint">Trykk på bokstavene eller skriv. Minimum 3 bokstaver.</p>
 
             {/* Input */}
             {phase === 'playing' && (
@@ -145,6 +192,9 @@ function PlayerGame() {
                   autoComplete="off"
                   autoCapitalize="off"
                 />
+                {input.length > 0 && (
+                  <button className="btn-clear" onClick={clearInput}>&times;</button>
+                )}
                 <button className="btn-submit" onClick={submitWord}>Send</button>
               </div>
             )}
@@ -153,6 +203,13 @@ function PlayerGame() {
             {feedback && (
               <div className={`word-feedback ${feedback.type}`}>
                 {feedback.text}
+              </div>
+            )}
+
+            {/* Source word reveal after round */}
+            {phase === 'finished' && sourceWord && (
+              <div className="source-word-player">
+                8-bokstavsord: <strong>{sourceWord.toUpperCase()}</strong>
               </div>
             )}
 

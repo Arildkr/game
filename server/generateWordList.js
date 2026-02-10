@@ -1,25 +1,50 @@
-// One-time script to generate ordjaktWords.js from raw word list files
+// Generate ordjaktWords.js from Norsk Ordbank fullformsliste (includes inflections)
 // Run: node generateWordList.js
 
 import { readFileSync, writeFileSync } from 'fs';
 
-function filterWords(path) {
-  const content = readFileSync(path, 'utf-8');
-  const lines = content.split(/\r?\n/).map(w => w.trim().toLowerCase());
+function extractFullforms(path, encoding = 'latin1') {
+  console.log(`Reading ${path}...`);
+  const content = readFileSync(path, encoding);
+  const lines = content.split(/\r?\n/);
+  console.log(`  ${lines.length} raw lines`);
+
+  // Tab-separated: column 3 (index 2) is the word form (OPPSLAG)
   const regex = /^[a-zæøåéèêóòâ]{3,8}$/;
-  return [...new Set(lines.filter(w => regex.test(w)))];
+  const all = new Set();
+
+  // Skip header line
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split('\t');
+    if (cols.length < 3) continue;
+    const word = cols[2].trim().toLowerCase();
+    if (regex.test(word)) {
+      all.add(word);
+    }
+  }
+
+  const words = [...all].sort();
+  const eightLetter = words.filter(w => w.length === 8);
+  console.log(`  ${words.length} unique words (3-8 chars), ${eightLetter.length} with 8 letters`);
+  return words;
 }
 
-const nob = filterWords('data/wordlist_20220201_norsk_ordbank_nob_2005.txt');
-const nno = filterWords('data/wordlist_20220201_norsk_ordbank_nno_2012.txt');
+// Bokmål: fullformsliste.txt
+const nob = extractFullforms('data/fullformsliste.txt');
+// Nynorsk: fullformer_2012.txt
+const nno = extractFullforms('data/fullformer_2012.txt');
 
-console.log('Bokmål:', nob.length, 'words,', nob.filter(w => w.length === 8).length, 'with 8 letters');
-console.log('Nynorsk:', nno.length, 'words,', nno.filter(w => w.length === 8).length, 'with 8 letters');
+// Test some inflected forms
+console.log('\nInflection check (bokmål):');
+const nobSet = new Set(nob);
+for (const w of ['hest', 'hester', 'hesten', 'hestene', 'løper', 'løpende', 'skriver', 'bøker', 'barn', 'barna']) {
+  console.log(`  ${w}: ${nobSet.has(w) ? 'YES' : 'NO'}`);
+}
 
-// Build JS module with JSON arrays
+// Build JS module
 let output = `// Auto-generated Norwegian word lists for Ordjakt
-// Source: Norsk Ordbank (Språkrådet)
-// Filtered: 3-8 character pure alphabetic words
+// Source: Norsk Ordbank fullformsliste (Språkrådet/Språkbanken)
+// Includes all inflected forms (bøyningsformer)
 // Generated: ${new Date().toISOString()}
 
 const NOB_WORDS = ${JSON.stringify(nob)};
@@ -40,4 +65,4 @@ export function getOrdjaktWordList(variant) {
 `;
 
 writeFileSync('ordjaktWords.js', output, 'utf-8');
-console.log('Generated ordjaktWords.js:', Math.round(output.length / 1024), 'KB');
+console.log(`\nGenerated ordjaktWords.js: ${Math.round(output.length / 1024)} KB`);

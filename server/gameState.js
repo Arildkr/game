@@ -801,8 +801,22 @@ function handleOrdjaktHostAction(room, action, data) {
       };
     }
 
-    case 'time-up':
-      return { broadcast: true, event: 'game:time-up', data: {} };
+    case 'time-up': {
+      gd.started = false;
+      const foundWords = Object.keys(gd.allUniqueWords)
+        .sort((a, b) => b.length - a.length || a.localeCompare(b));
+      return {
+        broadcast: true,
+        event: 'game:time-up',
+        data: {
+          sourceWord: gd.sourceWord,
+          foundWords,
+          totalUniqueWords: foundWords.length,
+          ordkongen: gd.ordkongen,
+          ordmaskinen: gd.ordmaskinen
+        }
+      };
+    }
 
     case 'new-round': {
       // Generate new letters

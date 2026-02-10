@@ -15,6 +15,8 @@ function HostGame() {
   const [totalUniqueWords, setTotalUniqueWords] = useState(0);
   const [ordkongen, setOrdkongen] = useState(null);
   const [ordmaskinen, setOrdmaskinen] = useState(null);
+  const [foundWords, setFoundWords] = useState([]);
+  const [sourceWord, setSourceWord] = useState('');
   const timerRef = useRef(null);
 
   const connectedPlayers = players.filter(p => p.isConnected);
@@ -60,23 +62,28 @@ function HostGame() {
       if (om) setOrdmaskinen(om);
     };
 
-    socket.on('game:ordjakt-update', handleUpdate);
-    return () => socket.off('game:ordjakt-update', handleUpdate);
-  }, [socket]);
+    const handleTimeUp = ({ sourceWord: sw, foundWords: fw, ordkongen: ok, ordmaskinen: om }) => {
+      if (sw) setSourceWord(sw);
+      if (fw) setFoundWords(fw);
+      if (ok) setOrdkongen(ok);
+      if (om) setOrdmaskinen(om);
+      setPhase('finished');
+    };
 
-  const startRound = () => {
-    setPhase('playing');
-    setTimeLeft(ROUND_TIME);
-    setWordsByLength({});
-    setTotalUniqueWords(0);
-    setOrdkongen(null);
-    setOrdmaskinen(null);
-    sendGameAction('start-round');
-    // Get letters from gameData
-    if (gameData?.letters) {
-      setLetters(gameData.letters);
-    }
-  };
+    const handleRoundStarted = ({ letters: l }) => {
+      if (l) setLetters(l);
+      setPhase('playing');
+    };
+
+    socket.on('game:ordjakt-update', handleUpdate);
+    socket.on('game:time-up', handleTimeUp);
+    socket.on('game:round-started', handleRoundStarted);
+    return () => {
+      socket.off('game:ordjakt-update', handleUpdate);
+      socket.off('game:time-up', handleTimeUp);
+      socket.off('game:round-started', handleRoundStarted);
+    };
+  }, [socket]);
 
   const newRound = () => {
     setPhase('playing');
@@ -85,20 +92,10 @@ function HostGame() {
     setTotalUniqueWords(0);
     setOrdkongen(null);
     setOrdmaskinen(null);
+    setFoundWords([]);
+    setSourceWord('');
     sendGameAction('new-round');
   };
-
-  // Listen for round-started to get letters
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleRoundStarted = ({ letters: l }) => {
-      if (l) setLetters(l);
-    };
-
-    socket.on('game:round-started', handleRoundStarted);
-    return () => socket.off('game:round-started', handleRoundStarted);
-  }, [socket]);
 
   const formatTime = (s) => {
     const mins = Math.floor(s / 60);
@@ -145,55 +142,104 @@ function HostGame() {
             </div>
 
             {/* Timer */}
-            <div className={`ordjakt-timer ${timeLeft <= 30 ? 'warning' : ''} ${phase === 'finished' ? 'finished' : ''}`}>
+            <div className={`ordjakt-timer ${timeLeft <= 30 && phase === 'playing' ? 'warning' : ''} ${phase === 'finished' ? 'finished' : ''}`}>
               {phase === 'finished' ? 'Tiden er ute!' : formatTime(timeLeft)}
             </div>
 
-            {/* Stats area */}
-            <div className="stats-area">
-              {/* Leaderboard titles */}
-              <div className="titles-row">
-                <div className="title-card ordkongen">
-                  <div className="title-label">👑 Ordkongen</div>
-                  <div className="title-value">
-                    {ordkongen ? (
-                      <><span className="title-name">{ordkongen.playerName}</span> <span className="title-detail">({ordkongen.word})</span></>
-                    ) : '—'}
+            {/* During play: stats */}
+            {phase === 'playing' && (
+              <div className="stats-area">
+                <div className="titles-row">
+                  <div className="title-card ordkongen">
+                    <div className="title-label">👑 Ordkongen</div>
+                    <div className="title-value">
+                      {ordkongen ? (
+                        <><span className="title-name">{ordkongen.playerName}</span> <span className="title-detail">({ordkongen.word})</span></>
+                      ) : '—'}
+                    </div>
+                  </div>
+                  <div className="title-card ordmaskinen">
+                    <div className="title-label">⚡ Ordmaskinen</div>
+                    <div className="title-value">
+                      {ordmaskinen ? (
+                        <><span className="title-name">{ordmaskinen.playerName}</span> <span className="title-detail">({ordmaskinen.count} ord)</span></>
+                      ) : '—'}
+                    </div>
                   </div>
                 </div>
-                <div className="title-card ordmaskinen">
-                  <div className="title-label">⚡ Ordmaskinen</div>
-                  <div className="title-value">
-                    {ordmaskinen ? (
-                      <><span className="title-name">{ordmaskinen.playerName}</span> <span className="title-detail">({ordmaskinen.count} ord)</span></>
-                    ) : '—'}
-                  </div>
-                </div>
-              </div>
 
-              {/* Words by length */}
-              <div className="words-stats">
-                <h3>Klassen har funnet {totalUniqueWords} unike ord</h3>
-                {sortedLengths.length > 0 ? (
-                  <div className="length-bars">
-                    {sortedLengths.map(([len, count]) => (
-                      <div key={len} className="length-bar-row">
-                        <span className="length-label">{len} bokstaver:</span>
-                        <div className="length-bar">
-                          <div
-                            className="length-bar-fill"
-                            style={{ width: `${Math.min(100, (count / Math.max(...Object.values(wordsByLength))) * 100)}%` }}
-                          />
+                <div className="words-stats">
+                  <h3>Klassen har funnet {totalUniqueWords} unike ord</h3>
+                  {sortedLengths.length > 0 ? (
+                    <div className="length-bars">
+                      {sortedLengths.map(([len, count]) => (
+                        <div key={len} className="length-bar-row">
+                          <span className="length-label">{len} bokstaver:</span>
+                          <div className="length-bar">
+                            <div
+                              className="length-bar-fill"
+                              style={{ width: `${Math.min(100, (count / Math.max(...Object.values(wordsByLength))) * 100)}%` }}
+                            />
+                          </div>
+                          <span className="length-count">{count}</span>
                         </div>
-                        <span className="length-count">{count}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="no-words">Venter på at elevene finner ord...</p>
-                )}
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="no-words">Venter på at elevene finner ord...</p>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* After round: show results */}
+            {phase === 'finished' && (
+              <div className="results-area">
+                {/* Source word reveal */}
+                {sourceWord && (
+                  <div className="source-word-reveal">
+                    <span className="source-label">8-bokstavsord:</span>
+                    <span className="source-word">{sourceWord.toUpperCase()}</span>
+                  </div>
+                )}
+
+                {/* Leaderboard */}
+                <div className="titles-row">
+                  <div className="title-card ordkongen">
+                    <div className="title-label">👑 Ordkongen</div>
+                    <div className="title-value">
+                      {ordkongen ? (
+                        <><span className="title-name">{ordkongen.playerName}</span> <span className="title-detail">({ordkongen.word})</span></>
+                      ) : '—'}
+                    </div>
+                  </div>
+                  <div className="title-card ordmaskinen">
+                    <div className="title-label">⚡ Ordmaskinen</div>
+                    <div className="title-value">
+                      {ordmaskinen ? (
+                        <><span className="title-name">{ordmaskinen.playerName}</span> <span className="title-detail">({ordmaskinen.count} ord)</span></>
+                      ) : '—'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* All found words */}
+                <div className="found-words-summary">
+                  <h3>Klassen fant {foundWords.length} unike ord</h3>
+                  {foundWords.length > 0 ? (
+                    <div className="found-words-grid">
+                      {foundWords.map(word => (
+                        <span key={word} className={`summary-word len-${word.length}`}>
+                          {word}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="no-words">Ingen ord ble funnet denne runden.</p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>
