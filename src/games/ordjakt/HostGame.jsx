@@ -245,12 +245,14 @@ function HostGame() {
       </main>
 
       <aside className="players-sidebar">
-        <h3>Elever ({connectedPlayers.length})</h3>
+        <h3>Topp 5 ({connectedPlayers.length} elever)</h3>
         <ul className="players-list">
           {connectedPlayers
             .sort((a, b) => (b.score || 0) - (a.score || 0))
-            .map(player => (
+            .slice(0, 5)
+            .map((player, i) => (
               <li key={player.id} className="player-item">
+                <span className="player-rank">#{i + 1}</span>
                 <span className="player-name">{player.name}</span>
                 <span className="player-score">{player.score || 0}p</span>
                 <button className="btn-kick" onClick={() => kickPlayer(player.id)} title="Fjern">✕</button>

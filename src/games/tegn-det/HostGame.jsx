@@ -152,10 +152,10 @@ function HostGame() {
       // Everyone has drawn - start new cycle
       setPlayersWhoHaveDrawn([]);
       setCycleNumber(prev => prev + 1);
-      nextDrawer = connectedPlayers[0];
+      nextDrawer = connectedPlayers[Math.floor(Math.random() * connectedPlayers.length)];
       newCycle = true;
     } else {
-      nextDrawer = availablePlayers[0];
+      nextDrawer = availablePlayers[Math.floor(Math.random() * availablePlayers.length)];
     }
 
     setDrawer(nextDrawer);
@@ -379,7 +379,7 @@ function HostGame() {
               >
                 <span className="player-name">
                   {player.id === drawer?.id && '🎨 '}
-                  {playersWhoHaveDrawn.includes(player.id) && !drawer?.id === player.id && '✓ '}
+                  {playersWhoHaveDrawn.includes(player.id) && player.id !== drawer?.id && '✓ '}
                   {player.name}
                 </span>
                 <span className="player-score">{player.score || 0}</span>

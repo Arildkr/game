@@ -11,6 +11,7 @@ function PlayerGame() {
   const [timeLeft, setTimeLeft] = useState(0);
   const [input, setInput] = useState('');
   const [myWords, setMyWords] = useState([]);
+  const [myScore, setMyScore] = useState(0);
   const [feedback, setFeedback] = useState(null);
   const [sourceWord, setSourceWord] = useState('');
   const inputRef = useRef(null);
@@ -48,6 +49,7 @@ function PlayerGame() {
       setLetters(l || []);
       setPhase('playing');
       setMyWords([]);
+      setMyScore(0);
       setInput('');
       setFeedback(null);
       setSourceWord('');
@@ -67,9 +69,10 @@ function PlayerGame() {
       setTimeout(() => inputRef.current?.focus(), 300);
     };
 
-    const handleWordResult = ({ accepted, word, reason }) => {
+    const handleWordResult = ({ accepted, word, reason, score }) => {
       if (accepted) {
         setMyWords(prev => [word, ...prev]);
+        if (score !== undefined) setMyScore(score);
         setFeedback({ type: 'success', text: `\u2713 ${word.toUpperCase()}` });
       } else {
         setFeedback({ type: 'error', text: reason });
@@ -215,7 +218,7 @@ function PlayerGame() {
 
             {/* My words */}
             <div className="my-words">
-              <h3>Dine ord ({myWords.length})</h3>
+              <h3>Dine ord ({myWords.length}) — {myScore} poeng</h3>
               {myWords.length > 0 ? (
                 <div className="word-list">
                   {myWords.map((word, i) => (

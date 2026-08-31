@@ -163,9 +163,36 @@ const botManager = new BotManager(io, rooms, handlePlayerAction);
 const HOST_DISCONNECT_GRACE_MS = 60000;
 const hostDisconnectTimers = new Map(); // roomCode → { timer, oldHostId }
 
+// Safe emit helper - catches transport errors (e.g. polling response closed)
+function safeEmit(target, event, data) {
+  try {
+    target.emit(event, data);
+  } catch (err) {
+    console.warn(`Emit failed for event "${event}":`, err.message);
+  }
+}
+
+function safeBroadcast(roomCode, event, data) {
+  try {
+    io.to(roomCode).emit(event, data);
+  } catch (err) {
+    console.warn(`Broadcast failed for event "${event}" in room ${roomCode}:`, err.message);
+  }
+}
+
+// Handle engine-level errors to prevent "message emit failed" crashes
+io.engine.on('connection_error', (err) => {
+  console.warn('Engine connection error:', err.code, err.message);
+});
+
 // Socket.io connection handling
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
+
+  // Handle per-socket transport errors
+  socket.conn?.on('error', (err) => {
+    console.warn(`Transport error for ${socket.id}:`, err.message);
+  });
 
   // Keep-alive fra klient - oppdater lastActivity for å forhindre rom-cleanup
   socket.on('ping-keepalive', () => {
@@ -444,12 +471,12 @@ io.on('connection', (socket) => {
       const result = handleGameAction(roomCode, action, data);
       if (result) {
         if (result.broadcast) {
-          io.to(roomCode).emit(result.event, result.data);
+          safeBroadcast(roomCode, result.event, result.data);
           // Trigger bot responses for broadcast events
           botManager.onGameEvent(roomCode, result.event, result.data);
         }
         if (result.toPlayer) {
-          io.to(result.toPlayer).emit(result.playerEvent, result.playerData);
+          safeEmit(io.to(result.toPlayer), result.playerEvent, result.playerData);
         }
       }
     } catch (err) {
@@ -504,16 +531,16 @@ io.on('connection', (socket) => {
       const result = handlePlayerAction(roomCode, socket.id, action, data);
       if (result) {
         if (result.broadcast) {
-          io.to(roomCode).emit(result.event, result.data);
+          safeBroadcast(roomCode, result.event, result.data);
         }
         if (result.toHost) {
           const room = rooms[roomCode];
           if (room) {
-            io.to(room.hostId).emit(result.hostEvent, result.hostData);
+            safeEmit(io.to(room.hostId), result.hostEvent, result.hostData);
           }
         }
         if (result.toPlayer) {
-          socket.emit(result.playerEvent, result.playerData);
+          safeEmit(socket, result.playerEvent, result.playerData);
         }
       }
     } catch (err) {
@@ -523,16 +550,20 @@ io.on('connection', (socket) => {
 
   // Lobby minispill score
   socket.on('lobby:submit-score', ({ score, gameId }) => {
-    const roomCode = socketToRoom.get(socket.id);
-    const result = submitLobbyScore(roomCode, socket.id, score, gameId || 'jumper');
-    if (result) {
-      // Send oppdatering til alle i rommet
-      io.to(roomCode).emit('lobby:score-update', {
-        playerId: socket.id,
-        totalScore: result.totalScore,
-        leaderboard: result.leaderboard,
-        gameLeaderboards: result.gameLeaderboards
-      });
+    try {
+      const roomCode = socketToRoom.get(socket.id);
+      const result = submitLobbyScore(roomCode, socket.id, score, gameId || 'jumper');
+      if (result) {
+        // Send oppdatering til alle i rommet
+        safeBroadcast(roomCode, 'lobby:score-update', {
+          playerId: socket.id,
+          totalScore: result.totalScore,
+          leaderboard: result.leaderboard,
+          gameLeaderboards: result.gameLeaderboards
+        });
+      }
+    } catch (err) {
+      console.error('Error in lobby:submit-score:', err);
     }
   });
 
@@ -601,7 +632,7 @@ io.on('connection', (socket) => {
       // Clean up stale socket mapping (new socket will get new mapping on rejoin)
       socketToRoom.delete(socket.id);
       // Notify other players
-      io.to(roomCode).emit('room:player-left', {
+      safeBroadcast(roomCode, 'room:player-left', {
         room: sanitizeRoom(room),
         playerId: socket.id
       });

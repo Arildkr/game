@@ -919,8 +919,10 @@ function handleOrdjaktPlayerAction(room, playerId, action, data) {
         gd.wordsByLength[word.length] = (gd.wordsByLength[word.length] || 0) + 1;
       }
 
-      // Update scoring
-      player.score = (player.score || 0) + word.length;
+      // Update scoring: 1 point per letter + bonus for longer words
+      const lengthBonus = word.length >= 5 ? (word.length - 4) : 0;
+      const wordScore = word.length + lengthBonus;
+      player.score = (player.score || 0) + wordScore;
 
       // Update Ordkongen (longest word)
       if (!gd.ordkongen || word.length > gd.ordkongen.word.length) {
@@ -2713,6 +2715,7 @@ function handleTegnDetHostAction(room, action, data) {
       gd.drawerId = drawerId;
       gd.drawerName = drawerName;
       gd.wordOptions = wordOptions;
+      gd.currentWord = null;
       gd.drawingData = [];
       gd.buzzerQueue = [];
       gd.currentGuesser = null;
@@ -2824,11 +2827,14 @@ function handleTegnDetHostAction(room, action, data) {
     }
 
     case 'end-round': {
+      const revealedWord = gd.currentWord;
+      gd.currentWord = null; // Round is over - prevent stale-word rescoring on late guesses
+
       return {
         broadcast: true,
         event: 'game:round-ended',
         data: {
-          word: gd.currentWord,
+          word: revealedWord,
           players: room.players
         }
       };
@@ -2980,13 +2986,16 @@ function handleTegnDetPlayerAction(room, playerId, action, data) {
         if (player) player.score = (player.score || 0) + guesserPoints;
         if (drawer) drawer.score = (drawer.score || 0) + drawerPoints;
 
+        const guessedWord = gd.currentWord;
+        gd.currentWord = null; // Round is over - prevent stale-word rescoring on late/duplicate guesses
+
         return {
           broadcast: true,
           event: 'game:correct-guess',
           data: {
             playerId,
             playerName: player?.name,
-            word: gd.currentWord,
+            word: guessedWord,
             guesserPoints,
             drawerPoints,
             players: room.players

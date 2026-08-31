@@ -109,7 +109,6 @@
   display: flex;
   gap: 0.75rem;
   justify-content: center;
-  flex-wrap: wrap;
 }
 
 .letter-tile {
@@ -284,6 +283,13 @@
   margin-bottom: 0.5rem;
 }
 
+.ordjakt-host .player-rank {
+  color: #fbbf24;
+  font-weight: 700;
+  min-width: 24px;
+  font-size: 0.85rem;
+}
+
 .ordjakt-host .player-name {
   flex: 1;
 }
@@ -401,12 +407,11 @@
   display: flex;
   gap: 0.4rem;
   justify-content: center;
-  flex-wrap: wrap;
 }
 
 .player-letter-tile {
-  width: 46px;
-  height: 46px;
+  width: 42px;
+  height: 42px;
   background: linear-gradient(145deg, #fbbf24, #f59e0b);
   color: #1f2937;
   font-size: 1.3rem;
