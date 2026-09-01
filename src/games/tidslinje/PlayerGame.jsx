@@ -20,6 +20,7 @@ function PlayerGame() {
   const [firstLocker, setFirstLocker] = useState(null);
   const [lastResult, setLastResult] = useState(null);
   const [draggedIndex, setDraggedIndex] = useState(null);
+  const [round, setRound] = useState(null);
   const timerRef = useRef(null);
 
   const myPlayerId = socket?.id;
@@ -36,7 +37,7 @@ function PlayerGame() {
   useEffect(() => {
     if (!socket) return;
 
-    const handleRoundStarted = ({ setName: name, events: evts, timeLimit }) => {
+    const handleRoundStarted = ({ setName: name, events: evts, timeLimit, round: rnd }) => {
       setSetName(name);
       setPhase('sorting');
       setEvents(evts || []);
@@ -46,6 +47,7 @@ function PlayerGame() {
       setLastResult(null);
       setMyResult(null);
       setTimeLeft(timeLimit || 60);
+      setRound(rnd);
 
       // Start timer
       clearInterval(timerRef.current);
@@ -159,11 +161,12 @@ function PlayerGame() {
 
     // Send sorted order to server
     sendPlayerAction('lock-answer', {
-      order: orderedEvents.map(e => e.id)
+      order: orderedEvents.map(e => e.id),
+      round
     });
 
     if (navigator.vibrate) navigator.vibrate(200);
-  }, [phase, hasLocked, orderedEvents, sendPlayerAction]);
+  }, [phase, hasLocked, orderedEvents, sendPlayerAction, round]);
 
   // Touch drag handlers
   const handleDragStart = (index) => {

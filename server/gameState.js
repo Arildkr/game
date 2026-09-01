@@ -288,7 +288,7 @@ function rebuildLeaderboards(room) {
  * Migrates all game data and lobby data from old socket ID to new socket ID.
  * Called when a player reconnects with a new socket.
  */
-function migratePlayerId(room, oldId, newId) {
+export function migratePlayerId(room, oldId, newId) {
   // Migrate lobby scores
   if (room.lobbyData?.playerScores?.[oldId]) {
     room.lobbyData.playerScores[newId] = room.lobbyData.playerScores[oldId];
@@ -379,6 +379,14 @@ function migratePlayerId(room, oldId, newId) {
     case 'squiggle-story':
       migrateKey(gd.submissions);
       migrateArray(gd.displayedSubmissions);
+      migrateKey(gd.votes);
+      break;
+
+    case 'ordjakt':
+      migrateKey(gd.playerWords);
+      break;
+
+    case 'stemningssjekk':
       migrateKey(gd.votes);
       break;
 
@@ -508,14 +516,16 @@ function initializeGameData(game, players, config) {
         targetNumber: null,
         availableNumbers: [],
         solutions: {}, // playerId -> { expression, result }
-        timeLeft: 90
+        timeLeft: 90,
+        roundRevealed: false
       };
 
     case 'tidslinje':
       return {
         events: [],
         submissions: {}, // playerId -> [orderedEventIds]
-        timeLeft: 60
+        timeLeft: 60,
+        roundRevealed: false
       };
 
     case 'slange': {
@@ -756,6 +766,14 @@ function handleStemningssjekkHostAction(room, action, data) {
   }
 }
 
+// Must match the EMOJIS list in src/games/stemningssjekk/PlayerGame.jsx
+const STEMNINGSSJEKK_EMOJIS = new Set([
+  '😊', '😄', '🥰', '😎',
+  '🤔', '😐', '😴', '🤷',
+  '😢', '😤', '😰', '🤯',
+  '🔥', '💪', '👍', '❤️',
+]);
+
 function handleStemningssjekkPlayerAction(room, playerId, action, data) {
   const gd = room.gameData;
   if (!gd.started) return null;
@@ -763,7 +781,7 @@ function handleStemningssjekkPlayerAction(room, playerId, action, data) {
   switch (action) {
     case 'pick-emoji': {
       const { emoji } = data;
-      if (!emoji) return null;
+      if (!STEMNINGSSJEKK_EMOJIS.has(emoji)) return null;
 
       const previousEmoji = gd.votes[playerId] || null;
       gd.votes[playerId] = emoji;
@@ -985,6 +1003,10 @@ function handleJaEllerNeiHostAction(room, action, data) {
     }
 
     case 'reveal-answer': {
+      // Idempotency guard - a manual click racing the auto-reveal timeout
+      // (or a double-click) must not score everyone twice.
+      if (gd.showAnswer) return null;
+
       // Host reveals the answer
       gd.showAnswer = true;
       const correctAnswer = gd.currentQuestion.answer;
@@ -1161,6 +1183,10 @@ function handleQuizHostAction(room, action, data) {
     }
 
     case 'reveal-answer': {
+      // Idempotency guard - a manual click racing the auto-reveal timeout
+      // (or a double-click) must not score everyone twice.
+      if (gd.showAnswer) return null;
+
       // Host reveals the answer
       gd.showAnswer = true;
       const correctAnswers = gd.correctAnswers || [];
@@ -1526,6 +1552,7 @@ function handleTallkampHostAction(room, action, data) {
       gd.solutions = {};
       gd.timeLimit = timeLimit * 1000;
       gd.currentRound = round;
+      gd.roundRevealed = false;
 
       return {
         broadcast: true,
@@ -1535,6 +1562,11 @@ function handleTallkampHostAction(room, action, data) {
     }
 
     case 'reveal-round': {
+      // Idempotency guard - a manual click racing an auto-reveal timeout
+      // (or a double-click) must not score everyone twice.
+      if (gd.roundRevealed) return null;
+      gd.roundRevealed = true;
+
       const results = [];
       const target = gd.targetNumber;
       const numSubmissions = Object.keys(gd.solutions).length;
@@ -1656,6 +1688,11 @@ function handleTallkampPlayerAction(room, playerId, action, data) {
   switch (action) {
     case 'submit': {
       if (gd.solutions[playerId]) return null; // Already submitted
+      // Reject a submission that arrives for a round that has already ended
+      // (host moved on / auto-revealed) or targets the wrong round entirely -
+      // otherwise a late in-flight submit from round N can silently land as
+      // that player's answer for round N+1.
+      if (gd.roundRevealed || data.round !== gd.currentRound) return null;
 
       const { expression } = data;
 
@@ -1704,6 +1741,7 @@ function handleTidslinjeHostAction(room, action, data) {
       gd.timeLimit = timeLimit * 1000;
       gd.currentRound = round;
       gd.setName = setName;
+      gd.roundRevealed = false;
 
       return {
         broadcast: true,
@@ -1713,6 +1751,11 @@ function handleTidslinjeHostAction(room, action, data) {
     }
 
     case 'reveal-round': {
+      // Idempotency guard - a manual click racing an auto-reveal timeout
+      // (or a double-click) must not score everyone twice.
+      if (gd.roundRevealed) return null;
+      gd.roundRevealed = true;
+
       const correctOrder = gd.correctOrder;
       const eventsWithYears = gd.eventsWithYears || [];
       const totalCount = correctOrder.length;
@@ -1848,6 +1891,11 @@ function handleTidslinjePlayerAction(room, playerId, action, data) {
       // Player locks their sorted answer
       if (!gd.lockedAnswers) gd.lockedAnswers = {};
       if (gd.lockedAnswers[playerId]) return null; // Already locked
+      // Reject a lock that arrives for a round that has already ended (host
+      // moved on / auto-revealed) or targets the wrong round entirely -
+      // otherwise a late in-flight lock from round N can silently land as
+      // that player's answer for round N+1.
+      if (gd.roundRevealed || data.round !== gd.currentRound) return null;
 
       const { order } = data;
 
@@ -2108,6 +2156,11 @@ function handleSlangePlayerAction(room, playerId, action, data) {
       return null;
 
     case 'submit-word': {
+      // Only the player the host currently has selected may submit - otherwise
+      // a word already in flight when the host moves to the next player can
+      // land after the fact and get approved under the wrong player's name.
+      if (playerId !== gd.currentPlayer?.id) return null;
+
       const word = data.word?.trim();
       if (!word) return null;
 

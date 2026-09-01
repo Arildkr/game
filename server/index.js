@@ -18,7 +18,8 @@ import {
   endGame,
   handleGameAction,
   handlePlayerAction,
-  cleanupOldRooms
+  cleanupOldRooms,
+  migratePlayerId
 } from './gameState.js';
 import { BotManager } from './botManager.js';
 
@@ -43,8 +44,8 @@ const io = new Server(server, {
       if (origin.endsWith('.vercel.app') || origin.endsWith('.netlify.app') || origin.includes('localhost')) {
         return callback(null, true);
       }
-      console.warn('CORS: Unknown origin:', origin);
-      callback(null, true);
+      console.warn('CORS: Rejected unknown origin:', origin);
+      callback(new Error('Not allowed by CORS'), false);
     },
     methods: ['GET', 'POST'],
     credentials: true
@@ -81,8 +82,15 @@ app.get('/ping', (req, res) => {
   res.send('pong');
 });
 
+// Per-game fields that hold the "answer" for the round in progress - these
+// must never reach a non-host client, since sanitizeRoom's payload goes out
+// over the wire and is inspectable (e.g. dev tools network tab) regardless of
+// what the UI actually renders. The host already gets these separately
+// through dedicated events, so stripping them here only affects players.
+const HOST_ONLY_GAME_DATA_KEYS = ['currentWord', 'wordOptions', 'correctAnswers', 'targetEquation', 'correctOrder', 'currentImageAnswers'];
+
 // Sanitize room data for client - avoid circular references and non-serializable objects
-function sanitizeRoom(room) {
+function sanitizeRoom(room, { forHost = false } = {}) {
   if (!room) return null;
 
   // Sanitize gameData to handle Set objects and Date objects
@@ -135,6 +143,12 @@ function sanitizeRoom(room) {
     } catch (err) {
       console.error('Error sanitizing gameData:', err);
       sanitizedGameData = null;
+    }
+
+    if (!forHost && sanitizedGameData) {
+      for (const key of HOST_ONLY_GAME_DATA_KEYS) {
+        delete sanitizedGameData[key];
+      }
     }
   }
 
@@ -335,7 +349,7 @@ io.on('connection', (socket) => {
       socket.join(newCode);
       socket.emit('host:rejoin-success', {
         roomCode: newCode,
-        room: sanitizeRoom(room),
+        room: sanitizeRoom(room, { forHost: true }),
         lobbyData: room.lobbyData,
         lobbyMinigame: room.lobbyMinigame || 'jumper',
         recreated: true
@@ -364,10 +378,11 @@ io.on('connection', (socket) => {
     socketToRoom.set(socket.id, upperCode);
     socket.join(upperCode);
 
-    // Send full state sync to host
+    // Send full state sync to host (host is allowed to see the round's
+    // secret data - e.g. the current word/answer - unlike other players)
     socket.emit('host:rejoin-success', {
       roomCode: upperCode,
-      room: sanitizeRoom(room),
+      room: sanitizeRoom(room, { forHost: true }),
       lobbyData: room.lobbyData,
       lobbyMinigame: room.lobbyMinigame || 'jumper'
     });
@@ -392,13 +407,21 @@ io.on('connection', (socket) => {
 
     if (existingPlayer) {
       // Clean up old socket mapping
-      if (existingPlayer.id !== socket.id) {
-        socketToRoom.delete(existingPlayer.id);
+      const oldId = existingPlayer.id;
+      if (oldId !== socket.id) {
+        socketToRoom.delete(oldId);
       }
       existingPlayer.id = socket.id;
       existingPlayer.isConnected = true;
       socketToRoom.set(socket.id, upperCode);
       socket.join(upperCode);
+
+      // Migrate all game data and lobby data referencing the old socket ID -
+      // without this, in-flight turn/answer/score state stays keyed to a dead
+      // ID and silently stops applying to the reconnected player.
+      if (oldId !== socket.id) {
+        migratePlayerId(room, oldId, socket.id);
+      }
 
       console.log(`Player ${name} (${socket.id}) rejoined room ${upperCode}`);
     } else {

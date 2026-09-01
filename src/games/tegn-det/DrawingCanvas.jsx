@@ -61,6 +61,25 @@ function floodFillCanvas(ctx, startX, startY, fillColorHex, canvasWidth, canvasH
   ctx.putImageData(imageData, 0, 0);
 }
 
+// Draw a single completed stroke (pen/eraser line or a fill) onto a context
+function drawStroke(ctx, stroke, canvasWidth, canvasHeight) {
+  if (stroke.type === 'fill') {
+    floodFillCanvas(ctx, stroke.x, stroke.y, stroke.color, canvasWidth, canvasHeight);
+  } else if (stroke.points && stroke.points.length > 1) {
+    ctx.beginPath();
+    ctx.strokeStyle = stroke.color || '#000000';
+    ctx.lineWidth = stroke.width || 4;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+    for (let i = 1; i < stroke.points.length; i++) {
+      ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
+    }
+    ctx.stroke();
+  }
+}
+
 function DrawingCanvas({
   isDrawer = false,
   onStroke,
@@ -78,6 +97,13 @@ function DrawingCanvas({
   const [tool, setTool] = useState('pen'); // 'pen', 'fill', or 'eraser'
   const lastPointRef = useRef(null);
 
+  // Offscreen cache of all committed strokes, so a round with many strokes
+  // (esp. an expensive full-canvas flood fill) doesn't get replayed from
+  // scratch on every single new stroke - only newly-added strokes are baked
+  // in incrementally. Only reset (full replay) on undo/clear/resize.
+  const committedCanvasRef = useRef(null);
+  const bakedCountRef = useRef(0);
+
   // Active drawing properties based on tool
   const activeColor = tool === 'eraser' ? backgroundColor : color;
   const activeWidth = tool === 'eraser' ? Math.max(lineWidth * 3, 12) : lineWidth;
@@ -88,35 +114,48 @@ function DrawingCanvas({
     '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899'
   ];
 
-  // Draw all strokes
+  // Ensure the offscreen committed-strokes cache matches the visible canvas size
+  const getCommittedCanvas = useCallback(() => {
+    let committed = committedCanvasRef.current;
+    if (!committed || committed.width !== width || committed.height !== height) {
+      committed = document.createElement('canvas');
+      committed.width = width;
+      committed.height = height;
+      committedCanvasRef.current = committed;
+      bakedCountRef.current = 0; // Size changed - cache is stale, rebuild below
+    }
+    return committed;
+  }, [width, height]);
+
+  // Draw all strokes (incrementally where possible)
   const redrawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = backgroundColor;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const committed = getCommittedCanvas();
+    const committedCtx = committed.getContext('2d');
 
-    // Draw all completed strokes (including fill strokes)
-    strokes.forEach(stroke => {
-      if (stroke.type === 'fill') {
-        floodFillCanvas(ctx, stroke.x, stroke.y, stroke.color, canvas.width, canvas.height);
-      } else if (stroke.points && stroke.points.length > 1) {
-        ctx.beginPath();
-        ctx.strokeStyle = stroke.color || '#000000';
-        ctx.lineWidth = stroke.width || 4;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-
-        ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
-        for (let i = 1; i < stroke.points.length; i++) {
-          ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
-        }
-        ctx.stroke();
+    // Strokes were removed (undo/clear) or the cache is stale - rebuild fully
+    if (bakedCountRef.current > strokes.length || bakedCountRef.current === 0) {
+      committedCtx.fillStyle = backgroundColor;
+      committedCtx.fillRect(0, 0, committed.width, committed.height);
+      for (const stroke of strokes) {
+        drawStroke(committedCtx, stroke, committed.width, committed.height);
       }
-    });
+      bakedCountRef.current = strokes.length;
+    } else if (bakedCountRef.current < strokes.length) {
+      // Bake only the newly-added strokes onto the existing cache
+      for (let i = bakedCountRef.current; i < strokes.length; i++) {
+        drawStroke(committedCtx, strokes[i], committed.width, committed.height);
+      }
+      bakedCountRef.current = strokes.length;
+    }
 
-    // Draw current stroke (while drawing)
+    // Composite: committed strokes + the in-progress stroke on top
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(committed, 0, 0);
+
     if (currentStroke.length > 1) {
       ctx.beginPath();
       ctx.strokeStyle = activeColor;
@@ -130,7 +169,13 @@ function DrawingCanvas({
       }
       ctx.stroke();
     }
-  }, [strokes, currentStroke, activeColor, activeWidth, backgroundColor]);
+  }, [strokes, currentStroke, activeColor, activeWidth, backgroundColor, getCommittedCanvas]);
+
+  // Background color changed - the cached committed canvas was painted with
+  // the old one, so force a full rebuild on the next redraw
+  useEffect(() => {
+    bakedCountRef.current = 0;
+  }, [backgroundColor]);
 
   // Redraw when strokes change
   useEffect(() => {

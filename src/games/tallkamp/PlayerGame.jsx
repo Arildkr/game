@@ -18,12 +18,13 @@ function PlayerGame() {
   const [myRank, setMyRank] = useState(0);
   const [leaderboard, setLeaderboard] = useState([]);
   const [usedNumberIndices, setUsedNumberIndices] = useState([]); // Sporer hvilke tall som er brukt
+  const [round, setRound] = useState(null);
   const timerRef = useRef(null);
 
   useEffect(() => {
     if (!socket) return;
 
-    const handleRoundStarted = ({ numbers: nums, target: tgt, timeLimit }) => {
+    const handleRoundStarted = ({ numbers: nums, target: tgt, timeLimit, round: rnd }) => {
       setNumbers(nums);
       setTarget(tgt);
       setPhase('playing');
@@ -33,6 +34,7 @@ function PlayerGame() {
       setError(null);
       setMyResult(null);
       setUsedNumberIndices([]); // Nullstill brukte tall
+      setRound(rnd);
 
       // Client-side timer
       timerRef.current = setInterval(() => {
@@ -217,7 +219,8 @@ function PlayerGame() {
       action: 'submit',
       data: {
         expression,
-        result: Math.round(result)
+        result: Math.round(result),
+        round
       }
     });
   };

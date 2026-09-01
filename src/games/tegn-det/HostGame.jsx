@@ -6,7 +6,7 @@ import DrawingCanvas from './DrawingCanvas';
 import './TegnDet.css';
 
 function HostGame() {
-  const { socket, players, endGame, sendGameAction, roomCode, kickPlayer } = useGame();
+  const { socket, players, endGame, sendGameAction, roomCode, kickPlayer, gameData } = useGame();
 
   const [phase, setPhase] = useState('setup'); // setup, waitingForWord, drawing, result
   const [currentWord, setCurrentWord] = useState(null);
@@ -136,6 +136,39 @@ function HostGame() {
       socket.off('game:word-selected', handleWordSelected);
     };
   }, [socket, phase, timeLimit]);
+
+  // Resync local UI state from server truth after a reconnect/page reload
+  // mid-round (gameData only arrives here on host:rejoin-success - normal
+  // gameplay drives phase purely through the socket events above, so this
+  // effect stays inert during a session that never reloaded).
+  // Note: roundNumber/cycleNumber/playersWhoHaveDrawn aren't tracked
+  // server-side, so the "who's drawn this cycle" queue restarts after a
+  // reload - but the round actually in progress picks back up correctly
+  // instead of the host being stuck on "Velg tegner" for a round that
+  // already has a drawer and possibly a word chosen.
+  const resyncedRef = useRef(false);
+  useEffect(() => {
+    if (!gameData || resyncedRef.current) return;
+    if (!gameData.drawerId) return; // No round in progress - fresh 'setup' is correct as-is
+    resyncedRef.current = true;
+
+    const drawerPlayer = players.find(p => p.id === gameData.drawerId)
+      || { id: gameData.drawerId, name: gameData.drawerName };
+    setDrawer(drawerPlayer);
+    setStrokes(Array.isArray(gameData.drawingData) ? gameData.drawingData : []);
+
+    if (gameData.currentWord) {
+      setCurrentWord(gameData.currentWord);
+      setPhase('drawing');
+      if (gameData.roundStartTime && timeLimit > 0) {
+        const elapsedSec = Math.floor((Date.now() - gameData.roundStartTime) / 1000);
+        setTimeLeft(Math.max(0, timeLimit - elapsedSec));
+      }
+    } else {
+      setPhase('waitingForWord');
+      setWordSelectTimeLeft(WORD_SELECT_TIME);
+    }
+  }, [gameData, players, timeLimit]);
 
   const selectDrawer = () => {
     if (connectedPlayers.length === 0) return;

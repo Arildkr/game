@@ -6,6 +6,30 @@ const GameContext = createContext(null);
 
 export const useGame = () => useContext(GameContext);
 
+// Session persistence - survives a page reload (sleep/wake, accidental refresh,
+// tab discard) so we can auto-rejoin instead of losing the room entirely.
+// Deliberately sessionStorage (not localStorage): a closed tab should not
+// silently rejoin a room days later.
+const STORAGE_PREFIX = 'klassespill:';
+function readStored(key) {
+  try {
+    return sessionStorage.getItem(STORAGE_PREFIX + key);
+  } catch {
+    return null;
+  }
+}
+function writeStored(key, value) {
+  try {
+    if (value === null || value === undefined || value === '') {
+      sessionStorage.removeItem(STORAGE_PREFIX + key);
+    } else {
+      sessionStorage.setItem(STORAGE_PREFIX + key, String(value));
+    }
+  } catch {
+    // Private browsing / storage disabled - session just won't survive a reload
+  }
+}
+
 export const GameProvider = ({ children }) => {
   // Connection state
   const [socket, setSocket] = useState(null);
@@ -15,16 +39,16 @@ export const GameProvider = ({ children }) => {
   const [connectionError, setConnectionError] = useState(null);
 
   // Room state
-  const [roomCode, setRoomCode] = useState(null);
+  const [roomCode, setRoomCode] = useState(() => readStored('roomCode'));
   const [players, setPlayers] = useState([]);
-  const [isHost, setIsHost] = useState(false);
-  const [playerName, setPlayerName] = useState('');
+  const [isHost, setIsHost] = useState(() => readStored('isHost') === 'true');
+  const [playerName, setPlayerName] = useState(() => readStored('playerName') || '');
   const [myPlayerId, setMyPlayerId] = useState(null);
   const [error, setError] = useState(null);
 
   // Game state
-  const [currentGame, setCurrentGame] = useState(null); // 'gjett-bildet', 'slange', 'tallkamp', 'quiz', 'tidslinje', 'ja-eller-nei'
-  const [gameState, setGameState] = useState('LOBBY'); // LOBBY_IDLE, LOBBY_GAME_SELECTED, LOBBY, PLAYING, GAME_OVER
+  const [currentGame, setCurrentGame] = useState(() => readStored('currentGame')); // 'gjett-bildet', 'slange', 'tallkamp', 'quiz', 'tidslinje', 'ja-eller-nei'
+  const [gameState, setGameState] = useState(() => readStored('gameState') || 'LOBBY'); // LOBBY_IDLE, LOBBY_GAME_SELECTED, LOBBY, PLAYING, GAME_OVER
   const [gameData, setGameData] = useState(null); // Game-specific data
 
   // Lobby state
@@ -49,6 +73,13 @@ export const GameProvider = ({ children }) => {
   useEffect(() => { roomCodeRef.current = roomCode; }, [roomCode]);
   useEffect(() => { isHostRef.current = isHost; }, [isHost]);
   useEffect(() => { playerNameRef.current = playerName; }, [playerName]);
+
+  // Persist session so a page reload can auto-rejoin instead of losing the room
+  useEffect(() => { writeStored('roomCode', roomCode); }, [roomCode]);
+  useEffect(() => { writeStored('isHost', isHost ? 'true' : ''); }, [isHost]);
+  useEffect(() => { writeStored('playerName', playerName); }, [playerName]);
+  useEffect(() => { writeStored('currentGame', currentGame); }, [currentGame]);
+  useEffect(() => { writeStored('gameState', gameState); }, [gameState]);
 
   // Funksjon for å nullstille state (definert før useEffect)
   const doResetGameState = useCallback(() => {
@@ -89,8 +120,6 @@ export const GameProvider = ({ children }) => {
 
     setSocket(newSocket);
 
-    // Track om vi har hatt minst én vellykket tilkobling (for å skille reconnect fra first-connect)
-    let hasConnectedBefore = false;
     // Retry-state for player rejoin (når rom gjenskapes av læreren)
     let playerRejoinRetries = 0;
     let playerRejoinTimer = null;
@@ -122,21 +151,20 @@ export const GameProvider = ({ children }) => {
       wsFailCount = 0;
       startKeepAlive();
 
-      // Auto-rejoin ved reconnect (ikke first-connect)
-      if (hasConnectedBefore) {
-        const code = roomCodeRef.current;
-        if (code) {
-          if (isHostRef.current) {
-            console.log(`Auto-rejoining room ${code} as host`);
-            newSocket.emit('host:rejoin', { roomCode: code });
-          } else if (playerNameRef.current) {
-            playerRejoinRetries = 0; // Reset retries on new connection
-            console.log(`Auto-rejoining room ${code} as player ${playerNameRef.current}`);
-            newSocket.emit('player:rejoin', { roomCode: code, playerName: playerNameRef.current });
-          }
+      // Auto-(re)join if we have a stored session - covers both a mid-session
+      // socket reconnect AND recovering from a full page reload (the roomCode
+      // state above is seeded from sessionStorage on mount in that case).
+      const code = roomCodeRef.current;
+      if (code) {
+        if (isHostRef.current) {
+          console.log(`Auto-rejoining room ${code} as host`);
+          newSocket.emit('host:rejoin', { roomCode: code });
+        } else if (playerNameRef.current) {
+          playerRejoinRetries = 0; // Reset retries on new connection
+          console.log(`Auto-rejoining room ${code} as player ${playerNameRef.current}`);
+          newSocket.emit('player:rejoin', { roomCode: code, playerName: playerNameRef.current });
         }
       }
-      hasConnectedBefore = true;
     });
 
     newSocket.on('disconnect', (reason) => {
