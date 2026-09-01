@@ -227,26 +227,26 @@
   font-style: italic;
 }
 
-.jaellernei-host .eliminated-this-round {
-  background: rgba(239, 68, 68, 0.2);
+.jaellernei-host .still-in-this-round {
+  background: rgba(34, 197, 94, 0.2);
   padding: 1rem 1.5rem;
   border-radius: 8px;
   margin-bottom: 1.5rem;
 }
 
-.jaellernei-host .eliminated-this-round h3 {
+.jaellernei-host .still-in-this-round h3 {
   margin-bottom: 0.5rem;
-  color: #fca5a5;
+  color: #86efac;
 }
 
-.jaellernei-host .eliminated-names {
+.jaellernei-host .still-in-names {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   justify-content: center;
 }
 
-.jaellernei-host .eliminated-name {
+.jaellernei-host .still-in-name {
   background: rgba(255, 255, 255, 0.1);
   padding: 0.25rem 0.75rem;
   border-radius: 4px;

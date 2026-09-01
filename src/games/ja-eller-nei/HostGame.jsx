@@ -207,14 +207,13 @@ function HostGame() {
               <div className="explanation">{revealData.explanation}</div>
             )}
 
-            {revealData.eliminatedThisRound.length > 0 && (
-              <div className="eliminated-this-round">
-                <h3>Ute denne runden:</h3>
-                <div className="eliminated-names">
-                  {revealData.eliminatedThisRound.map(pid => {
-                    const player = players.find(p => p.id === pid);
-                    return player ? <span key={pid} className="eliminated-name">{player.name}</span> : null;
-                  })}
+            {alivePlayers.length > 0 && (
+              <div className="still-in-this-round">
+                <h3>Fortsatt med:</h3>
+                <div className="still-in-names">
+                  {alivePlayers.map(player => (
+                    <span key={player.id} className="still-in-name">{player.name}</span>
+                  ))}
                 </div>
               </div>
             )}
