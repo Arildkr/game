@@ -365,6 +365,34 @@ function HostGame() {
     }
   };
 
+  // Shows the answer text and auto-advances after a delay - used both when
+  // the host force-reveals via "Vis svaret" and when they reach 100% via
+  // repeated "Neste hint" clicks and then click "Gå videre"
+  const revealAnswerAndAdvance = () => {
+    if (tempAnswer || !currentImage) return;
+
+    const correctAnswer = currentImage.answers?.[0] || currentImage.answer || '';
+    setTempAnswer(correctAnswer);
+    setPhase('showingAnswer');
+
+    setTimeout(() => {
+      setTempAnswer(null);
+      if (isLastImage) {
+        sendGameAction('end-gjett-bildet');
+        setPhase('gameOver');
+      } else {
+        const nextMode = config.mode === 'blanding' ? getRandomMode() : config.mode;
+        sendGameAction('next-image', { imageIndex: currentIndex + 1, mode: nextMode });
+      }
+    }, 3000);
+  };
+
+  const handleShowAnswer = () => {
+    setRevealStep(REVEAL_STEPS.length - 1);
+    sendGameAction('reveal-step', { step: REVEAL_STEPS.length - 1 });
+    revealAnswerAndAdvance();
+  };
+
   const handleNextImageAction = () => {
     if (phase === 'roundEnd') {
       if (isLastImage) {
@@ -377,22 +405,7 @@ function HostGame() {
       return;
     }
 
-    if (!tempAnswer && currentImage) {
-      const correctAnswer = currentImage.answers?.[0] || currentImage.answer || '';
-      setTempAnswer(correctAnswer);
-      setPhase('showingAnswer');
-
-      setTimeout(() => {
-        setTempAnswer(null);
-        if (isLastImage) {
-          sendGameAction('end-gjett-bildet');
-          setPhase('gameOver');
-        } else {
-          const nextMode = config.mode === 'blanding' ? getRandomMode() : config.mode;
-          sendGameAction('next-image', { imageIndex: currentIndex + 1, mode: nextMode });
-        }
-      }, 3000);
-    }
+    revealAnswerAndAdvance();
   };
 
   const handleClearBuzzer = () => {
@@ -583,10 +596,7 @@ function HostGame() {
               </button>
               <button
                 className="btn btn-reveal"
-                onClick={() => {
-                  setRevealStep(REVEAL_STEPS.length - 1);
-                  sendGameAction('reveal-step', { step: REVEAL_STEPS.length - 1 });
-                }}
+                onClick={handleShowAnswer}
                 disabled={revealStep >= REVEAL_STEPS.length - 1 || phase === 'showingAnswer'}
               >
                 Vis svaret
