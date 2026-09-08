@@ -44,8 +44,12 @@ const io = new Server(server, {
       if (origin.endsWith('.vercel.app') || origin.endsWith('.netlify.app') || origin.includes('localhost')) {
         return callback(null, true);
       }
-      console.warn('CORS: Rejected unknown origin:', origin);
-      callback(new Error('Not allowed by CORS'), false);
+      // Reverted to fail-open: rejecting unknown origins broke production for
+      // any client whose exact origin wasn't already in CLIENT_ORIGIN - too
+      // risky for a live classroom tool to gate on that list being perfectly
+      // in sync with reality. Back to logging only, matching prior behavior.
+      console.warn('CORS: Unknown origin (allowed anyway):', origin);
+      callback(null, true);
     },
     methods: ['GET', 'POST'],
     credentials: true
