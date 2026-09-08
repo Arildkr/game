@@ -364,6 +364,7 @@ export const GameProvider = ({ children }) => {
     newSocket.on('game:word-rejected', handlePlayersUpdate);
     newSocket.on('game:round-revealed', handlePlayersUpdate);
     newSocket.on('game:answer-revealed', handlePlayersUpdate);
+    newSocket.on('game:ordjakt-update', handlePlayersUpdate);
 
     newSocket.on('game:ended', ({ room, lobbyData: lData } = {}) => {
       // Avslutt tar alle tilbake til lobby (ikke ut av rommet)

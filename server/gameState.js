@@ -965,7 +965,8 @@ function handleOrdjaktPlayerAction(room, playerId, action, data) {
           ordkongen: gd.ordkongen,
           ordmaskinen: gd.ordmaskinen,
           playerName: player.name,
-          playerWordCount
+          playerWordCount,
+          players: room.players
         }
       };
     }
