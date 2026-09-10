@@ -1,6 +1,7 @@
 // game/src/games/gjett-bildet/PlayerGame.jsx
 import { useState, useEffect, useRef } from 'react';
 import { useGame } from '../../contexts/GameContext';
+import RevealImage from './RevealImage';
 import './GjettBildet.css';
 
 function PlayerGame() {
@@ -18,6 +19,10 @@ function PlayerGame() {
   const [penaltyActive, setPenaltyActive] = useState(false);
   const [penaltyTime, setPenaltyTime] = useState(0);
   const [isLockedOut, setIsLockedOut] = useState(false); // Utestengt fra å buzze på dette bildet
+  // Mirrors the host's image, only populated with a real imageUrl while the
+  // teacher has "show image on student screen" turned on
+  const [imageSync, setImageSync] = useState({ visible: false, imageUrl: null, mode: 'blur', revealPercent: 100, focalPoint: { x: 50, y: 50 }, answerText: null });
+  const [imageSyncLoaded, setImageSyncLoaded] = useState(false);
   const inputRef = useRef(null);
 
   const myPlayerId = socket?.id;
@@ -106,12 +111,20 @@ function PlayerGame() {
       setPenaltyActive(false);
     };
 
+    const handleImageSync = (data) => {
+      setImageSync(prev => {
+        if (data.imageUrl !== prev.imageUrl) setImageSyncLoaded(false);
+        return data;
+      });
+    };
+
     socket.on('game:player-buzzed', handlePlayerBuzzed);
     socket.on('game:player-selected', handlePlayerSelected);
     socket.on('game:guess-result', handleGuessResult);
     socket.on('game:next-image', handleNextImage);
     socket.on('game:gjett-bildet-ended', handleGameEnded);
     socket.on('game:buzzer-cleared', handleBuzzerCleared);
+    socket.on('game:image-sync', handleImageSync);
 
     return () => {
       socket.off('game:player-buzzed', handlePlayerBuzzed);
@@ -120,6 +133,7 @@ function PlayerGame() {
       socket.off('game:next-image', handleNextImage);
       socket.off('game:gjett-bildet-ended', handleGameEnded);
       socket.off('game:buzzer-cleared', handleBuzzerCleared);
+      socket.off('game:image-sync', handleImageSync);
     };
   }, [socket, myPlayerId]);
 
@@ -263,6 +277,17 @@ const handleSubmitGuess = (e) => {
         </header>
 
         <div className="waiting-content">
+          {imageSync.visible && imageSync.imageUrl && (
+            <RevealImage
+              imageUrl={imageSync.imageUrl}
+              mode={imageSync.mode}
+              revealPercent={imageSync.revealPercent}
+              focalPoint={imageSync.focalPoint}
+              imageLoaded={imageSyncLoaded}
+              onImageLoad={() => setImageSyncLoaded(true)}
+              answerText={imageSync.answerText}
+            />
+          )}
           <div className="waiting-icon">⏳</div>
           <h2>{currentPlayer.name} svarer...</h2>
           {isInQueue && (
@@ -334,10 +359,22 @@ const handleSubmitGuess = (e) => {
       </header>
 
       <div className="buzzer-content">
-        <div className="look-at-screen">
-          <span className="eye-icon">👀</span>
-          <p>Se på storskjermen!</p>
-        </div>
+        {imageSync.visible && imageSync.imageUrl ? (
+          <RevealImage
+            imageUrl={imageSync.imageUrl}
+            mode={imageSync.mode}
+            revealPercent={imageSync.revealPercent}
+            focalPoint={imageSync.focalPoint}
+            imageLoaded={imageSyncLoaded}
+            onImageLoad={() => setImageSyncLoaded(true)}
+            answerText={imageSync.answerText}
+          />
+        ) : (
+          <div className="look-at-screen">
+            <span className="eye-icon">👀</span>
+            <p>Se på storskjermen!</p>
+          </div>
+        )}
 
         <button
           className={`buzz-button ${hasBuzzed ? 'buzzed' : ''}`}

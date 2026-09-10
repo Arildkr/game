@@ -1461,6 +1461,28 @@ function handleGjettBildetHostAction(room, action, data) {
         data: {}
       };
 
+    // Teacher-controlled pass-through: mirrors the current image/reveal
+    // state to student devices when the "show image on student screen"
+    // toggle is on. The image URL is only ever included when the host
+    // says visible:true, so it never reaches a player's client at all
+    // while the toggle is off. Doesn't touch gd - purely a display sync,
+    // students still can't act on it (buzzing/guessing is untouched).
+    case 'sync-image-to-players': {
+      const visible = !!data.visible;
+      return {
+        broadcast: true,
+        event: 'game:image-sync',
+        data: {
+          visible,
+          imageUrl: visible ? (data.imageUrl || null) : null,
+          mode: data.mode || 'blur',
+          revealPercent: typeof data.revealPercent === 'number' ? data.revealPercent : 100,
+          focalPoint: data.focalPoint || { x: 50, y: 50 },
+          answerText: data.answerText || null
+        }
+      };
+    }
+
     case 'end-gjett-bildet': {
       const leaderboard = room.players
         .map(p => ({ id: p.id, name: p.name, score: p.score }))

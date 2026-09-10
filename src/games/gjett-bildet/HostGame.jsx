@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useGame } from '../../contexts/GameContext';
 import { getImages, shuffleArray, categories } from '../../data/gjettBildetImages';
+import RevealImage from './RevealImage';
 import './GjettBildet.css';
 
 const REVEAL_STEPS = [10, 20, 35, 50, 70, 85, 100];
@@ -68,94 +69,6 @@ function isAnswerCorrect(studentAnswer, correctAnswersArray) {
   });
 }
 
-// Random Reveal Component - grid-basert for konsistent dekning
-// Deler bildet i et rutenett og avdekker ruter i tilfeldig rekkefølge
-// Garanterer: 10% reveal = ~10% synlig, 100% reveal = helt synlig
-function RandomRevealOverlay({ revealPercent }) {
-  // Bruk 16x16 = 256 celler for jevn dekning
-  const GRID_SIZE = 16;
-  const TOTAL_CELLS = GRID_SIZE * GRID_SIZE;
-
-  // Generer shufflet rekkefølge én gang og behold den
-  const shuffledOrderRef = useRef(null);
-  const maskIdRef = useRef(`reveal-mask-${Math.random().toString(36).substr(2, 9)}`);
-
-  // Lag shufflet rekkefølge første gang
-  if (!shuffledOrderRef.current) {
-    const order = [];
-    for (let i = 0; i < TOTAL_CELLS; i++) {
-      order.push(i);
-    }
-    // Fisher-Yates shuffle
-    for (let i = order.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [order[i], order[j]] = [order[j], order[i]];
-    }
-    shuffledOrderRef.current = order;
-  }
-
-  // Beregn hvor mange celler som skal være synlige
-  // Bruk eksponentiell kurve for å vise færre celler i starten
-  // Ved 10%: ~8 celler, ved 50%: ~90 celler, ved 100%: alle 256
-  const adjustedPercent = Math.pow(revealPercent / 100, 1.5);
-  const cellsToReveal = Math.floor(adjustedPercent * TOTAL_CELLS);
-  const revealedCells = new Set(shuffledOrderRef.current.slice(0, cellsToReveal));
-
-  const maskId = maskIdRef.current;
-  const cellSize = 100 / GRID_SIZE;
-
-  // Ved 100% - vis hele bildet (ingen overlay)
-  if (revealPercent >= 100) {
-    return null;
-  }
-
-  return (
-    <svg
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        pointerEvents: 'none'
-      }}
-      viewBox="0 0 100 100"
-      preserveAspectRatio="none"
-    >
-      <defs>
-        <mask id={maskId}>
-          {/* Hvit bakgrunn = overlay vises (dekker bildet) */}
-          <rect x="0" y="0" width="100" height="100" fill="white" />
-          {/* Svarte rektangler = overlay skjules (bildet vises) */}
-          {Array.from(revealedCells).map(cellIndex => {
-            const row = Math.floor(cellIndex / GRID_SIZE);
-            const col = cellIndex % GRID_SIZE;
-            return (
-              <rect
-                key={cellIndex}
-                x={col * cellSize}
-                y={row * cellSize}
-                width={cellSize + 0.5} // Litt overlapp for å unngå striper
-                height={cellSize + 0.5}
-                fill="black"
-              />
-            );
-          })}
-        </mask>
-      </defs>
-      {/* Svart rektangel med maske - de avdekkede cellene blir gjennomsiktige */}
-      <rect
-        x="0"
-        y="0"
-        width="100"
-        height="100"
-        fill="black"
-        mask={`url(#${maskId})`}
-      />
-    </svg>
-  );
-}
-
 function HostGame() {
   const {
     socket,
@@ -183,11 +96,29 @@ function HostGame() {
   const [currentMode, setCurrentMode] = useState('blur'); // Aktiv modus for dette bildet
   const [focalPoint, setFocalPoint] = useState({ x: 50, y: 50 }); // Tilfeldig fokuspunkt for mask/zoom
   const [answerTimeLeft, setAnswerTimeLeft] = useState(15); // Tidsfrist for svar (synkronisert med elev)
+  // Teacher-controlled: off by default so the shared-screen buzz-in dynamic
+  // stays the default experience; teacher opts in per session
+  const [showImageToPlayers, setShowImageToPlayers] = useState(false);
 
   const initDone = useRef(false);
   const currentImage = images[currentIndex];
   const revealPercent = REVEAL_STEPS[revealStep];
   const isLastImage = currentIndex >= images.length - 1;
+
+  // Mirror the current image/reveal state to student devices whenever
+  // anything relevant changes (new image, hint revealed, answer shown) -
+  // but only send the actual URL when the teacher has the toggle on.
+  useEffect(() => {
+    if (!socket || !currentImage) return;
+    sendGameAction('sync-image-to-players', {
+      visible: showImageToPlayers,
+      imageUrl: currentImage.url,
+      mode: currentMode,
+      revealPercent,
+      focalPoint,
+      answerText: tempAnswer
+    });
+  }, [socket, sendGameAction, showImageToPlayers, currentImage, currentMode, revealPercent, focalPoint, tempAnswer]);
 
   // Velg tilfeldig modus
   const getRandomMode = useCallback(() => {
@@ -423,102 +354,16 @@ function HostGame() {
 
   const renderImage = () => {
     if (!currentImage) return null;
-
-    // Random reveal mode - bilde med sirkel-overlay
-    if (currentMode === 'random') {
-      return (
-        <div className="image-container" style={{ position: 'relative', overflow: 'hidden' }}>
-          {!imageLoaded && (
-            <div className="loading-spinner">
-              <div className="spinner"></div>
-              <p>Laster bilde...</p>
-            </div>
-          )}
-          <img
-            src={currentImage.url}
-            alt="Gjett bildet"
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              opacity: imageLoaded ? 1 : 0
-            }}
-            onLoad={() => setImageLoaded(true)}
-            draggable={false}
-          />
-          <RandomRevealOverlay revealPercent={revealPercent} />
-
-          {tempAnswer && (
-            <div className="answer-overlay">
-              <p className="answer-label">Svaret var:</p>
-              <h1 className="answer-text">{tempAnswer}</h1>
-              <p className="answer-wait">Går videre om litt...</p>
-            </div>
-          )}
-
-          <div className="reveal-indicator">
-            <div className="reveal-bar" style={{ width: `${revealPercent}%` }}></div>
-          </div>
-        </div>
-      );
-    }
-
-    // Andre modi
-    let imageStyle = {
-      width: '100%',
-      height: '100%',
-      objectFit: 'cover'
-    };
-
-    if (currentMode === 'blur') {
-      // Blur: 30px ved start, 0px ved 100%
-      const blur = ((100 - revealPercent) / 100) * 30;
-      imageStyle.filter = `blur(${blur}px)`;
-      imageStyle.transition = 'filter 0.5s ease';
-    } else if (currentMode === 'zoom') {
-      // Zoom: Økt fra 4x til 8x multiplier for å starte mer zoomet inn
-      // Ved 10%: scale = 1 + 0.9 * 8 = 8.2x zoom (mye nærmere)
-      // Ved 100%: scale = 1x (helt ute)
-      const scale = 1 + ((100 - revealPercent) / 100) * 8;
-      imageStyle.transform = `scale(${scale})`;
-      imageStyle.transformOrigin = `${focalPoint.x}% ${focalPoint.y}%`;
-      // Ingen transition for zoom - unngår å vise mer av bildet under animasjon
-    } else if (currentMode === 'mask') {
-      // Mask: Bruk eksponentiell kurve for mindre sirkel ved start
-      // Ved 10%: ~3% radius, ved 50%: ~35% radius, ved 100%: 100% radius
-      const maskRadius = Math.pow(revealPercent / 100, 1.5) * 100;
-      imageStyle.clipPath = `circle(${maskRadius}% at ${focalPoint.x}% ${focalPoint.y}%)`;
-      imageStyle.transition = 'clip-path 0.3s ease';
-    }
-
     return (
-      <div className="image-container" style={{ position: 'relative' }}>
-        {!imageLoaded && (
-          <div className="loading-spinner">
-            <div className="spinner"></div>
-            <p>Laster bilde...</p>
-          </div>
-        )}
-        <img
-          src={currentImage.url}
-          alt="Gjett bildet"
-          style={{ ...imageStyle, opacity: imageLoaded ? 1 : 0 }}
-          onLoad={() => setImageLoaded(true)}
-          draggable={false}
-        />
-
-        {tempAnswer && (
-          <div className="answer-overlay">
-            <p className="answer-label">Svaret var:</p>
-            <h1 className="answer-text">{tempAnswer}</h1>
-            <p className="answer-wait">Går videre om litt...</p>
-          </div>
-        )}
-
-        <div className="reveal-indicator">
-          <div className="reveal-bar" style={{ width: `${revealPercent}%` }}></div>
-        </div>
-      </div>
+      <RevealImage
+        imageUrl={currentImage.url}
+        mode={currentMode}
+        revealPercent={revealPercent}
+        focalPoint={focalPoint}
+        imageLoaded={imageLoaded}
+        onImageLoad={() => setImageLoaded(true)}
+        answerText={tempAnswer}
+      />
     );
   };
 
@@ -562,6 +407,13 @@ function HostGame() {
           <span className="progress">{currentIndex + 1} / {images.length}</span>
         </div>
         <div className="header-actions">
+          <button
+            className={`btn btn-toggle-image ${showImageToPlayers ? 'active' : ''}`}
+            onClick={() => setShowImageToPlayers(v => !v)}
+            title="Om elevene også skal se bildet på sin egen skjerm"
+          >
+            {showImageToPlayers ? '👁️ Bilde vises for elever' : '🙈 Bilde skjult for elever'}
+          </button>
           <span className="room-code">Rom: {roomCode}</span>
           <button className="btn btn-end" onClick={handleEndGame}>Avslutt</button>
         </div>

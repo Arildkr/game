@@ -473,6 +473,18 @@
   color: white;
 }
 
+.gjett-bildet-host .btn-toggle-image {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.gjett-bildet-host .btn-toggle-image.active {
+  background: rgba(34, 197, 94, 0.25);
+  color: #86efac;
+}
+
 .gjett-bildet-host .btn-hint {
   background: #3b82f6;
   color: white;
@@ -631,6 +643,93 @@
   font-size: 0.9rem;
   margin-top: 0.5rem;
   opacity: 0.8;
+}
+
+/* Shared RevealImage component, rendered on the player's own screen when
+   the teacher turns on "vis bilde for elever" */
+.gjett-bildet-player .image-container {
+  width: 100%;
+  max-width: 340px;
+  aspect-ratio: 4 / 3;
+  background: #000;
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+}
+
+.gjett-bildet-player .image-container img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: filter 0.5s ease, transform 0.5s ease;
+}
+
+.gjett-bildet-player .reveal-indicator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.gjett-bildet-player .reveal-bar {
+  height: 100%;
+  background: #22c55e;
+  transition: width 0.3s ease;
+}
+
+.gjett-bildet-player .answer-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.75);
+  text-align: center;
+  padding: 1rem;
+}
+
+.gjett-bildet-player .answer-label {
+  font-size: 0.85rem;
+  opacity: 0.8;
+  margin: 0 0 0.25rem;
+}
+
+.gjett-bildet-player .answer-text {
+  font-size: 1.4rem;
+  margin: 0;
+}
+
+.gjett-bildet-player .answer-wait {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  margin: 0.5rem 0 0;
+}
+
+.gjett-bildet-player .loading-spinner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  opacity: 0.7;
+}
+
+.gjett-bildet-player .spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #4ade80;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 
 /* Answering Screen */
