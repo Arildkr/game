@@ -165,6 +165,14 @@ function PlayerGame() {
       setPhase('result');
     };
 
+    // Someone declined to draw - everyone still waiting resets cleanly
+    // instead of being stuck on "X velger ord..." until the host reacts
+    const handleDrawDeclined = () => {
+      setDrawerName('');
+      setWordSelectTimeLeft(0);
+      if (wordSelectTimerRef.current) clearInterval(wordSelectTimerRef.current);
+    };
+
     socket.on('game:drawer-selected', handleDrawerSelected);
     socket.on('game:word-options', handleWordOptions);
     socket.on('game:round-started', handleRoundStarted);
@@ -175,6 +183,7 @@ function PlayerGame() {
     socket.on('game:correct-guess', handleCorrectGuess);
     socket.on('game:wrong-guess', handleWrongGuess);
     socket.on('game:round-ended', handleRoundEnded);
+    socket.on('game:draw-declined', handleDrawDeclined);
 
     return () => {
       socket.off('game:drawer-selected', handleDrawerSelected);
@@ -187,6 +196,7 @@ function PlayerGame() {
       socket.off('game:correct-guess', handleCorrectGuess);
       socket.off('game:wrong-guess', handleWrongGuess);
       socket.off('game:round-ended', handleRoundEnded);
+      socket.off('game:draw-declined', handleDrawDeclined);
       if (lockoutTimerRef.current) clearInterval(lockoutTimerRef.current);
       if (wordSelectTimerRef.current) clearInterval(wordSelectTimerRef.current);
     };
@@ -198,6 +208,20 @@ function PlayerGame() {
       action: 'select-word',
       data: { word: selectedWord }
     });
+  };
+
+  const declineDraw = () => {
+    socket.emit('player:game-action', {
+      action: 'decline-draw',
+      data: {}
+    });
+    // Optimistic local reset - don't wait for the round-trip
+    isDrawerRef.current = false;
+    setIsDrawer(false);
+    setWordOptions([]);
+    setWordSelectTimeLeft(0);
+    if (wordSelectTimerRef.current) clearInterval(wordSelectTimerRef.current);
+    setPhase('waiting');
   };
 
   const handleStroke = (stroke) => {
@@ -292,6 +316,9 @@ function PlayerGame() {
                 </button>
               ))}
             </div>
+            <button className="btn-decline-draw" onClick={declineDraw}>
+              Jeg vil ikke tegne nå
+            </button>
           </div>
         )}
 

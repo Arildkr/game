@@ -99,9 +99,14 @@ function HostGame() {
         type: 'wrong',
         playerName
       });
-      // Clear wrong result after 2 seconds
+      // Clear the wrong-guess banner after 2 seconds - but only if it's still
+      // THIS wrong result. `phase` here is a stale closure value from when
+      // this handler was registered; checking it directly could wipe out a
+      // *correct* result (and the "Neste runde" button with it) that arrived
+      // in the meantime, softlocking the host on a blank screen. Checking the
+      // latest state via the functional updater avoids that entirely.
       setTimeout(() => {
-        if (phase === 'drawing') setLastResult(null);
+        setLastResult(prev => (prev && prev.type === 'wrong') ? null : prev);
       }, 2000);
     };
 
@@ -120,12 +125,27 @@ function HostGame() {
       setCurrentWord(word);
     };
 
+    // The selected drawer chose not to draw this round - go back to setup so
+    // the host can pick someone else, same as when the word-select timer runs out
+    const handleDrawDeclined = () => {
+      if (wordSelectTimerRef.current) clearTimeout(wordSelectTimerRef.current);
+      setWordSelectTimeLeft(0);
+      setDrawer(prevDrawer => {
+        if (prevDrawer) {
+          setPlayersWhoHaveDrawn(prev => prev.includes(prevDrawer.id) ? prev : [...prev, prevDrawer.id]);
+        }
+        return prevDrawer;
+      });
+      nextRound();
+    };
+
     socket.on('game:drawing-update', handleDrawingUpdate);
     socket.on('game:canvas-cleared', handleCanvasCleared);
     socket.on('game:correct-guess', handleCorrectGuess);
     socket.on('game:wrong-guess', handleWrongGuess);
     socket.on('game:round-started', handleRoundStarted);
     socket.on('game:word-selected', handleWordSelected);
+    socket.on('game:draw-declined', handleDrawDeclined);
 
     return () => {
       socket.off('game:drawing-update', handleDrawingUpdate);
@@ -134,6 +154,7 @@ function HostGame() {
       socket.off('game:wrong-guess', handleWrongGuess);
       socket.off('game:round-started', handleRoundStarted);
       socket.off('game:word-selected', handleWordSelected);
+      socket.off('game:draw-declined', handleDrawDeclined);
     };
   }, [socket, phase, timeLimit]);
 

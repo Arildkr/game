@@ -2938,6 +2938,24 @@ function handleTegnDetPlayerAction(room, playerId, action, data) {
       };
     }
 
+    case 'decline-draw': {
+      // Only the current drawer, and only before they've picked a word, can
+      // decline - lets a student who doesn't want to be "in focus" pass the
+      // turn to someone else instead of being stuck choosing a word
+      if (playerId !== gd.drawerId || gd.currentWord) return null;
+
+      const declinedName = gd.drawerName;
+      gd.drawerId = null;
+      gd.drawerName = null;
+      gd.wordOptions = null;
+
+      return {
+        broadcast: true,
+        event: 'game:draw-declined',
+        data: { playerName: declinedName }
+      };
+    }
+
     case 'draw-stroke': {
       if (playerId !== gd.drawerId) return null;
 

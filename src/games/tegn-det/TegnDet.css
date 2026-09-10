@@ -722,6 +722,23 @@
   transform: scale(0.98);
 }
 
+.tegndet-player .btn-decline-draw {
+  display: block;
+  margin: 1.5rem auto 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  padding: 0.6rem 1.2rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.tegndet-player .btn-decline-draw:hover {
+  color: rgba(255, 255, 255, 0.85);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
 /* Drawing phase */
 .tegndet-player .drawing-phase {
   text-align: center;
