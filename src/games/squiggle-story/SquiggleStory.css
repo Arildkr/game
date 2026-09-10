@@ -230,12 +230,10 @@
   display: block;
 }
 
-.squigglestory-host .gallery-name {
-  padding: 0.75rem;
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  font-weight: 600;
-  text-align: center;
+.squigglestory-host .gallery-hint {
+  opacity: 0.75;
+  margin: -0.5rem 0 1rem;
+  font-size: 0.95rem;
 }
 
 .squigglestory-host .no-submissions {

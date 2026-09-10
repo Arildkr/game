@@ -203,9 +203,16 @@ function HostGame() {
           <div className="gallery-phase">
             <h2>Galleri</h2>
 
+            <p className="gallery-hint">Fjern upassende eller uferdige tegninger før avstemmingen starter</p>
+
             <div className="gallery-grid">
               {submissions.map((sub, i) => (
-                <div key={sub.playerId || i} className="gallery-item">
+                // Deliberately no visible name here - this screen is shown to the
+                // whole class right before voting, and showing who drew what would
+                // let students vote for a classmate instead of the drawing. The
+                // name is still available on hover (title attribute) in case the
+                // teacher needs to follow up about a specific drawing.
+                <div key={sub.playerId || i} className="gallery-item" title={sub.playerName}>
                   <button
                     className="btn-remove-gallery"
                     onClick={() => removeFromGallery(sub.playerId)}
@@ -215,10 +222,9 @@ function HostGame() {
                   </button>
                   <img
                     src={sub.imageData}
-                    alt={`Tegning av ${sub.playerName}`}
+                    alt="Tegning"
                     className="gallery-image"
                   />
-                  <div className="gallery-name">{sub.playerName}</div>
                 </div>
               ))}
             </div>
