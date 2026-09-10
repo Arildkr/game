@@ -7,6 +7,10 @@ import './GjettBildet.css';
 
 const REVEAL_STEPS = [10, 20, 35, 50, 70, 85, 100];
 const POINTS_BY_STEP = [100, 80, 60, 50, 40, 30, 20];
+// The teacher only ever picks from the front of the queue (fastest
+// responders) - showing the whole class's names the instant everyone
+// buzzes at once isn't useful, just noisy
+const BUZZER_DISPLAY_LIMIT = 8;
 
 // Tilgjengelige avsløring-modi
 const REVEAL_MODES = ['mask', 'zoom', 'blur', 'random'];
@@ -491,7 +495,7 @@ function HostGame() {
                 <div className="buzzer-section">
                   <h3>Buzzerkø ({buzzerQueue.length})</h3>
                   <ul className="buzzer-list">
-                    {buzzerQueue.map((playerId, index) => (
+                    {buzzerQueue.slice(0, BUZZER_DISPLAY_LIMIT).map((playerId, index) => (
                       <li key={playerId} className="buzzer-item">
                         <span className="buzzer-position">{index + 1}</span>
                         <span className="buzzer-name">{getPlayerName(playerId)}</span>
@@ -499,6 +503,9 @@ function HostGame() {
                       </li>
                     ))}
                   </ul>
+                  {buzzerQueue.length > BUZZER_DISPLAY_LIMIT && (
+                    <p className="buzzer-more">+ {buzzerQueue.length - BUZZER_DISPLAY_LIMIT} flere venter</p>
+                  )}
                 </div>
               )}
 

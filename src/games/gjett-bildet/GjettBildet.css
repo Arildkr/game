@@ -273,10 +273,19 @@
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
-  /* Cap growth so a long buzzer queue scrolls within itself instead of
-     squeezing the image down to nothing (game-status-row never shrinks) */
-  max-height: 8rem;
+  /* The rendered list itself is capped to BUZZER_DISPLAY_LIMIT entries, so
+     this height comfortably fits all of them without scrolling in the
+     normal case - overflow-y stays as a defensive fallback (long names
+     wrapping, etc.), not the primary way to reach hidden entries. */
+  max-height: 16rem;
   overflow-y: auto;
+}
+
+.gjett-bildet-host .buzzer-more {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  opacity: 0.65;
+  text-align: center;
 }
 
 .gjett-bildet-host .buzzer-item {
